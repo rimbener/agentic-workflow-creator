@@ -1,0 +1,36 @@
+{
+  "name": "agentic-workflow-creator",
+  "version": "0.1.0",
+  "description": "Launch an AI coding agent pre-loaded with curated skills, commands, and scripts — zero footprint.",
+  "keywords": [
+    "awc",
+    "claude",
+    "claude-code",
+    "agent",
+    "workflow",
+    "cli"
+  ],
+  "license": "MIT",
+  "author": "Hernán Laura",
+  "type": "module",
+  "bin": {
+    "awc": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --target=node --outdir dist && chmod +x dist/cli.js",
+    "typecheck": "bunx tsc --noEmit",
+    "test": "bun test",
+    "smoke": "node dist/cli.js claude -- --version"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "@types/node": "^22"
+  }
+}
