@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { parseCli } from "./args";
-import { runClaude } from "./agents/claude";
-import { packageJsonPath } from "./paths";
+import { readFileSync } from 'node:fs'
+import { runClaude } from './agents/claude'
+import { type ParsedCli, parseCli } from './args'
+import { packageJsonPath } from './paths'
 
 const HELP = `awc — agentic-workflow-creator
 
@@ -19,44 +19,44 @@ Options:
   -v, --version   Show version
 
 Everything after \`--\` is passed through to the agent CLI verbatim.
-`;
+`
 
 function main(): void {
-  let cli;
+  let cli: ParsedCli
   try {
-    cli = parseCli(process.argv.slice(2));
+    cli = parseCli(process.argv.slice(2))
   } catch (err) {
-    console.error(`awc: ${err instanceof Error ? err.message : String(err)}`);
-    console.error("Run `awc --help` for usage.");
-    process.exit(1);
+    console.error(`awc: ${err instanceof Error ? err.message : String(err)}`)
+    console.error('Run `awc --help` for usage.')
+    process.exit(1)
   }
 
   if (cli.help) {
-    console.log(HELP);
-    return;
+    console.log(HELP)
+    return
   }
   if (cli.version) {
-    const pkg = JSON.parse(readFileSync(packageJsonPath(), "utf8"));
-    console.log(pkg.version);
-    return;
+    const pkg = JSON.parse(readFileSync(packageJsonPath(), 'utf8'))
+    console.log(pkg.version)
+    return
   }
 
   switch (cli.agent) {
-    case "claude":
+    case 'claude':
       runClaude({
         tmpDir: cli.tmpDir,
         keep: cli.keep,
         passthrough: cli.passthrough,
-      });
-      break;
+      })
+      break
     case undefined:
-      console.log(HELP);
-      process.exit(1);
-      break;
+      console.log(HELP)
+      process.exit(1)
+      break
     default:
-      console.error(`awc: unknown agent "${cli.agent}" (available: claude)`);
-      process.exit(1);
+      console.error(`awc: unknown agent "${cli.agent}" (available: claude)`)
+      process.exit(1)
   }
 }
 
-main();
+main()

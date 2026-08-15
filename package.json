@@ -27,9 +27,13 @@
     "build": "bun build src/cli.ts --target=node --outdir dist && chmod +x dist/cli.js",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
-    "smoke": "node dist/cli.js claude -- --version"
+    "smoke": "node dist/cli.js claude -- --version",
+    "check": "biome check",
+    "format": "biome format --write",
+    "lint": "biome lint"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
     "@types/bun": "^1.3.14",
     "@types/node": "^22"
   }
