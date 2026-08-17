@@ -1,17 +1,17 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to LLMs when working with code in this repository.
 
 ## What this repo is
 
-`awc` (agentic-workflow-creator) is a Node CLI that launches LLMs
-pre-loaded with a bundled plugin (skills + commands) for a single session,
-without touching the user's `~/.claude` or the target project's `.claude/`.
-It stages `templates/claude/` into a temp folder, spawns
-`claude --plugin-dir <tmp>/plugin <prompt>`, and deletes the temp folder on
-exit. See `SPEC.md` for the full design rationale.
+`awc` (agentic-workflow-creator) is a Node CLI that launches a coding agent —
+Claude Code, Codex, or opencode — pre-loaded with a bundled skill and command
+for a single session, without touching the user's global agent config or the
+target project's config directory. It stages `templates/` into a temp folder,
+spawns the agent pointed at it, and deletes the folder on exit. See `SPEC.md`
+for the full design rationale.
 
-The bundled plugin's centerpiece is the **workflow-creator** skill: it
+The bundled payload's centerpiece is the **workflow-creator** skill: it
 interviews a user and generates a "lead-run agentic workflow package" — a
 YAML of tiny nodes executed step by step by a `workflow_lead` subagent, plus
 the agent files and scripts those nodes invoke.
@@ -19,9 +19,9 @@ the agent files and scripts those nodes invoke.
 There are two largely independent things to reason about:
 
 1. **The `awc` CLI itself** — `src/`, plain Node/TypeScript.
-2. **The bundled workflow-creator plugin content** — `templates/claude/`,
-   which is prose/Markdown/YAML consumed by a *different* Claude Code
-   session (the one `awc` launches), not by this repo's build.
+2. **The bundled workflow-creator content** — `templates/`, which is
+   prose/Markdown/YAML consumed by a *different* agent session (the one `awc`
+   launches), not by this repo's build.
 
 ## Commands
 
@@ -31,7 +31,7 @@ bun run build        # bundle src/cli.ts -> dist/cli.js (bun build --target=node
 bun run typecheck     # tsc --noEmit
 bun test              # run all unit tests (test/*.test.ts)
 bun test test/staging.test.ts   # run a single test file
-bun run smoke         # node dist/cli.js claude -- --version (full stage/spawn/cleanup cycle against the real `claude` binary)
+bun run smoke         # scripts/smoke.sh — per installed agent: stage/spawn/cleanup cycle against the real binary, plus a check that the payload landed under that host's dir names
 bun run check          # biome check
 bun run format         # biome format --write
 bun run lint           # biome lint
@@ -46,42 +46,68 @@ quotes, no semicolons (ASI), 2-space indent (biome.json).
 Small, linear pipeline, one file per concern:
 
 - `cli.ts` — entry point: parses argv, handles `--help`/`--version`, dispatches
-  to an agent (currently only `claude`).
+  through the `AGENTS` map to one of `claude` / `codex` / `opencode`.
 - `args.ts` — `parseCli`: splits argv on the first `--` into "own" flags vs.
-  `passthrough` args forwarded verbatim to the `claude` binary.
-- `agents/claude.ts` — `runClaude`: the stage → spawn → cleanup lifecycle.
-  Registers `SIGINT` as a no-op (Claude Code owns Ctrl+C internally — the
-  wrapper must survive it and only clean up when the child actually exits),
-  `SIGTERM` → exit 143, and a synchronous `process.on('exit')` cleanup as the
-  last-chance guard against a hard kill.
-- `staging.ts` — `stage`/`cleanup`/`readPrompt`: copies
-  `templates/claude/plugin/` into `<tmpDir>/plugin`, always deleting any
-  stale `tmpDir` first (self-heals after a `kill -9`, which cannot be
-  intercepted by handlers).
-- `paths.ts` — resolves `templatesDir()`/`packageJsonPath()` relative to the
-  compiled entry file via `new URL(..., import.meta.url)`, **never**
-  `process.cwd()` — this is what makes it work identically via `npx`, a
-  global install, and `node dist/cli.js` run locally.
+  `passthrough` args forwarded verbatim to the agent binary.
+- `agents/run.ts` — `launch`: the spawn → signal → cleanup lifecycle every
+  agent shares. Registers `SIGINT` as a no-op (the agent TUIs own Ctrl+C
+  internally — the wrapper must survive it and only clean up when the child
+  actually exits), `SIGTERM` → exit 143, and a synchronous
+  `process.on('exit')` cleanup as the last-chance guard against a hard kill.
+- `agents/{claude,codex,opencode}.ts` — one file per host: a `stage*` function
+  (exported, so tests can drive it without spawning) and a `run*` that stages
+  then calls `launch`.
+- `staging.ts` — `resetTmp`/`copyPayload`/`shadow`/`cleanup`/`readPrompt`.
+  `resetTmp` always deletes a stale `tmpDir` first (self-heals after a
+  `kill -9`, which cannot be intercepted by handlers). `shadow` is the piece
+  that makes the env-var hosts work — read its comment before touching it.
+- `paths.ts` — resolves `templatesDir()`/`sharedDir()`/`hostDir()`/
+  `packageJsonPath()` relative to the compiled entry file via
+  `new URL(..., import.meta.url)`, **never** `process.cwd()` — this is what
+  makes it work identically via `npx`, a global install, and
+  `node dist/cli.js` run locally.
 
-Only `agents/claude.ts` is Claude-Code-specific; adding another agent means a
-new file under `src/agents/` plus a new `case` in `cli.ts`'s dispatch.
+Adding another agent means a new file under `src/agents/` plus an entry in
+`cli.ts`'s `AGENTS` map and a `templates/hosts/<name>/prompt.md`.
 
-## Architecture — the bundled plugin (`templates/claude/`)
+Codex is the odd one out for the payload's *command* half: it has no
+slash-command slot (it dropped `$CODEX_HOME/prompts` in 0.117.0), so
+`awc-status` ships there as a second skill via `copyCommandsAsSkills`. Do not
+"restore" a `prompts/` dir — it is never read, and a file sitting in it passes
+every on-disk check while doing nothing. `scripts/smoke.sh` guards this by
+asserting each host actually *loads* the payload (`codex debug prompt-input`,
+`opencode debug skill` + `debug config`), run from a scratch dir so this
+repo's own AGENTS.md cannot satisfy the grep.
+
+The three hosts are injected differently, and that asymmetry is the main thing
+to keep straight (full table in `SPEC.md`): Claude Code takes a whole plugin
+from `--plugin-dir`, while Codex (`CODEX_HOME`) and opencode
+(`OPENCODE_CONFIG_DIR`) read one config directory that the env var *replaces*
+rather than extends. Hence `shadow`: symlink every entry of the user's real
+config dir into the temp dir, but make the skill/command dirs real folders
+holding links to the user's entries plus our payload. Staging never writes
+into the real config dir; the agent writing through a link (a refreshed token,
+a new session file) lands where it should.
+
+## Architecture — the bundled content (`templates/`)
 
 ```
-templates/claude/
-├── prompt.md                        # initial message injected into the launched session
-└── plugin/
-    ├── .claude-plugin/plugin.json
-    ├── commands/awc-status.md       # /awc-status
-    └── skills/workflow-creator/
-        ├── SKILL.md                 # the skill's process (recon → interview → design → write → validate)
-        ├── references/
-        │   ├── interview.md         # what to ask, one question per turn
-        │   └── agent-catalog.md     # bundled base agents: args, return signals, pairing/loop rules
-        └── assets/
-            ├── running.md           # the YAML dialect's execution contract — copied verbatim into every generated package
-            └── agents/*.md          # base agent templates instantiated (tailored) per generated workflow
+templates/
+├── shared/                          # host-neutral; staged into every host under its own dir names
+│   ├── commands/awc-status.md       # /awc-status
+│   └── skills/workflow-creator/
+│       ├── SKILL.md                 # the skill's process (recon → interview → design → write → validate)
+│       ├── references/
+│       │   ├── interview.md         # what to ask, one question per turn
+│       │   ├── agent-catalog.md     # bundled base agents: args, return signals, pairing/loop rules
+│       │   └── hosts.md             # the three launcher files a generated package ships
+│       └── assets/
+│           ├── running.md           # the YAML dialect's execution contract — copied verbatim into every generated package
+│           └── agents/*.md          # base agent templates instantiated (tailored) per generated workflow
+└── hosts/
+    ├── claude/{prompt.md, plugin/.claude-plugin/plugin.json}
+    ├── codex/prompt.md
+    └── opencode/prompt.md
 ```
 
 Key things to know before touching this content:
@@ -93,15 +119,20 @@ Key things to know before touching this content:
 - `test/staging.test.ts` cross-checks `references/agent-catalog.md`'s agent
   table against `assets/agents/*.md` in both directions — adding or removing
   a bundled agent template requires updating the catalog table row, or the
-  test fails.
+  test fails. It also drives each host's `stage*` function directly, so a new
+  host needs a case there.
 - The generated YAML dialect (nodes: `run:`, `agent:`+`prompt:`, `loop:`,
   `gate:`, `when:`) is fully specified in `assets/running.md` — read it
   before changing anything that touches how workflows are authored or
   executed.
-- Generated launch commands (`.claude/commands/<name>.md`) substitute
-  `$ARGUMENTS` exactly once into a fenced block; prose in that file must
-  never mention the literal placeholder elsewhere, since the harness
-  rewrites every occurrence before the model sees it.
+- Every generated package ships **three** launchers — `.claude/commands/`,
+  `.codex/skills/`, `.opencode/command/` — specified in `references/hosts.md`.
+  The Claude Code and opencode ones substitute `$ARGUMENTS` exactly once into
+  a fenced block; prose in those files must never mention the literal
+  placeholder elsewhere, since the harness rewrites every occurrence before
+  the model sees it (which is why `hosts.md` backslash-escapes it throughout).
+  Codex has no project-level slash commands, so its launcher is a project
+  skill triggered by its `description` instead.
 - Generated packages must read positively — no "(no worktree)", "NOT TDD",
   or similar negation echoes of ruled-out alternatives; SKILL.md's
   validation checklist greps for this before handoff.
