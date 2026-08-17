@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test'
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { templatesDir } from '../src/paths'
@@ -26,9 +33,42 @@ describe('stage', () => {
     expect(
       existsSync(path.join(tmp, 'plugin', 'commands', 'awc-status.md')),
     ).toBe(true)
-    expect(existsSync(path.join(tmp, 'plugin', 'scripts', 'scaffold.sh'))).toBe(
-      true,
+    expect(
+      existsSync(
+        path.join(
+          tmp,
+          'plugin',
+          'skills',
+          'workflow-creator',
+          'assets',
+          'running.md',
+        ),
+      ),
+    ).toBe(true)
+    cleanup(tmp)
+  })
+
+  test('stages every agent template the catalog documents, and only those', () => {
+    const tmp = freshTmp()
+    stage(tmp, claudeTemplate)
+    const skillDir = path.join(tmp, 'plugin', 'skills', 'workflow-creator')
+    const catalog = readFileSync(
+      path.join(skillDir, 'references', 'agent-catalog.md'),
+      'utf8',
     )
+    // Table rows look like: | `agent_name` | ... |
+    const catalogAgents = [...catalog.matchAll(/^\| `([a-z_]+)` \|/gm)].map(
+      (m) => `${m[1]}.md`,
+    )
+    expect(catalogAgents.length).toBeGreaterThan(0)
+    const agentsDir = path.join(skillDir, 'assets', 'agents')
+    for (const agent of catalogAgents) {
+      expect(existsSync(path.join(agentsDir, agent))).toBe(true)
+    }
+    // Reverse direction: every staged template is documented in the catalog.
+    for (const file of readdirSync(agentsDir)) {
+      expect(catalogAgents).toContain(file)
+    }
     cleanup(tmp)
   })
 

@@ -19,9 +19,9 @@ Base: <base>.` — every path below is under `.awc/tasks/<task>/`. `<commands>`
 lists the exact check commands to run (test, typecheck/lint, build, smoke):
 run those and only those, never guessed or substituted alternatives. `<base>`
 is the git ref the dependency diff runs against — never a guessed ref. A
-missing `Commands:` or `Base:` argument is `DOD_FAILED`, naming it. Write `dod.md` and state the verdict in
-it. You do not end the loop — a fix step runs after you, so expect to be
-re-run on `DOD_FAILED`.
+missing `Commands:` or `Base:` argument is `DOD_FAILED`, naming it. 
+Write `dod.md` and state the verdict in it. You do not end the loop 
+— a fix step runs after you, so expect to be re-run on `DOD_FAILED`.
 
 ## Protocol
 

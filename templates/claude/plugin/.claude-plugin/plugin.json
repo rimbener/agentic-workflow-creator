@@ -1,0 +1,8 @@
+{
+  "name": "awc",
+  "description": "Agentic workflow creator toolkit (session-only, staged by awc)",
+  "author": {
+    "name": "Hernán Laura"
+  },
+  "version": "0.1.0"
+}
