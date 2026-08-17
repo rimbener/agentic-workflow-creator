@@ -153,7 +153,12 @@ for (const wf of workflows) {
 const skillRunning = runningMdRef && existsSync(runningMdRef) ? readFileSync(runningMdRef, 'utf8') : null
 const runningCandidates = files.filter((f) => /running\.md$/i.test(f))
 report.package = {
-  launcherCommands: files.filter((f) => rel(f).startsWith('.claude/commands/')).map(rel),
+  // One launcher per supported host; graders check all three are present and agree.
+  launchers: {
+    claude: files.filter((f) => rel(f).startsWith('.claude/commands/')).map(rel),
+    codex: files.filter((f) => rel(f).startsWith('.codex/skills/')).map(rel),
+    opencode: files.filter((f) => /^\.opencode\/commands?\//.test(rel(f))).map(rel),
+  },
   agentFiles: files.filter((f) => /agents\/[^/]+\.md$/.test(rel(f))).map(rel),
   scriptFiles: files
     .filter((f) => /scripts\/[^/]+\.(sh|mjs|ts|js|py)$/.test(rel(f)))

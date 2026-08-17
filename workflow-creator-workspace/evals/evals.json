@@ -5,12 +5,12 @@
       "id": 0,
       "name": "full-pipeline-bun-tdd",
       "prompt": "I want a reusable workflow for building features in this repo, run by an agent orchestrator (a workflow lead) step by step. My flow: work in a git worktree cut from main; bun install to bootstrap; first a user-story interview with me, then a spec with gherkin acceptance criteria, an automated spec review with fixes, and I sign off on the spec exactly once; implementation in vertical slices, strict TDD, with a quick review of every slice; after all slices, one exhaustive engineering review; then a final definition-of-done validation; finish with the branch left ready for me to open the PR myself. The quality gates I want are exactly the ones listed \u2014 the per-slice reviews, the one exhaustive review, and the DoD validation. Create the whole thing: the workflow file, the agents it needs, any scripts, and a way to launch it. I'm away from the keyboard after sending this \u2014 where I haven't specified something, go with your recommended default and complete the package in this session.",
-      "expected_output": "A workflow package: workflows/<name>/<name>.yaml with tiny nodes (worktree + install as separate nodes, story loop, spec loop with Format: gherkin, spec review + fixes, single approval loop, TDD slice loop with quick per-slice review, exhaustive review round, DoD settle, PR-ready finish), agents/ with workflow_lead + the referenced agents, running.md execution contract, README, and a .claude/commands launcher \u2014 all written in positive terms.",
+      "expected_output": "A workflow package: workflows/<name>/<name>.yaml with tiny nodes (worktree + install as separate nodes, story loop, spec loop with Format: gherkin, spec review + fixes, single approval loop, TDD slice loop with quick per-slice review, exhaustive review round, DoD settle, PR-ready finish), agents/ with workflow_lead + the referenced agents, running.md execution contract, README, and launchers for Claude Code, Codex and opencode \u2014 all written in positive terms.",
       "files": [
         "fixtures/bun-app"
       ],
       "expectations": [
-        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and a launcher command file under .claude/commands/ that points at the workflow",
+        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and launcher files for all three hosts — .claude/commands/<name>.md, .codex/skills/<name>/SKILL.md and .opencode/command/<name>.md — each pointing at the same workflow with the same input mapping",
         "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
         "no-multiline-inline-shell: no command in any node or loop step contains a newline or chained multi-step shell logic \u2014 anything bigger is a script file",
         "setup-steps-are-separate-nodes: creating the git worktree and running bun install are two separate nodes, and no generated script bundles more than one setup concern (install, git operations, seeding folders, starting servers)",
@@ -35,7 +35,7 @@
         "fixtures/docs-site"
       ],
       "expectations": [
-        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and a launcher command file under .claude/commands/ that points at the workflow",
+        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and launcher files for all three hosts — .claude/commands/<name>.md, .codex/skills/<name>/SKILL.md and .opencode/command/<name>.md — each pointing at the same workflow with the same input mapping",
         "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
         "current-branch-no-worktree: the workflow runs in place \u2014 no worktree/workdir setup and no git worktree command anywhere",
         "no-code-pipeline-baggage: the workflow contains no test, typecheck, build, CI, or mutation nodes \u2014 the repo has none of those",
@@ -58,7 +58,7 @@
         "fixtures/bun-app"
       ],
       "expectations": [
-        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and a launcher command file under .claude/commands/ that points at the workflow",
+        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and launcher files for all three hosts — .claude/commands/<name>.md, .codex/skills/<name>/SKILL.md and .opencode/command/<name>.md — each pointing at the same workflow with the same input mapping",
         "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
         "current-branch-no-worktree: the workflow runs in place \u2014 no worktree/workdir setup and no git worktree command anywhere",
         "split-pairing-not-tdd: the slice loop uses an implementer (production code only) AND a separate unit-test writer (tests only) as independent steps \u2014 no strict-TDD self-contained implementer",
