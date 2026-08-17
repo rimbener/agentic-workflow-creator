@@ -23,3 +23,7 @@ Added a README section on using `awc` from this checkout via `npm link` (or by p
 ## 2026-08-17 — `048ff2f` — chore(agents): add repo-tailored /commit command
 
 Added the Conventional Commits `/commit` command, adapted from the generic monorepo version to this repo's single-package layout.
+
+## 2026-08-17 — `5e03fdf` — chore: add AGENTS.md and wire up Claude Code compatibility symlinks
+
+Added the repo guidance as AGENTS.md, with CLAUDE.md symlinked to it, and symlinked `.claude/commands` to `.agents/commands` so Claude Code reads the same repo-tailored `/commit` command from one source of truth.
