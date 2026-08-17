@@ -93,11 +93,13 @@ templates/claude/
     │   └── plugin.json              # { name, description, version }
     ├── skills/
     │   └── workflow-creator/
-    │       └── SKILL.md             # guides the agent through designing a workflow
-    ├── commands/
-    │   └── awc-status.md            # /awc-status — summarize workflow progress
-    └── scripts/
-        └── scaffold.sh              # helper the skill can invoke
+    │       ├── SKILL.md             # interview → design → generate a lead-run workflow package
+    │       ├── references/          # YAML-authoring guide: interview checklist, agent catalog
+    │       └── assets/
+    │           ├── running.md       # execution contract, copied into every generated package
+    │           └── agents/          # base agent templates the skill instantiates per workflow
+    └── commands/
+        └── awc-status.md            # /awc-status — summarize workflow progress
 ```
 
 The template content is a starting point; iterating on it does not require code changes.

@@ -47,6 +47,38 @@ Everything after `--` is passed through to the `claude` CLI verbatim, e.g.:
 awc claude -- --model opus
 ```
 
+## Use locally (without publishing)
+
+To use `awc` in your other projects straight from this checkout, link it
+globally once:
+
+```bash
+cd /path/to/agentic-workflow-creator
+bun run build
+npm link
+```
+
+Then, in any project:
+
+```bash
+awc claude
+```
+
+Because the link is a symlink to the working copy — and templates are read
+from it at runtime, not bundled — edits to the skill, agent templates, or
+commands are live on the next `awc claude`; only `src/` changes need a fresh
+`bun run build`. Undo with `npm unlink -g agentic-workflow-creator`.
+
+Alternatively, skip installing and run it by path (or alias it):
+
+```bash
+node /path/to/agentic-workflow-creator/dist/cli.js claude
+```
+
+To rehearse the real published install, `npm pack` builds the tarball and
+`npm i -g ./agentic-workflow-creator-<version>.tgz` installs exactly what
+would ship.
+
 ## Requirements
 
 - Node.js >= 18
