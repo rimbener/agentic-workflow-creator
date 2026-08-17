@@ -16,6 +16,8 @@ Read these before starting (silently — they are your working knowledge):
 - `references/agent-catalog.md` — the bundled agents, their arguments and
   signals, the canonical loop shapes, and the rules for authoring new agents.
 - `references/interview.md` — how to interview and every area to settle.
+- `references/hosts.md` — the three launcher files every package ships, and
+  the one thing that differs between Claude Code, Codex and opencode.
 
 ## Process
 
@@ -32,7 +34,7 @@ Read these before starting (silently — they are your working knowledge):
 4. **Write the package** (layout below): the YAML, the agents (instantiate
    bundled bases tailored to this workflow's steps; author missing ones —
    both per the catalog's rules), the scripts, `running.md` copied verbatim
-   from `assets/running.md`, a short README, and the launch command.
+   from `assets/running.md`, a short README, and the three launchers.
 5. **Validate** (checklist below), then hand off: how to launch, what the run
    will ask of them, and where the artifacts land.
 
@@ -86,42 +88,21 @@ workflows/<name>/
 ├── running.md         # execution contract — verbatim copy of assets/running.md
 ├── agents/            # workflow_lead.md + every agent the nodes reference
 └── scripts/           # one script = one thing; chmod +x
-.claude/commands/<name>.md   # the launch command
+.claude/commands/<name>.md      # launcher — Claude Code
+.codex/skills/<name>/SKILL.md   # launcher — Codex
+.opencode/command/<name>.md     # launcher — opencode
 ```
 
-The launch command file maps its arguments onto the workflow's declared
-`inputs:`. Two hazards shape its layout: the harness substitutes `$`-
-placeholders *everywhere* in the file before the model reads it, so
-instruction prose must never mention one — a sentence explaining a
-placeholder gets rewritten into nonsense; and id-like inputs feed paths and
-branch names, so a stray word poisons them. Therefore: substitute
-`\$ARGUMENTS` exactly once, into a fenced slot, and spell the input mapping
-in plain words the lead applies to that slot. Generate the mapping from the
-workflow's actual input list. (The placeholder is backslash-escaped
-throughout this file so your own invocation leaves it intact — the launcher
-file you write must carry the literal placeholder with no backslash.) For
-the common `task` + `request` pair:
+Everything under `workflows/<name>/` is host-neutral and written once. The
+three launcher files are the same four instructions in each host's own
+wrapper — `references/hosts.md` has the file templates, the argument
+placeholder each host substitutes, and the hazards that shape them. Write all
+three from that reference, generating the input mapping from this workflow's
+actual `inputs:` list, and keep their wording aligned so a reader comparing
+two of them sees one workflow.
 
-```markdown
----
-description: Run the <name> workflow
-argument-hint: <task-id> <the request, in your own words>
----
-
-You are the workflow lead for this run — coordination only.
-
-The launch arguments, verbatim:
-<args>
-\$ARGUMENTS
-</args>
-
-1. Read workflows/<name>/agents/workflow_lead.md — that is your role; follow it exactly.
-2. Read workflows/<name>/running.md — the execution contract for the workflow file.
-3. Fill the workflow's inputs from the args block: the first word is `task`
-   (the kebab id); everything after it is `request`. A missing required
-   input is `blocked` — ask for it instead of running.
-4. Run the workflow, top to bottom: Task: <task>. Mode: run. Workflow: workflows/<name>/<name>.yaml.
-```
+The README's "how to launch" section names all three: the slash command for
+Claude Code and opencode, and the trigger phrase for Codex.
 
 ## The YAML at a glance
 
@@ -194,8 +175,13 @@ nodes come from its own interview.
   allows it.
 - Every `{{placeholder}}` is a declared input, a var, or a loop-only one.
 - The package contains `running.md`, `agents/workflow_lead.md`, and every
-  referenced agent; the launch command points at the right paths and maps its
-  arguments onto every declared input.
+  referenced agent.
+- All three launchers exist — `.claude/commands/<name>.md`,
+  `.codex/skills/<name>/SKILL.md`, `.opencode/command/<name>.md` — each
+  pointing at the right paths and mapping its arguments onto every declared
+  input. The two that substitute placeholders carry exactly one, inside its
+  fenced slot and nowhere else in the file; the Codex skill's `description`
+  names the phrases that should trigger it.
 - The package reads positively: grep the generated README, YAML comments, and
   agent prompts for negation echoes (`no `, `not `, `ruled out`) and restate
   any decision-echo you find as what the workflow does. An agent's own hard

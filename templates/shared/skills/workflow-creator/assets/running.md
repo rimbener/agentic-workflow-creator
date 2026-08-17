@@ -43,7 +43,10 @@ failure; quote it, don't summarize it.
 1. Read the agent file (`agent:` is a path relative to this folder).
 2. Spawn **one** subagent whose prompt is: the agent file's body, then a
    `---` divider, then the node's `prompt:` with placeholders filled. The
-   subagent works in the working directory.
+   subagent works in the working directory. Use whatever your host calls to
+   spawn one — Claude Code's Task tool, Codex's `spawn_agent`, opencode's
+   `task` tool. The agent files here are plain prompts, read by you and
+   passed on; they need no registration with the host.
 3. Judge the step **only** by the subagent's final return line against
    `expect:` — a word, or list of words, the line must start with. Inside a
    loop, a return ending with `<promise>TOKEN</promise>` whose TOKEN names an

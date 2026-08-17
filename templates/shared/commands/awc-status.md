@@ -1,5 +1,5 @@
 ---
-description: Summarize the current workflow-creation session progress
+description: Summarize progress of the current awc workflow-creation session. Use when the user asks for awc status, how the workflow build is going, or where things got to.
 ---
 
 Summarize the current awc workflow-creation session:

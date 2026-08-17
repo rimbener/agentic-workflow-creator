@@ -1,11 +1,13 @@
 {
   "name": "agentic-workflow-creator",
   "version": "0.1.0",
-  "description": "Launch an AI coding agent pre-loaded with curated skills, commands, and scripts — zero footprint.",
+  "description": "Launch Claude Code, Codex, or opencode pre-loaded with curated skills, commands, and scripts — zero footprint.",
   "keywords": [
     "awc",
     "claude",
     "claude-code",
+    "codex",
+    "opencode",
     "agent",
     "workflow",
     "cli"
@@ -27,7 +29,7 @@
     "build": "bun build src/cli.ts --target=node --outdir dist && chmod +x dist/cli.js",
     "typecheck": "bunx tsc --noEmit",
     "test": "bun test",
-    "smoke": "node dist/cli.js claude -- --version",
+    "smoke": "bash scripts/smoke.sh",
     "check": "biome check",
     "format": "biome format --write",
     "lint": "biome lint"

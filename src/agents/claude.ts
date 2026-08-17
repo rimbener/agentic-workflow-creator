@@ -1,47 +1,37 @@
-import { spawn } from 'node:child_process'
+import { cpSync } from 'node:fs'
 import path from 'node:path'
-import { templatesDir } from '../paths'
-import { cleanup, readPrompt, stage } from '../staging'
+import { hostDir, sharedDir } from '../paths'
+import { copyPayload, readPrompt, resetTmp } from '../staging'
+import { type AgentOptions, launch } from './run'
 
-export interface ClaudeOptions {
-  tmpDir: string
-  keep: boolean
-  passthrough: string[]
+// Claude Code loads a whole plugin from one flag, so staging is a plain copy:
+// the host's manifest plus the shared payload under the plugin's own names.
+export function stageClaude(tmpDir: string): string {
+  const host = hostDir('claude')
+  const pluginDir = path.join(tmpDir, 'plugin')
+
+  resetTmp(tmpDir)
+  cpSync(path.join(host, 'plugin'), pluginDir, { recursive: true })
+  copyPayload(
+    sharedDir(),
+    path.join(pluginDir, 'skills'),
+    path.join(pluginDir, 'commands'),
+  )
+  return pluginDir
 }
 
-export function runClaude(opts: ClaudeOptions): void {
-  const templateDir = path.join(templatesDir(), 'claude')
-  stage(opts.tmpDir, templateDir)
+export function runClaude(opts: AgentOptions): void {
+  const pluginDir = stageClaude(opts.tmpDir)
 
-  process.on('exit', () => {
-    if (!opts.keep) cleanup(opts.tmpDir)
+  launch(opts, {
+    bin: 'claude',
+    args: [
+      '--plugin-dir',
+      pluginDir,
+      readPrompt(hostDir('claude')),
+      ...opts.passthrough,
+    ],
+    installHint:
+      'Install Claude Code first: npm install -g @anthropic-ai/claude-code',
   })
-  // Ctrl+C reaches the whole foreground process group; Claude Code uses it
-  // internally (interrupt turn / exit), so the wrapper must survive it and
-  // only clean up once the child actually exits.
-  process.on('SIGINT', () => {})
-  process.on('SIGTERM', () => process.exit(143))
-
-  const args = [
-    '--plugin-dir',
-    path.join(opts.tmpDir, 'plugin'),
-    readPrompt(templateDir),
-    ...opts.passthrough,
-  ]
-
-  const child = spawn('claude', args, { stdio: 'inherit' })
-
-  child.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'ENOENT') {
-      console.error('awc: `claude` was not found on your PATH.')
-      console.error(
-        'Install Claude Code first: npm install -g @anthropic-ai/claude-code',
-      )
-    } else {
-      console.error(`awc: failed to launch claude: ${err.message}`)
-    }
-    process.exit(1)
-  })
-
-  child.on('close', (code) => process.exit(code ?? 0))
 }
