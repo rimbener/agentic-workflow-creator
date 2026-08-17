@@ -1,0 +1,79 @@
+{
+  "skill_name": "workflow-creator",
+  "evals": [
+    {
+      "id": 0,
+      "name": "full-pipeline-bun-tdd",
+      "prompt": "I want a reusable workflow for building features in this repo, run by an agent orchestrator (a workflow lead) step by step. My flow: work in a git worktree cut from main; bun install to bootstrap; first a user-story interview with me, then a spec with gherkin acceptance criteria, an automated spec review with fixes, and I sign off on the spec exactly once; implementation in vertical slices, strict TDD, with a quick review of every slice; after all slices, one exhaustive engineering review; then a final definition-of-done validation; finish with the branch left ready for me to open the PR myself. The quality gates I want are exactly the ones listed \u2014 the per-slice reviews, the one exhaustive review, and the DoD validation. Create the whole thing: the workflow file, the agents it needs, any scripts, and a way to launch it. I'm away from the keyboard after sending this \u2014 where I haven't specified something, go with your recommended default and complete the package in this session.",
+      "expected_output": "A workflow package: workflows/<name>/<name>.yaml with tiny nodes (worktree + install as separate nodes, story loop, spec loop with Format: gherkin, spec review + fixes, single approval loop, TDD slice loop with quick per-slice review, exhaustive review round, DoD settle, PR-ready finish), agents/ with workflow_lead + the referenced agents, running.md execution contract, README, and a .claude/commands launcher \u2014 all written in positive terms.",
+      "files": [
+        "fixtures/bun-app"
+      ],
+      "expectations": [
+        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and a launcher command file under .claude/commands/ that points at the workflow",
+        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
+        "no-multiline-inline-shell: no command in any node or loop step contains a newline or chained multi-step shell logic \u2014 anything bigger is a script file",
+        "setup-steps-are-separate-nodes: creating the git worktree and running bun install are two separate nodes, and no generated script bundles more than one setup concern (install, git operations, seeding folders, starting servers)",
+        "loops-bounded-and-exitable: every loop declares max_iterations and exactly one explicit exit condition (a completion signal or a command-based check)",
+        "agent-steps-carry-required-args: every agent invocation passes the arguments its agent definition requires (e.g. verification commands for implementer/reviewer steps, a base ref for the engineering review, a format for the spec step)",
+        "gherkin-format-requested: the spec-writing step explicitly requests Gherkin acceptance criteria",
+        "tdd-not-split-pairing: the slice build loop uses a strict-TDD implementer that owns both tests and code, and does NOT also include a separate unit-test-writer agent in that loop",
+        "phases-match-request: the node sequence includes a user-story interview loop, a spec + automated spec review + fix step, exactly one human spec sign-off, a slice loop with a quick per-slice review, exactly one exhaustive engineering review after all slices, and a DoD validation \u2014 and contains NO mutation-testing and NO push/PR-opening node",
+        "execution-contract-shipped: the package includes a running/execution-contract document that defines the node semantics for the lead (with the skill: a verbatim copy of the skill's assets/running.md)",
+        "quiet-commands: test/check commands in the YAML prefer failure-only or quiet output variants (e.g. bun test --only-failures, install --silent)",
+        "referenced-files-exist: every agent path and script path referenced by the YAML exists in the package, and scripts are executable",
+        "positive-phrasing: the generated artifacts (README, YAML comments, agent prompts) describe every decision in positive terms \u2014 what the workflow does \u2014 with no negation echoes such as 'no worktree', 'non-gherkin', 'NOT TDD', 'no mutation testing', or 'ruled out'",
+        "agents-scoped-to-workflow: every packaged agent copy is tailored to this workflow \u2014 no agent carries a mode no node invokes, and none checks an artifact no node produces (in particular, the DoD/validation agent makes no reference to mutation artifacts, since this workflow has no mutation step)"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "docs-workflow-agnostic",
+      "prompt": "This repo is our markdown docs site. I want a workflow an agent lead can run step by step: given a page id and a rough ask, an outline interview with me (one question at a time) to settle the outline; then a writer agent drafts the page under docs/; then an edit loop \u2014 an editor agent reviews the draft and the writer fixes findings \u2014 capped at 3 rounds; then a link-check script I want written (checks that relative markdown links in docs/ resolve); and finally I approve the page before the run ends. Work on the current branch. The only automated check in this repo is the link-check script you'll write. Please create the workflow file, the agents, the script, and a launcher. I'm away while you build this \u2014 use your best recommendations for anything unspecified and complete the package in this session.",
+      "expected_output": "A non-code workflow package proving the creator is domain-agnostic: runs in place on the current branch, an interview loop, newly authored writer + editor agents following the design rules (agnostic, isolated, one return line), an edit loop capped at 3, a single-purpose executable link-check script as its own node, a final gate, and the standard package skeleton (yaml, running.md, workflow_lead, README, launcher) \u2014 all written in positive terms.",
+      "files": [
+        "fixtures/docs-site"
+      ],
+      "expectations": [
+        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and a launcher command file under .claude/commands/ that points at the workflow",
+        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
+        "current-branch-no-worktree: the workflow runs in place \u2014 no worktree/workdir setup and no git worktree command anywhere",
+        "no-code-pipeline-baggage: the workflow contains no test, typecheck, build, CI, or mutation nodes \u2014 the repo has none of those",
+        "outline-interview-loop: the outline interview is a bounded loop designed for one-question-per-turn relay to the human, with a completion signal",
+        "new-agents-follow-design-rules: writer and editor are two separate newly authored agent files, each with name+description frontmatter, a single-line return convention with an explicit signal, arguments passed via invocation (not baked-in repo facts), and neither referencing the other agent by name",
+        "edit-loop-capped-at-3: the editor-reviews/writer-fixes loop has max_iterations 3 and an explicit exit condition",
+        "linkcheck-script-single-purpose: the link-check script exists in the package, is executable, does exactly one thing (verify relative markdown links in docs/ resolve), is invoked by its own dedicated node, and works when actually executed \u2014 a clean pass on the repo's docs and a reported failure on an injected broken link",
+        "final-human-approval: a human approval gate (or interactive approval loop) is the last meaningful step before the run ends",
+        "no-multiline-inline-shell: no command in any node or loop step contains a newline or chained multi-step shell logic",
+        "execution-contract-shipped: the package includes a running/execution-contract document that defines the node semantics for the lead (with the skill: a verbatim copy of the skill's assets/running.md)",
+        "positive-phrasing: the generated artifacts (README, YAML comments, agent prompts) describe every decision in positive terms \u2014 what the workflow does \u2014 with no negation echoes such as 'no worktree', 'no build', or 'ruled out'"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "mutation-split-pairing",
+      "prompt": "Set up a feature workflow for this Bun/TypeScript repo that a workflow-lead agent executes node by node. Requirements: run on the current branch. Spec phase: plain acceptance criteria, an automated spec review, and a single human approval of the spec. Build in vertical slices, with production code and unit tests owned by two independent agents \u2014 an implementer that owns only the production code, and a unit-test writer that owns only the tests \u2014 plus a quick review each slice. After the build: a full engineering review capped at 2 rounds, then mutation testing with StrykerJS scoped to the changed files, capped at 3 rounds \u2014 the mutation loop's exit must be decided solely by a script reading Stryker's own log. Then a definition-of-done validation. The .awc task trail should be committed with the work. Create everything: workflow file, agents, scripts, launcher. Use recommended defaults for the rest; I'm offline until tomorrow, so make your recommended calls and complete the package in this session.",
+      "expected_output": "A package using the split pairing (implementer + unit_test_writer), quick slice reviews, an engineering review round capped at 2 with CI steps around it, a mutation round capped at 3 ending on until_run with a strict gate script that reads Stryker's log, mutation_tester invoked with the log path, dod settle loop, running in place on the current branch, and the standard package skeleton \u2014 all written in positive terms.",
+      "files": [
+        "fixtures/bun-app"
+      ],
+      "expectations": [
+        "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and a launcher command file under .claude/commands/ that points at the workflow",
+        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
+        "current-branch-no-worktree: the workflow runs in place \u2014 no worktree/workdir setup and no git worktree command anywhere",
+        "split-pairing-not-tdd: the slice loop uses an implementer (production code only) AND a separate unit-test writer (tests only) as independent steps \u2014 no strict-TDD self-contained implementer",
+        "plain-format-and-single-approval: the spec step requests plain acceptance criteria, an automated spec review runs before the human, and there is exactly one human spec sign-off",
+        "review-round-verified-tree: the engineering review loop is capped at 2, the reviewer receives a base ref, never runs CI itself, and the round has a CI/check command step before the reviewer and again after the fix step",
+        "mutation-exit-is-a-script: the mutation loop is capped at 3 and exits via a command/script check (until_run or equivalent) whose script reads the mutation tool's own log or report output \u2014 never an agent-emitted completion signal \u2014 and the gate is strict: any surviving or uncovered mutant fails it (a lenient default threshold such as 80% must not pass it)",
+        "mutation-reporter-gets-log: the mutation-report agent step receives the path to the captured mutation log in its invocation, and a preceding node runs Stryker scoped to changed files capturing that log",
+        "mutation-fixes-routed: the mutation loop routes fixes to the right owners \u2014 production-defect kills to the implementer, test-side kills to the unit-test writer \u2014 and re-runs checks before the next mutation round",
+        "dod-settle-loop: a DoD validation step receives the check commands and a base ref, in a bounded loop with fix step(s) after it",
+        "scripts-single-purpose: every generated script does exactly one thing, is executable, and no node hides multi-step shell logic inline",
+        "execution-contract-shipped: the package includes a running/execution-contract document that defines the node semantics for the lead (with the skill: a verbatim copy of the skill's assets/running.md)",
+        "quiet-commands: test/check commands prefer failure-only or quiet output variants (e.g. bun test --only-failures)",
+        "positive-phrasing: the generated artifacts (README, YAML comments, agent prompts) describe every decision in positive terms \u2014 what the workflow does \u2014 with no negation echoes such as 'no worktree', 'non-gherkin', 'NOT TDD', or 'ruled out'",
+        "agents-scoped-to-workflow: every packaged agent copy is tailored to this workflow \u2014 no agent carries a mode no node invokes and none checks an artifact no node produces (e.g. if there is no post-mutation delta-review node, the engineering reviewer ships without a delta-review mode)"
+      ]
+    }
+  ]
+}
