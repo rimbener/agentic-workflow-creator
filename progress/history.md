@@ -27,3 +27,15 @@ Added the Conventional Commits `/commit` command, adapted from the generic monor
 ## 2026-08-17 — `5e03fdf` — chore: add AGENTS.md and wire up Claude Code compatibility symlinks
 
 Added the repo guidance as AGENTS.md, with CLAUDE.md symlinked to it, and symlinked `.claude/commands` to `.agents/commands` so Claude Code reads the same repo-tailored `/commit` command from one source of truth.
+
+## 2026-08-17 — `2bd0a57` — feat(cli): add Codex and opencode hosts
+
+Split the payload into `templates/shared` plus per-host staging. Codex and opencode get a shadowed config dir so the session loads the skill without writing into the user's real home. Generated packages now ship a launcher for each host. Smoke checks every installed binary actually loads it.
+
+## 2026-08-17 — `2dea88c` — test(evals): require a launcher per host
+
+Generated packages now ship Claude, Codex, and opencode launchers. The fact-checker reports all three so graders can check they agree.
+
+## 2026-08-17 — `f6f2059` — docs: document multi-host staging and generated launchers
+
+SPEC and README now cover the three hosts, the shadow config dir, and the per-host launchers a generated package ships. AGENTS.md matches.
