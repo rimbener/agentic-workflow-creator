@@ -4,3 +4,4 @@ dist/
 .awc-smoke-tmp/
 
 workflows-examples/*
+.vscode/autosave-editor.txt
