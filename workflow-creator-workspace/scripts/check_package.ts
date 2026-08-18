@@ -2,8 +2,9 @@
 // Usage: bun check_package.ts <repo-dir> <skill-running-md-path>
 // Prints a JSON facts report; it never judges — graders combine these facts
 // with their own reading of the files.
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
+import { loadHosts, parseHostsConf } from '../../src/hosts'
 
 const repo = process.argv[2]
 const runningMdRef = process.argv[3]
@@ -25,6 +26,8 @@ function walk(dir: string, out: string[] = []): string[] {
 
 const files = walk(repo)
 const rel = (p: string) => path.relative(repo, p)
+const isExec = (p: string) => (statSync(p).mode & 0o111) !== 0
+const GIT_WORKTREE = /git\s+worktree/
 
 // Find candidate workflow YAMLs: any yaml with a top-level nodes/steps/jobs list.
 const yamlFiles = files.filter((f) => /\.ya?ml$/.test(f))
@@ -132,7 +135,7 @@ for (const wf of workflows) {
       scripts: Object.fromEntries(refs.scripts.map((s) => [s, resolveRef(s)])),
     },
     greps: {
-      git_worktree: /git\s+worktree/.test(raw),
+      git_worktree: GIT_WORKTREE.test(raw),
       gherkin: /gherkin/i.test(raw),
       format_plain: /Format:\s*plain/i.test(raw),
       only_failures: /--only-failures/.test(raw),
@@ -149,6 +152,14 @@ for (const wf of workflows) {
   })
 }
 
+const workflowNames = new Set(
+  workflows.map((w) => path.basename(path.dirname(w.file))).filter((n) => n && n !== '.'),
+)
+
+const skillRoster = loadHosts()
+  .map((h) => h.name)
+  .join()
+
 // Package-level facts
 const skillRunning = runningMdRef && existsSync(runningMdRef) ? readFileSync(runningMdRef, 'utf8') : null
 const runningCandidates = files.filter((f) => /running\.md$/i.test(f))
@@ -162,7 +173,27 @@ report.package = {
   agentFiles: files.filter((f) => /agents\/[^/]+\.md$/.test(rel(f))).map(rel),
   scriptFiles: files
     .filter((f) => /scripts\/[^/]+\.(sh|mjs|ts|js|py)$/.test(rel(f)))
-    .map((f) => ({ file: rel(f), executable: (statSync(f).mode & 0o111) !== 0, lines: readFileSync(f, 'utf8').split('\n').length })),
+    .map((f) => ({ file: rel(f), executable: isExec(f), lines: readFileSync(f, 'utf8').split('\n').length })),
+  launchScripts: files
+    .filter((f) => {
+      const r = rel(f)
+      return /^[^/]+\.sh$/.test(r) && workflowNames.has(r.slice(0, -3))
+    })
+    .map((f) => ({
+      file: rel(f),
+      executable: isExec(f),
+      git_worktree: GIT_WORKTREE.test(readFileSync(f, 'utf8')),
+    })),
+  hostConfig: files
+    .filter((f) => rel(f) === 'hosts.conf')
+    .map((f) => {
+      const names = parseHostsConf(readFileSync(f, 'utf8')).map((h) => h.name)
+      return {
+        file: rel(f),
+        names,
+        matchesSkillRoster: names.join() === skillRoster,
+      }
+    }),
   workflowLeadPresent: files.some((f) => /workflow_lead\.md$/.test(f)),
   runningMd: runningCandidates.map((f) => ({
     file: rel(f),
