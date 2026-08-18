@@ -4,7 +4,8 @@ A workflow package is host-neutral everywhere it matters: the YAML, the agent
 files, the scripts and `running.md` are plain text that any of the three
 agents can read. Two things differ per host — **where a run is launched from**
 and **what the lead calls to spawn a subagent** — so every package ships one
-launcher per host and the reader picks the one their tool loads.
+in-session launcher per host. A worktree workflow also ships `./<name>.sh`,
+which creates the tree and starts the host already inside it.
 
 | Host | Launcher file | Arguments arrive as | Lead spawns a subagent with |
 | --- | --- | --- | --- |
@@ -13,7 +14,8 @@ launcher per host and the reader picks the one their tool loads.
 | opencode | `.opencode/command/<name>.md` | `\$ARGUMENTS` | the `task` tool |
 
 Write all three. They are small, they keep one package usable by a team on
-mixed tools, and nothing else in the package changes.
+mixed tools, and nothing else in the package changes. The launch script
+dispatches to the same three binaries; it does not replace these files.
 
 ## The launcher's job
 
@@ -94,3 +96,38 @@ You are the workflow lead for this run — coordination only.
 
 Give the `description` real trigger phrases — it is the only thing that gets
 this skill selected, and a vague one leaves the workflow unreachable.
+
+## Launch script — worktree workflows
+
+Copy `assets/run.sh` to `./<name>.sh` and `assets/hosts.conf` to `./hosts.conf`
+at the target repo root. `chmod +x` the script. Replace only the FILL values
+in the script:
+
+| Placeholder | Set to |
+| --- | --- |
+| `__NAME__` | the workflow's kebab name |
+| `__BRANCH_PREFIX__` | branch is `<prefix>/<task>` (default `task`) |
+| `__WORKTREE_PARENT__` | directory under the main checkout (default `.worktrees`) |
+
+Leave everything below the FILL block alone unless this workflow's `inputs:`
+are not `task` + `request` — then rewrite usage, the args block, and step 3
+of the prompt to match, the same mapping the three in-session launchers use.
+Do not edit `hosts.conf`. Add or remove a host only in
+`assets/hosts.conf` (this skill's copy); the launch script reads it.
+
+The script:
+
+1. Creates `.worktrees/<task>` on `<prefix>/<task>` cut from the current
+   branch (`HEAD`), or reuses that tree if it already exists (resume) — path
+   comparison is physical (`pwd -P`), so a `/tmp` vs `/private/tmp` spelling
+   still resumes.
+2. Refuses to create the tree unless `workflows/<name>/<name>.yaml` is on
+   `HEAD`. `<task>` must be kebab-case. A branch already checked out in
+   another worktree is a clear error, not a raw `git worktree add` failure.
+3. `cd`s into the tree and starts the host with the same four launcher steps,
+   args filled. Interactive TUI — `claude "$PROMPT"`, `codex "$PROMPT"`,
+   `opencode --prompt "$PROMPT"`. Never `claude -p` or `opencode run`.
+4. Does not remove the worktree when the agent exits.
+
+Invocation: `./<name>.sh <task> claude "<request>"` (or `codex` / `opencode`).
+An in-place workflow does not ship this file.

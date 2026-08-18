@@ -12,7 +12,6 @@ types, how to execute each one, and how a run ends.
 | `name`, `description` | identity — state them when the run starts |
 | `inputs` | the values the run starts with; the launch command supplies them |
 | `vars` | fixed values the workflow references (e.g. the project's check commands) |
-| `workdir` | where nodes run once it exists (see Working directory); absent = current branch, in place |
 | `nodes` | the run itself — an ordered list, executed top to bottom, one node at a time |
 
 The `nodes:` list **is** the workflow: never reorder, merge, or invent nodes,
@@ -33,20 +32,20 @@ Every node has an `id` and exactly one behavior.
 
 ### `run:` — one command
 
-Execute the command in the working directory. Non-zero exit halts the run —
-report the node id and the command's output. Commands here are written to
-print output only on failure, so output on your screen usually *is* the
-failure; quote it, don't summarize it.
+Execute the command in the directory the run was launched from. Non-zero
+exit halts the run — report the node id and the command's output. Commands
+here are written to print output only on failure, so output on your screen
+usually *is* the failure; quote it, don't summarize it.
 
 ### `agent:` + `prompt:` — one agent invocation
 
 1. Read the agent file (`agent:` is a path relative to this folder).
 2. Spawn **one** subagent whose prompt is: the agent file's body, then a
    `---` divider, then the node's `prompt:` with placeholders filled. The
-   subagent works in the working directory. Use whatever your host calls to
-   spawn one — Claude Code's Task tool, Codex's `spawn_agent`, opencode's
-   `task` tool. The agent files here are plain prompts, read by you and
-   passed on; they need no registration with the host.
+   subagent works in the directory the run was launched from. Use whatever
+   your host calls to spawn one — Claude Code's Task tool, Codex's
+   `spawn_agent`, opencode's `task` tool. The agent files here are plain
+   prompts, read by you and passed on; they need no registration with the host.
 3. Judge the step **only** by the subagent's final return line against
    `expect:` — a word, or list of words, the line must start with. Inside a
    loop, a return ending with `<promise>TOKEN</promise>` whose TOKEN names an
@@ -88,10 +87,9 @@ judgment.
 
 ## Working directory
 
-Without `workdir:`, every node runs where the run was launched — the current
-branch, in place. With `workdir:`, every node runs there once it exists; a
-node carrying `dir:` runs in that directory instead (that is how the node
-that *creates* the workdir runs before it exists).
+Every node — commands and subagents — runs in the directory the session was
+launched from. Start the host in the checkout that should receive the writes
+(a worktree, or the current branch).
 
 ## Questions and approvals
 

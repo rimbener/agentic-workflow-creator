@@ -16,8 +16,8 @@ Read these before starting (silently — they are your working knowledge):
 - `references/agent-catalog.md` — the bundled agents, their arguments and
   signals, the canonical loop shapes, and the rules for authoring new agents.
 - `references/interview.md` — how to interview and every area to settle.
-- `references/hosts.md` — the three launcher files every package ships, and
-  the one thing that differs between Claude Code, Codex and opencode.
+- `references/hosts.md` — the three in-session launcher files every package
+  ships, plus the launch script a worktree workflow copies from `assets/run.sh`.
 
 ## Process
 
@@ -34,7 +34,9 @@ Read these before starting (silently — they are your working knowledge):
 4. **Write the package** (layout below): the YAML, the agents (instantiate
    bundled bases tailored to this workflow's steps; author missing ones —
    both per the catalog's rules), the scripts, `running.md` copied verbatim
-   from `assets/running.md`, a short README, and the three launchers.
+   from `assets/running.md`, a short README, the three in-session launchers,
+   and — when isolation is a worktree — `./<name>.sh` copied from
+   `assets/run.sh` with the FILL values set.
 5. **Validate** (checklist below), then hand off: how to launch, what the run
    will ask of them, and where the artifacts land.
 
@@ -46,10 +48,11 @@ a script.
 
 **A script does exactly one thing.** A script with internal phases is a
 workflow hiding inside a file — where the lead can't see progress, retry a
-single step, or report where it failed. `bun install` and `git worktree add`
-are two nodes, never one `bootstrap.sh`. Splitting is the default; a script
-earns its place only when its steps are one atomic operation from the
-workflow's point of view.
+single step, or report where it failed. Splitting is the default; a node
+script earns its place only when its steps are one atomic operation from the
+workflow's point of view. The launch script (`./<name>.sh`) is not a node
+script: it creates or reuses the worktree and starts the host, then the lead
+takes over. `bun install` stays its own YAML node.
 
 **Commands print only on failure.** Every line of output lands in someone's
 context. Recommend `bun test --only-failures`, quiet reporters, `--silent`
@@ -82,15 +85,17 @@ does; the road not taken lives only in the creation conversation.
 ## Package layout
 
 ```
+<name>.sh                       # worktree launch — copy of assets/run.sh
+hosts.conf                      # copy of assets/hosts.conf — do not edit
 workflows/<name>/
 ├── <name>.yaml        # the workflow
 ├── README.md          # purpose, node walkthrough table, how to launch
 ├── running.md         # execution contract — verbatim copy of assets/running.md
 ├── agents/            # workflow_lead.md + every agent the nodes reference
 └── scripts/           # one script = one thing; chmod +x
-.claude/commands/<name>.md      # launcher — Claude Code
-.codex/skills/<name>/SKILL.md   # launcher — Codex
-.opencode/command/<name>.md     # launcher — opencode
+.claude/commands/<name>.md      # in-session launcher — Claude Code
+.codex/skills/<name>/SKILL.md   # in-session launcher — Codex
+.opencode/command/<name>.md     # in-session launcher — opencode
 ```
 
 Everything under `workflows/<name>/` is host-neutral and written once. The
@@ -99,14 +104,22 @@ wrapper — `references/hosts.md` has the file templates, the argument
 placeholder each host substitutes, and the hazards that shape them. Write all
 three from that reference, generating the input mapping from this workflow's
 actual `inputs:` list, and keep their wording aligned so a reader comparing
-two of them sees one workflow.
+two of them sees one workflow. A worktree workflow also ships `./<name>.sh`
+from that same reference: copy `assets/run.sh` and `assets/hosts.conf` to the
+repo root as `./<name>.sh` and `./hosts.conf`, fill NAME/BRANCH_PREFIX/
+WORKTREE_PARENT, `chmod +x` the script. An in-place workflow omits both.
 
-The README's "how to launch" section names all three: the slash command for
-Claude Code and opencode, and the trigger phrase for Codex.
+The README's "how to launch" section names the path that applies: worktree →
+`./<name>.sh <task> claude "<request>"` (or `codex` / `opencode`); in-place →
+the slash command for Claude Code and opencode, and the trigger phrase for
+Codex. Commit the package on the current branch before the first worktree run.
+Re-running the script resumes in the existing tree.
 
 ## The YAML at a glance
 
-Full semantics live in `assets/running.md`; this is the flavor:
+Full semantics live in `assets/running.md`; this is the flavor. A worktree
+workflow's YAML starts at bootstrap — the launch script already put the host
+in the tree:
 
 ```yaml
 name: fix-bug
@@ -121,13 +134,7 @@ vars:
   test_command: "bun test --only-failures"
   base: main
 
-workdir: .worktrees/{{task}}
-
 nodes:
-  - id: worktree
-    dir: .                                 # runs before workdir exists
-    run: git worktree add .worktrees/{{task}} -b task/{{task}} {{base}}
-
   - id: install
     run: bun install --silent
 
@@ -176,12 +183,17 @@ nodes come from its own interview.
 - Every `{{placeholder}}` is a declared input, a var, or a loop-only one.
 - The package contains `running.md`, `agents/workflow_lead.md`, and every
   referenced agent.
-- All three launchers exist — `.claude/commands/<name>.md`,
+- All three in-session launchers exist — `.claude/commands/<name>.md`,
   `.codex/skills/<name>/SKILL.md`, `.opencode/command/<name>.md` — each
   pointing at the right paths and mapping its arguments onto every declared
   input. The two that substitute placeholders carry exactly one, inside its
   fenced slot and nowhere else in the file; the Codex skill's `description`
   names the phrases that should trigger it.
+- A worktree workflow ships executable `./<name>.sh` and `./hosts.conf`
+  copied from `assets/run.sh` and `assets/hosts.conf`, with FILL values
+  matching the interview (name, branch prefix, worktree parent). The YAML
+  has no `git worktree` command
+  and no `workdir:` key. An in-place workflow has neither file.
 - The package reads positively: grep the generated README, YAML comments, and
   agent prompts for negation echoes (`no `, `not `, `ruled out`) and restate
   any decision-echo you find as what the workflow does. An agent's own hard

@@ -31,10 +31,14 @@ prose (the request itself) can ride along as a second input. Anything else a
 node needs (ticket URL, target dir) is another input or a var.
 
 **3. Isolation.** *Do you want the workflow to work in a worktree or on the
-current branch?* Worktree → three decisions: the base ref, the branch naming,
-and what happens on success (keep for a manual PR, or a cleanup node). Each
-git operation is its own node — creating the worktree is one node, never a
-line buried in a setup script.
+current branch?* Worktree → two decisions: the branch naming (`task/<task>`
+default) and the worktree path (`.worktrees/<task>` default). Those go into
+the launch script (`assets/run.sh` → `./<name>.sh`), which cuts the tree from
+the current branch, or reuses it, and starts the host inside it — not a YAML
+node. The package must already be committed on the current branch before the
+first run. The worktree stays after the agent exits; do not generate a remove
+node. In-place → slash-command / skill launch from the current checkout; no
+launch script.
 
 **4. Bootstrap.** *Is there a command to bootstrap the environment?* Install,
 codegen, services, a docs server — **one node per command**, in order. If
@@ -84,7 +88,7 @@ node or an interactive loop, never an agent's own judgment.
 **11. Finalize.** Commit-message convention? Should the `.awc/tasks/<task>/`
 trail be committed with the work (recommend yes — reviewers and the DoD diff
 committed history)? Push / open a draft PR (its own node), or stop at "branch
-ready"? Cleanup nodes?
+ready"? The worktree is left in place for a manual PR — not removed.
 
 ## From answers to nodes
 
