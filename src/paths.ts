@@ -14,6 +14,16 @@ export function sharedDir(): string {
   return path.join(templatesDir(), 'shared')
 }
 
+export function hostsConfPath(): string {
+  return path.join(
+    sharedDir(),
+    'skills',
+    'workflow-creator',
+    'assets',
+    'hosts.conf',
+  )
+}
+
 // Per-host extras: the initial prompt, plus any manifest the host needs.
 export function hostDir(host: string): string {
   return path.join(templatesDir(), 'hosts', host)

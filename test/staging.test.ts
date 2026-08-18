@@ -14,6 +14,7 @@ import path from 'node:path'
 import { stageClaude } from '../src/agents/claude'
 import { stageCodex } from '../src/agents/codex'
 import { stageOpencode } from '../src/agents/opencode'
+import { hostNames } from '../src/hosts'
 import { hostDir, sharedDir } from '../src/paths'
 import { cleanup, readPrompt, shadow } from '../src/staging'
 
@@ -273,7 +274,7 @@ describe('cleanup', () => {
 
 describe('readPrompt', () => {
   test('every host ships a trimmed initial prompt', () => {
-    for (const host of ['claude', 'codex', 'opencode']) {
+    for (const host of hostNames()) {
       const prompt = readPrompt(hostDir(host))
       expect(prompt.length).toBeGreaterThan(0)
       expect(prompt).toBe(prompt.trim())

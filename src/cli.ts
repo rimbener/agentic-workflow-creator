@@ -4,23 +4,28 @@ import { runClaude } from './agents/claude'
 import { runCodex } from './agents/codex'
 import { runOpencode } from './agents/opencode'
 import { type ParsedCli, parseCli } from './args'
+import { loadHosts } from './hosts'
 import { packageJsonPath } from './paths'
 
-const AGENTS = {
+const RUNNERS: Record<string, typeof runClaude> = {
   claude: runClaude,
   codex: runCodex,
   opencode: runOpencode,
 }
 
-const HELP = `awc — agentic-workflow-creator
+function helpText(): string {
+  const hosts = loadHosts()
+  const width = Math.max(...hosts.map((h) => h.name.length))
+  const agents = hosts
+    .map((h) => `  ${h.name.padEnd(width)}    ${h.help}`)
+    .join('\n')
+  return `awc — agentic-workflow-creator
 
 Usage:
   awc <agent> [options] [-- <agent args...>]
 
 Agents:
-  claude          Launch Claude Code with the bundled workflow plugin
-  codex           Launch Codex with the bundled workflow skill
-  opencode        Launch opencode with the bundled workflow skill
+${agents}
 
 Options:
   --keep          Do not delete the temp folder on exit (debugging)
@@ -30,6 +35,7 @@ Options:
 
 Everything after \`--\` is passed through to the agent CLI verbatim.
 `
+}
 
 function main(): void {
   let cli: ParsedCli
@@ -42,7 +48,7 @@ function main(): void {
   }
 
   if (cli.help) {
-    console.log(HELP)
+    console.log(helpText())
     return
   }
   if (cli.version) {
@@ -52,14 +58,24 @@ function main(): void {
   }
 
   if (cli.agent === undefined) {
-    console.log(HELP)
+    console.log(helpText())
     process.exit(1)
   }
 
-  const run = AGENTS[cli.agent as keyof typeof AGENTS]
+  const hosts = loadHosts()
+  for (const h of hosts) {
+    if (!RUNNERS[h.name]) {
+      console.error(
+        `awc: hosts.conf names "${h.name}" but no runner is registered`,
+      )
+      process.exit(1)
+    }
+  }
+
+  const run = RUNNERS[cli.agent]
   if (!run) {
     console.error(
-      `awc: unknown agent "${cli.agent}" (available: ${Object.keys(AGENTS).join(', ')})`,
+      `awc: unknown agent "${cli.agent}" (available: ${hosts.map((h) => h.name).join(', ')})`,
     )
     process.exit(1)
   }

@@ -18,17 +18,10 @@ TMP=".awc-smoke-tmp"
 fail=0
 trap 'rm -rf "$TMP"' EXIT
 
-# agent : staged subdir : workflow-creator skill path : awc-status path
-# Codex has no slash-command slot (it dropped $CODEX_HOME/prompts in 0.117.0),
-# so awc-status ships there as a skill.
-HOSTS=(
-  "claude:plugin:skills/workflow-creator/SKILL.md:commands/awc-status.md"
-  "codex:codex-home:skills/workflow-creator/SKILL.md:skills/awc-status/SKILL.md"
-  "opencode:opencode-config:skill/workflow-creator/SKILL.md:command/awc-status.md"
-)
-
-for spec in "${HOSTS[@]}"; do
-  IFS=: read -r agent staged skillpath statuspath <<<"$spec"
+# Read the roster via the TypeScript parser (strict). FD 3 so inner commands
+# cannot steal remaining rows from stdin.
+while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-}" ]; do
+  [[ -z "${agent:-}" ]] && continue
 
   if ! command -v "$agent" >/dev/null 2>&1; then
     echo "== $agent (not installed, skipped)"
@@ -113,7 +106,11 @@ for spec in "${HOSTS[@]}"; do
     done
   fi
   rm -rf "$TMP"
-done
+done 3< <(bun -e 'import { loadHosts } from "./src/hosts.ts"
+for (const h of loadHosts()) {
+  console.log([h.name, h.smokeDir, h.smokeSkill, h.smokeStatus].join("\t"))
+}
+')
 
 [ "$fail" -eq 0 ] && echo "smoke: all checks passed"
 exit $fail
