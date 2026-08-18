@@ -48,7 +48,7 @@ CLI help, smoke, and host-name tests read the same tab-separated roster the laun
 
 Graders look for a root launch script plus `hosts.conf`; in-place workflows omit both.
 
-## 2026-08-18 — docs: document worktree launch script and hosts.conf
+## 2026-08-18 — `aef0bb2` — docs: document worktree launch script and hosts.conf
 
 AGENTS, README, and SPEC cover the launch script, the `hosts.conf` roster, and `RUNNERS`.
 
