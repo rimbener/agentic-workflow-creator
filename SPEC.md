@@ -197,7 +197,8 @@ package ships all three variants:
 
 Codex has no project-level slash commands, so its launcher is a project skill selected by
 its `description` rather than a command taking a placeholder. The skill's
-`references/hosts.md` is the authority on these files.
+`references/hosts.md` is the authority on these files. A worktree workflow also
+ships `./<name>.sh` (from `assets/run.sh`) so the host starts inside the tree.
 
 ## Risks / open questions
 

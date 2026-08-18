@@ -69,14 +69,17 @@ awc claude -- --model opus
 The bundled **workflow-creator** skill interviews you and writes a workflow
 package. The package itself is host-neutral — the YAML, the agent prompts, the
 scripts and the execution contract are plain text any of the three agents can
-read — and it ships one launcher per host, so a workflow created in one tool
-runs in the others:
+read — and it ships one in-session launcher per host, so a workflow created in
+one tool runs in the others. A worktree workflow also ships `./<name>.sh`, which
+creates the tree and starts the host already inside it:
 
 ```
+<name>.sh                         # worktree workflows: create tree, start host
+hosts.conf                        # host roster the script reads
 workflows/<name>/                 # the workflow, its agents and scripts
-.claude/commands/<name>.md        # launcher — Claude Code
-.codex/skills/<name>/SKILL.md     # launcher — Codex
-.opencode/command/<name>.md       # launcher — opencode
+.claude/commands/<name>.md        # in-session launcher — Claude Code
+.codex/skills/<name>/SKILL.md     # in-session launcher — Codex
+.opencode/command/<name>.md       # in-session launcher — opencode
 ```
 
 ## Use locally (without publishing)

@@ -36,6 +36,22 @@ Split the payload into `templates/shared` plus per-host staging. Codex and openc
 
 Generated packages now ship Claude, Codex, and opencode launchers. The fact-checker reports all three so graders can check they agree.
 
+## 2026-08-18 — `b16be48` — feat(skill): launch worktree runs from a script inside the tree
+
+Worktree isolation is a launcher concern. Generated packages ship `./<name>.sh` plus `hosts.conf`; the script creates or reuses a worktree from HEAD and starts the host already in that checkout. YAML no longer creates the tree.
+
+## 2026-08-18 — `8013d22` — feat(cli): drive the agent roster from hosts.conf
+
+CLI help, smoke, and host-name tests read the same tab-separated roster the launch script copies.
+
+## 2026-08-18 — `5e10a75` — test(evals): expect a worktree launch script, not a YAML node
+
+Graders look for a root launch script plus `hosts.conf`; in-place workflows omit both.
+
+## 2026-08-18 — docs: document worktree launch script and hosts.conf
+
+AGENTS, README, and SPEC cover the launch script, the `hosts.conf` roster, and `RUNNERS`.
+
 ## 2026-08-17 — `f6f2059` — docs: document multi-host staging and generated launchers
 
 SPEC and README now cover the three hosts, the shadow config dir, and the per-host launchers a generated package ships. AGENTS.md matches.
