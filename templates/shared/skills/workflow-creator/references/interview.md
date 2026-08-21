@@ -31,14 +31,14 @@ prose (the request itself) can ride along as a second input. Anything else a
 node needs (ticket URL, target dir) is another input or a var.
 
 **3. Isolation.** *Do you want the workflow to work in a worktree or on the
-current branch?* Worktree → two decisions: the branch naming (`task/<task>`
-default) and the worktree path (`.worktrees/<task>` default). Those go into
-the launch script (`assets/run.sh` → `./<name>.sh`), which cuts the tree from
-the current branch, or reuses it, and starts the host inside it — not a YAML
-node. The package must already be committed on the current branch before the
-first run. The worktree stays after the agent exits; do not generate a remove
-node. In-place → slash-command / skill launch from the current checkout; no
-launch script.
+current branch?* Worktree → the worktree path (`.worktrees/<task>` default)
+goes into the launch script FILL (`assets/run.sh` → `./<name>.sh`). Branch
+naming (`task/<task>` default) and the workflow name are asked on a terminal
+at launch, not baked in (headless uses the script basename and `task`). The script cuts the tree from the current branch, or reuses it, and
+starts the host inside it — not a YAML node. The package must already be
+committed on the current branch before the first run. The worktree stays
+after the agent exits; do not generate a remove node. In-place →
+slash-command / skill launch from the current checkout; no launch script.
 
 **4. Bootstrap.** *Is there a command to bootstrap the environment?* Install,
 codegen, services, a docs server — **one node per command**, in order. If

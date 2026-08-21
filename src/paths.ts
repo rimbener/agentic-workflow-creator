@@ -14,13 +14,13 @@ export function sharedDir(): string {
   return path.join(templatesDir(), 'shared')
 }
 
-export function hostsConfPath(): string {
+export function agentsCliConfPath(): string {
   return path.join(
     sharedDir(),
     'skills',
     'workflow-creator',
     'assets',
-    'hosts.conf',
+    'agents-cli.conf',
   )
 }
 

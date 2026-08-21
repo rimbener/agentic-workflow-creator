@@ -36,7 +36,7 @@ Read these before starting (silently — they are your working knowledge):
    both per the catalog's rules), the scripts, `running.md` copied verbatim
    from `assets/running.md`, a short README, the three in-session launchers,
    and — when isolation is a worktree — `./<name>.sh` copied from
-   `assets/run.sh` with the FILL values set.
+   `assets/run.sh` with `__WORKTREE_PARENT__` set.
 5. **Validate** (checklist below), then hand off: how to launch, what the run
    will ask of them, and where the artifacts land.
 
@@ -86,7 +86,7 @@ does; the road not taken lives only in the creation conversation.
 
 ```
 <name>.sh                       # worktree launch — copy of assets/run.sh
-hosts.conf                      # copy of assets/hosts.conf — do not edit
+agents-cli.conf                 # copy of assets/agents-cli.conf — do not edit
 workflows/<name>/
 ├── <name>.yaml        # the workflow
 ├── README.md          # purpose, node walkthrough table, how to launch
@@ -105,12 +105,16 @@ placeholder each host substitutes, and the hazards that shape them. Write all
 three from that reference, generating the input mapping from this workflow's
 actual `inputs:` list, and keep their wording aligned so a reader comparing
 two of them sees one workflow. A worktree workflow also ships `./<name>.sh`
-from that same reference: copy `assets/run.sh` and `assets/hosts.conf` to the
-repo root as `./<name>.sh` and `./hosts.conf`, fill NAME/BRANCH_PREFIX/
-WORKTREE_PARENT, `chmod +x` the script. An in-place workflow omits both.
+from that same reference: copy `assets/run.sh` and `assets/agents-cli.conf` to the
+repo root as `./<name>.sh` and `./agents-cli.conf`, fill `__WORKTREE_PARENT__`,
+`chmod +x` the script. Name and branch prefix are asked on a terminal at
+launch (headless: script basename and `task`, or `AWC_NAME` /
+`AWC_BRANCH_PREFIX`). An in-place workflow omits both.
 
 The README's "how to launch" section names the path that applies: worktree →
-`./<name>.sh <task> claude "<request>"` (or `codex` / `opencode`); in-place →
+`./<name>.sh <task> claude "<request>"` (or `codex` / `opencode`). On a
+terminal the script asks for workflow name and branch prefix; headless uses
+the script basename and `task`, or `AWC_NAME` / `AWC_BRANCH_PREFIX`. In-place →
 the slash command for Claude Code and opencode, and the trigger phrase for
 Codex. Commit the package on the current branch before the first worktree run.
 Re-running the script resumes in the existing tree.
@@ -189,11 +193,12 @@ nodes come from its own interview.
   input. The two that substitute placeholders carry exactly one, inside its
   fenced slot and nowhere else in the file; the Codex skill's `description`
   names the phrases that should trigger it.
-- A worktree workflow ships executable `./<name>.sh` and `./hosts.conf`
-  copied from `assets/run.sh` and `assets/hosts.conf`, with FILL values
-  matching the interview (name, branch prefix, worktree parent). The YAML
-  has no `git worktree` command
-  and no `workdir:` key. An in-place workflow has neither file.
+- A worktree workflow ships executable `./<name>.sh` and `./agents-cli.conf`
+  copied from `assets/run.sh` and `assets/agents-cli.conf`, with
+  `__WORKTREE_PARENT__` matching the interview. The script asks for
+  workflow name and branch prefix on a terminal (headless defaults, or
+  `AWC_NAME` / `AWC_BRANCH_PREFIX`). The YAML has no `git worktree`
+  command and no `workdir:` key. An in-place workflow has neither file.
 - The package reads positively: grep the generated README, YAML comments, and
   agent prompts for negation echoes (`no `, `not `, `ruled out`) and restate
   any decision-echo you find as what the workflow does. An agent's own hard

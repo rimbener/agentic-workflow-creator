@@ -6,7 +6,7 @@ import { templatesDir } from '../src/paths'
 
 const row = 'claude\tclaude\thelp\tplugin\tskills/x.md\tcommands/x.md'
 
-describe('hosts.conf', () => {
+describe('agents-cli.conf', () => {
   test('roster matches templates/hosts and src/agents', () => {
     const names = hostNames().slice().sort()
     const dirs = readdirSync(path.join(templatesDir(), 'hosts')).sort()

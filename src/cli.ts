@@ -66,7 +66,7 @@ function main(): void {
   for (const h of hosts) {
     if (!RUNNERS[h.name]) {
       console.error(
-        `awc: hosts.conf names "${h.name}" but no runner is registered`,
+        `awc: agents-cli.conf names "${h.name}" but no runner is registered`,
       )
       process.exit(1)
     }

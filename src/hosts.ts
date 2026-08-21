@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { hostsConfPath } from './paths'
+import { agentsCliConfPath } from './paths'
 
 export type Host = {
   name: string
@@ -19,15 +19,15 @@ export function parseHostsConf(text: string): Host[] {
     const cols = line.split('\t')
     if (cols.length !== 6) {
       throw new Error(
-        `hosts.conf:${n}: expected 6 tab-separated fields, got ${cols.length}`,
+        `agents-cli.conf:${n}: expected 6 tab-separated fields, got ${cols.length}`,
       )
     }
     const [name, argv, help, smokeDir, smokeSkill, smokeStatus] = cols
     if (!name || !argv || !help || !smokeDir || !smokeSkill || !smokeStatus) {
-      throw new Error(`hosts.conf:${n}: empty field`)
+      throw new Error(`agents-cli.conf:${n}: empty field`)
     }
     if (seen.has(name)) {
-      throw new Error(`hosts.conf:${n}: duplicate host ${name}`)
+      throw new Error(`agents-cli.conf:${n}: duplicate host ${name}`)
     }
     seen.add(name)
     hosts.push({
@@ -39,12 +39,12 @@ export function parseHostsConf(text: string): Host[] {
       smokeStatus,
     })
   }
-  if (hosts.length === 0) throw new Error('hosts.conf: no hosts')
+  if (hosts.length === 0) throw new Error('agents-cli.conf: no hosts')
   return hosts
 }
 
 export function loadHosts(): Host[] {
-  return parseHostsConf(readFileSync(hostsConfPath(), 'utf8'))
+  return parseHostsConf(readFileSync(agentsCliConfPath(), 'utf8'))
 }
 
 export function hostNames(): string[] {

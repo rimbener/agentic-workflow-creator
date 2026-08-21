@@ -1,29 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Instantiated per workflow. Replace the FILL values; leave the rest alone
+# Instantiated per workflow. Replace the FILL value; leave the rest alone
 # unless this workflow's inputs are not `task` + `request`.
+# Workflow name and branch prefix are asked at launch (defaults: this
+# script's basename, `task`).
 # --- FILL ---
-NAME="__NAME__"
-BRANCH_PREFIX="__BRANCH_PREFIX__"
 WORKTREE_PARENT="__WORKTREE_PARENT__"
 # --- END FILL ---
 
-# Host roster is hosts.conf next to this script (copy of assets/hosts.conf).
+# Host roster is agents-cli.conf next to this script (copy of assets/agents-cli.conf).
 # Add or remove a host only there.
 HERE=$(cd "$(dirname "$0")" && pwd)
-HOSTS_CONF="$HERE/hosts.conf"
-if [[ ! -f "$HOSTS_CONF" ]]; then
-  echo "hosts.conf not found next to $(basename "$0")" >&2
+AGENTS_CLI_CONF="$HERE/agents-cli.conf"
+if [[ ! -f "$AGENTS_CLI_CONF" ]]; then
+  echo "agents-cli.conf not found next to $(basename "$0")" >&2
   exit 1
 fi
 
 host_names() {
-  awk -F'\t' '/^[ \t]*$/ { next } /^[ \t]*#/ { next } { print $1 }' "$HOSTS_CONF"
+  awk -F'\t' '/^[ \t]*$/ { next } /^[ \t]*#/ { next } { print $1 }' "$AGENTS_CLI_CONF"
 }
 
 host_argv() {
-  awk -F'\t' -v h="$1" '/^[ \t]*$/ { next } /^[ \t]*#/ { next } $1 == h { print $2; exit }' "$HOSTS_CONF"
+  awk -F'\t' -v h="$1" '/^[ \t]*$/ { next } /^[ \t]*#/ { next } $1 == h { print $2; exit }' "$AGENTS_CLI_CONF"
 }
 
 # Same rules as src/hosts.ts parseHostsConf.
@@ -31,22 +31,22 @@ if ! awk -F'\t' '
   /^[ \t]*$/ { next }
   /^[ \t]*#/ { next }
   NF != 6 {
-    printf "hosts.conf:%d: expected 6 tab-separated fields, got %d\n", NR, NF > "/dev/stderr"
+    printf "agents-cli.conf:%d: expected 6 tab-separated fields, got %d\n", NR, NF > "/dev/stderr"
     exit 1
   }
   {
     for (i = 1; i <= 6; i++) if ($i == "") {
-      printf "hosts.conf:%d: empty field\n", NR > "/dev/stderr"
+      printf "agents-cli.conf:%d: empty field\n", NR > "/dev/stderr"
       exit 1
     }
     if (seen[$1]++) {
-      printf "hosts.conf:%d: duplicate host %s\n", NR, $1 > "/dev/stderr"
+      printf "agents-cli.conf:%d: duplicate host %s\n", NR, $1 > "/dev/stderr"
       exit 1
     }
     n++
   }
-  END { if (n == 0) { print "hosts.conf: no hosts" > "/dev/stderr"; exit 1 } }
-' "$HOSTS_CONF"; then
+  END { if (n == 0) { print "agents-cli.conf: no hosts" > "/dev/stderr"; exit 1 } }
+' "$AGENTS_CLI_CONF"; then
   exit 1
 fi
 
@@ -78,6 +78,31 @@ read -r -a cmd <<<"$argv"
 if ! command -v "${cmd[0]}" >/dev/null 2>&1; then
   echo "not on PATH: ${cmd[0]}" >&2
   exit 127
+fi
+
+# Never read stdin here — it belongs to the host (./demo.sh ... < commands.txt).
+# Prompt + answer on /dev/tty (not read -p / stderr). Headless: defaults, or
+# AWC_NAME / AWC_BRANCH_PREFIX. Skip when no fd is a TTY so tests don't hang.
+ask() {
+  local _var=$1 _prompt=$2 _default=$3 _val=$4
+  if [[ -z "$_val" && -c /dev/tty && ( -t 0 || -t 1 || -t 2 ) ]]; then
+    printf '%s [%s]: ' "$_prompt" "$_default" >/dev/tty || true
+    read -r _val </dev/tty || true
+  fi
+  printf -v "$_var" '%s' "${_val:-$_default}"
+}
+
+default_name=$(basename "$0" .sh)
+ask NAME "Workflow name" "$default_name" "${AWC_NAME-}"
+ask BRANCH_PREFIX "Branch prefix" "task" "${AWC_BRANCH_PREFIX-}"
+
+if [[ ! "$NAME" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  echo "workflow name must be a kebab-case id (got: $NAME)" >&2
+  exit 2
+fi
+if [[ ! "$BRANCH_PREFIX" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  echo "branch prefix must be a kebab-case id (got: $BRANCH_PREFIX)" >&2
+  exit 2
 fi
 
 # Script lives at the repo root. Resolve the main checkout even when this
@@ -138,7 +163,14 @@ elif [[ -e "$WORKTREE" || -L "$WORKTREE" ]]; then
   exit 1
 else
   if ! git cat-file -e "HEAD:${PKG}" 2>/dev/null; then
-    echo "${PKG} is not on the current branch. Commit the package before the first run." >&2
+    echo "${PKG} is not on the current branch." >&2
+    known=$(git ls-tree -r --name-only HEAD -- workflows 2>/dev/null || true)
+    if [[ -n "$known" ]]; then
+      names=$(printf '%s\n' "$known" | sed -n 's|^workflows/\([^/]*\)/\1\.yaml$|\1|p' | sort | paste -sd ',' - | sed 's/,/, /g')
+      echo "Re-run with AWC_NAME=<name> matching workflows/<name>/<name>.yaml${names:+ (known: ${names})}." >&2
+    else
+      echo "Commit the package before the first run." >&2
+    fi
     exit 1
   fi
   existing=$(branch_checkout_path || true)
@@ -155,6 +187,11 @@ else
 fi
 
 cd "$WORKTREE"
+
+if [[ ! -f "$PKG" ]]; then
+  echo "no package ${PKG} in ${WORKTREE}" >&2
+  exit 1
+fi
 
 PROMPT="You are the workflow lead for this run — coordination only.
 

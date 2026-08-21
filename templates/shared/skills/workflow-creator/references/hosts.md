@@ -99,21 +99,26 @@ this skill selected, and a vague one leaves the workflow unreachable.
 
 ## Launch script — worktree workflows
 
-Copy `assets/run.sh` to `./<name>.sh` and `assets/hosts.conf` to `./hosts.conf`
-at the target repo root. `chmod +x` the script. Replace only the FILL values
+Copy `assets/run.sh` to `./<name>.sh` and `assets/agents-cli.conf` to `./agents-cli.conf`
+at the target repo root. `chmod +x` the script. Replace only the FILL value
 in the script:
 
 | Placeholder | Set to |
 | --- | --- |
-| `__NAME__` | the workflow's kebab name |
-| `__BRANCH_PREFIX__` | branch is `<prefix>/<task>` (default `task`) |
 | `__WORKTREE_PARENT__` | directory under the main checkout (default `.worktrees`) |
+
+Do not bake the workflow name or branch prefix into the script. On a terminal
+it asks for both on `/dev/tty` (defaults: this file's basename, `task`) — prompt
+and answer stay on the terminal even if stdout/stderr are redirected. Headless
+runs (no TTY on stdin, stdout, or stderr) use those defaults and do not read
+stdin — stdin is left for the host. Override with `AWC_NAME` and
+`AWC_BRANCH_PREFIX`.
 
 Leave everything below the FILL block alone unless this workflow's `inputs:`
 are not `task` + `request` — then rewrite usage, the args block, and step 3
 of the prompt to match, the same mapping the three in-session launchers use.
-Do not edit `hosts.conf`. Add or remove a host only in
-`assets/hosts.conf` (this skill's copy); the launch script reads it.
+Do not edit `agents-cli.conf`. Add or remove a host only in
+`assets/agents-cli.conf` (this skill's copy); the launch script reads it.
 
 The script:
 
@@ -130,4 +135,5 @@ The script:
 4. Does not remove the worktree when the agent exits.
 
 Invocation: `./<name>.sh <task> claude "<request>"` (or `codex` / `opencode`).
+Headless: `AWC_NAME=<name> AWC_BRANCH_PREFIX=task ./<name>.sh ...`.
 An in-place workflow does not ship this file.
