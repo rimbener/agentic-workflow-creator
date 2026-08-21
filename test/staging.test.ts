@@ -32,6 +32,12 @@ describe('stageClaude', () => {
     expect(
       existsSync(path.join(plugin, 'skills', 'workflow-creator', 'SKILL.md')),
     ).toBe(true)
+    expect(existsSync(path.join(plugin, 'skills', 'grill-me', 'SKILL.md'))).toBe(
+      true,
+    )
+    expect(existsSync(path.join(plugin, 'skills', 'grilling', 'SKILL.md'))).toBe(
+      true,
+    )
     expect(existsSync(path.join(plugin, 'commands', 'awc-status.md'))).toBe(
       true,
     )
@@ -120,6 +126,12 @@ for (const host of HOSTS) {
       const tmp = freshTmp()
       const staged = host.stage(tmp)
       expect(existsSync(path.join(staged, skillMd))).toBe(true)
+      expect(
+        existsSync(path.join(staged, host.skills, 'grill-me', 'SKILL.md')),
+      ).toBe(true)
+      expect(
+        existsSync(path.join(staged, host.skills, 'grilling', 'SKILL.md')),
+      ).toBe(true)
       expect(existsSync(path.join(staged, statusMd))).toBe(true)
       // Real files in the temp dir, not links that could resolve to the user's.
       // Every segment is checked: a symlinked parent would make an lstat on the
@@ -240,6 +252,13 @@ describe('shadow', () => {
 })
 
 describe('the shared payload', () => {
+  test('ships grill-me and grilling beside workflow-creator', () => {
+    const skills = path.join(sharedDir(), 'skills')
+    for (const name of ['grill-me', 'grilling', 'workflow-creator']) {
+      expect(existsSync(path.join(skills, name, 'SKILL.md'))).toBe(true)
+    }
+  })
+
   test('ships every agent template the catalog documents, and only those', () => {
     const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
     const catalog = readFileSync(
