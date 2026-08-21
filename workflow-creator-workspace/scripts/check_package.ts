@@ -185,7 +185,7 @@ report.package = {
       git_worktree: GIT_WORKTREE.test(readFileSync(f, 'utf8')),
     })),
   hostConfig: files
-    .filter((f) => rel(f) === 'hosts.conf')
+    .filter((f) => rel(f) === 'agents-cli.conf')
     .map((f) => {
       const names = parseHostsConf(readFileSync(f, 'utf8')).map((h) => h.name)
       return {
