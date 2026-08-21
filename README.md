@@ -75,7 +75,7 @@ creates the tree and starts the host already inside it:
 
 ```
 <name>.sh                         # worktree workflows: create tree, start host
-hosts.conf                        # host roster the script reads
+agents-cli.conf                   # host roster the script reads
 workflows/<name>/                 # the workflow, its agents and scripts
 .claude/commands/<name>.md        # in-session launcher — Claude Code
 .codex/skills/<name>/SKILL.md     # in-session launcher — Codex

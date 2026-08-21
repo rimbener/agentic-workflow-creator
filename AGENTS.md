@@ -46,7 +46,7 @@ quotes, no semicolons (ASI), 2-space indent (biome.json).
 Small, linear pipeline, one file per concern:
 
 - `cli.ts` — entry point: parses argv, handles `--help`/`--version`, loads
-  the host roster from `assets/hosts.conf`, dispatches through `RUNNERS`.
+  the host roster from `assets/agents-cli.conf`, dispatches through `RUNNERS`.
 - `hosts.ts` — parses that roster (names, TUI argv, help, smoke paths).
 - `args.ts` — `parseCli`: splits argv on the first `--` into "own" flags vs.
   `passthrough` args forwarded verbatim to the agent binary.
@@ -63,12 +63,12 @@ Small, linear pipeline, one file per concern:
   `kill -9`, which cannot be intercepted by handlers). `shadow` is the piece
   that makes the env-var hosts work — read its comment before touching it.
 - `paths.ts` — resolves `templatesDir()`/`sharedDir()`/`hostDir()`/
-  `hostsConfPath()`/`packageJsonPath()` relative to the compiled entry file via
+  `agentsCliConfPath()`/`packageJsonPath()` relative to the compiled entry file via
   `new URL(..., import.meta.url)`, **never** `process.cwd()` — this is what
   makes it work identically via `npx`, a global install, and
   `node dist/cli.js` run locally.
 
-Adding another agent means a row in `assets/hosts.conf`, a file under
+Adding another agent means a row in `assets/agents-cli.conf`, a file under
 `src/agents/`, and `templates/hosts/<name>/prompt.md`.
 
 Codex is the odd one out for the payload's *command* half: it has no
@@ -104,8 +104,8 @@ templates/
 │       │   └── hosts.md             # in-session launchers + worktree launch script
 │       └── assets/
 │           ├── running.md           # the YAML dialect's execution contract — copied verbatim into every generated package
-│           ├── run.sh               # worktree launch template — copied to ./<name>.sh with FILL values set
-│           ├── hosts.conf           # host roster — add/remove a host only here
+│           ├── run.sh               # worktree launch template — copied to ./<name>.sh; FILL is worktree parent
+│           ├── agents-cli.conf      # host roster — add/remove a host only here
 │           └── agents/*.md          # base agent templates instantiated (tailored) per generated workflow
 └── hosts/
     ├── claude/{prompt.md, plugin/.claude-plugin/plugin.json}
@@ -131,7 +131,7 @@ Key things to know before touching this content:
 - Every generated package ships **three** in-session launchers — `.claude/commands/`,
   `.codex/skills/`, `.opencode/command/` — specified in `references/hosts.md`.
   A worktree workflow also ships `./<name>.sh` from `assets/run.sh` and
-  `./hosts.conf` from `assets/hosts.conf` (add/remove a host only there):
+  `./agents-cli.conf` from `assets/agents-cli.conf` (add/remove a host only there):
   the script creates (or reuses) the worktree and starts the host already
   inside it, so the YAML has no worktree node. The Claude Code and opencode ones substitute `$ARGUMENTS` 
   exactly once into a fenced block; prose in those files must never mention the 
