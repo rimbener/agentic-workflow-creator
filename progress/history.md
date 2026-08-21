@@ -59,3 +59,15 @@ AGENTS, README, and SPEC cover the launch script, the `hosts.conf` roster, and `
 ## 2026-08-21 — `3b9ef0a` — feat(skill): ship grill-me and grilling in the shared payload
 
 Bundled grill-me and grilling into the shared payload so awc sessions load them next to workflow-creator. Staging tests assert they land for every host.
+
+## 2026-08-21 — `11cbd2a` — feat(skill): prompt for launch name and prefix
+
+Worktree script asks for name and branch prefix on a TTY instead of FILL slots. Roster file is `agents-cli.conf`.
+
+## 2026-08-21 — `d54f785` — test(evals): expect agents-cli.conf beside the launch script
+
+Graders look for a root `agents-cli.conf` next to the launch script.
+
+## 2026-08-21 — `df7a13f` — docs: document launch prompts and agents-cli.conf
+
+AGENTS and README cover the TTY prompt, `AWC_NAME` / `AWC_BRANCH_PREFIX`, and the renamed roster.
