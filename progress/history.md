@@ -55,3 +55,7 @@ Graders look for a root launch script plus `hosts.conf`; in-place workflows omit
 ## 2026-08-18 — `aef0bb2` — docs: document worktree launch script and hosts.conf
 
 AGENTS, README, and SPEC cover the launch script, the `hosts.conf` roster, and `RUNNERS`.
+
+## 2026-08-21 — `3b9ef0a` — feat(skill): ship grill-me and grilling in the shared payload
+
+Bundled grill-me and grilling into the shared payload so awc sessions load them next to workflow-creator. Staging tests assert they land for every host.
