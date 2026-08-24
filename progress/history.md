@@ -71,3 +71,15 @@ Graders look for a root `agents-cli.conf` next to the launch script.
 ## 2026-08-21 — `df7a13f` — docs: document launch prompts and agents-cli.conf
 
 AGENTS and README cover the TTY prompt, `AWC_NAME` / `AWC_BRANCH_PREFIX`, and the renamed roster.
+
+## 2026-08-24 — `eba7f56` — feat(skill): add parallel nodes and wait joins to the YAML dialect
+
+`parallel: true` starts a run/agent and the lead keeps walking. `wait:` collects in-flight results; leftover work drains at the end of the list.
+
+## 2026-08-24 — `2dc99c5` — test(evals): recognize wait and parallel: true in package facts
+
+check_package treats `wait:` as a behavior and records `parallel`; graders allow wait in yaml-valid-simple-nodes.
+
+## 2026-08-24 — `1a9b489` — docs: mention parallel: true and wait: in the dialect list
+
+AGENTS.md's node-type bullet now matches running.md.
