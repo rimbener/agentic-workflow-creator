@@ -101,6 +101,9 @@ Map each settled area to nodes using the canonical shapes in
   `Slice:`);
 - every `run:` node is one short command; anything longer is a script in
   `scripts/` that still does exactly one thing;
+- independent checks or agents on disjoint paths may be `parallel: true`
+  with a later `wait:`; interviews, gates, and anything that edits the same
+  files stay sequential;
 - nothing runs after an edit without a verification step, and no review
   round ends on an unverified tree.
 

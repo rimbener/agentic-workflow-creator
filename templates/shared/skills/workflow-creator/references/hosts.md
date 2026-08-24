@@ -13,6 +13,10 @@ which creates the tree and starts the host already inside it.
 | Codex | `.codex/skills/<name>/SKILL.md` | the user's own message | `spawn_agent` |
 | opencode | `.opencode/command/<name>.md` | `\$ARGUMENTS` | the `task` tool |
 
+A `parallel: true` agent is spawned with the same tool, without waiting for
+its return before the next node. A `parallel: true` `run:` uses the host's
+background shell. If the host cannot detach, the lead reports `blocked`.
+
 Write all three. They are small, they keep one package usable by a team on
 mixed tools, and nothing else in the package changes. The launch script
 dispatches to the same three binaries; it does not replace these files.

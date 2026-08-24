@@ -30,7 +30,7 @@ lines are where those arguments get passed.
 
 | Agent | Does | Invocation arguments | Return signals |
 | --- | --- | --- | --- |
-| `workflow_lead` | Runs the workflow: invokes agents, enforces gates and caps, escalates on halt. Coordination only — never writes or commits | `Task/Mode/Workflow` (supplied by the launch command) | `complete`, `halted`, `blocked` |
+| `workflow_lead` | Runs the workflow: invokes agents, enforces gates and caps, collects parallel work, escalates on halt. Coordination only — never writes or commits | `Task/Mode/Workflow` (supplied by the launch command) | `complete`, `halted`, `blocked` |
 | `story_partner` | Interviews the human one question at a time → `user-story.md`. Owns the *problem*, never the solution | `Task`, `Mode: interview`, the raw request, `{{answer}}` | `user_story`; token `USER_STORY_WRITTEN` |
 | `spec_partner` | Interview → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted` (token `SPEC_BUNDLE_WRITTEN`), `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
 | `spec_reviewer` | One-round automated review of the spec bundle → `review-spec.md`, before the human approval | `Task`, `Mode: review` | `APPROVED`, `CHANGES_REQUESTED` |
@@ -69,6 +69,11 @@ lines are where those arguments get passed.
   commit their own work; a commit with no such owner (the approved spec, a
   trailing artifact sweep) gets a small authored committer agent that stages
   only the paths named in its invocation.
+- **Parallel only for disjoint work.** `parallel: true` on a `run:` or agent
+  that does not share writes with in-flight siblings and does not need the
+  human. Interviews, gates, and paired implementer/test-writer steps stay
+  sequential — the pairing's coupling is the YAML order. Join with `wait:`
+  before any node that depends on the result.
 
 ## Canonical loop shapes
 

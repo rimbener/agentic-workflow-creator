@@ -42,9 +42,15 @@ Read these before starting (silently — they are your working knowledge):
 
 ## The rules that make a workflow good
 
-**Nodes stay tiny.** A node is one short prompt, one agent call, or one
-command — never several lines of inline shell. More than one line of logic →
-a script.
+**Nodes stay tiny.** A node is one short prompt, one agent call, one
+command, or a wait — never several lines of inline shell. More than one
+line of logic → a script.
+
+**Parallel is for disjoint work.** `parallel: true` starts a `run:` or agent
+and the walk continues. Only emit it when steps do not share writes and do
+not need the human (no interview, no gate, no approval). Put a `wait:` before
+any later node that depends on that work; leftover in-flight work drains at
+the end of the list. Sequential is the default.
 
 **A script does exactly one thing.** A script with internal phases is a
 workflow hiding inside a file — where the lead can't see progress, retry a
@@ -169,7 +175,26 @@ nodes:
     gate: "Slices done. Review the diff on task/{{task}} — approve to finish."
 ```
 
-This example is illustrative, never a template to copy — every workflow's
+Independent checks overlap with `parallel: true`; `wait:` collects them
+before anything that depends on the results:
+
+```yaml
+  - id: lint
+    parallel: true
+    run: bun run lint
+
+  - id: typecheck
+    parallel: true
+    run: bun run typecheck
+
+  - id: install
+    run: bun install --silent
+
+  - id: join-checks
+    wait: [lint, typecheck]
+```
+
+These examples are illustrative, never templates to copy — every workflow's
 nodes come from its own interview.
 
 ## Validation checklist (before handoff)
@@ -184,6 +209,9 @@ nodes come from its own interview.
   node produces.
 - Every `run:` is one short command with failure-only output where the tool
   allows it.
+- Every `parallel: true` is on a top-level `run:` or `agent:` node — never a
+  loop, gate, wait, or loop step. Every `wait:` names prior `parallel: true`
+  ids. A `wait:` sits before any node that depends on that work.
 - Every `{{placeholder}}` is a declared input, a var, or a loop-only one.
 - The package contains `running.md`, `agents/workflow_lead.md`, and every
   referenced agent.
