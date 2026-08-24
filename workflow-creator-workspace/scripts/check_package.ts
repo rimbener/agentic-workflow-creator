@@ -43,7 +43,19 @@ for (const f of yamlFiles) {
   }
 }
 
-const BEHAVIOR_KEYS = ['run', 'agent', 'loop', 'gate', 'bash', 'script', 'prompt', 'command', 'cmd', 'shell']
+const BEHAVIOR_KEYS = [
+  'run',
+  'agent',
+  'loop',
+  'gate',
+  'wait',
+  'bash',
+  'script',
+  'prompt',
+  'command',
+  'cmd',
+  'shell',
+]
 
 function nodeFacts(node: any, idx: number) {
   if (node === null || typeof node !== 'object') return { idx, malformed: true }
@@ -74,10 +86,11 @@ function nodeFacts(node: any, idx: number) {
     }
     for (const k of ['prompt', 'agent', 'expect']) if (loop[k] !== undefined) (facts.loop as any)[k] = loop[k]
   }
-  for (const k of ['agent', 'expect', 'when', 'when_bash', 'dir', 'gate', 'prompt']) {
+  for (const k of ['agent', 'expect', 'when', 'when_bash', 'dir', 'gate', 'prompt', 'wait']) {
     if (node[k] !== undefined) facts[k] = node[k]
   }
   if (typeof node.run === 'string') facts.run = node.run
+  if (node.parallel !== undefined) facts.parallel = node.parallel
   return facts
 }
 

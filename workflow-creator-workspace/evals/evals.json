@@ -9,7 +9,7 @@
       "files": ["fixtures/bun-app"],
       "expectations": [
         "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and launcher files for all three hosts — .claude/commands/<name>.md, .codex/skills/<name>/SKILL.md and .opencode/command/<name>.md — each pointing at the same workflow with the same input mapping",
-        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
+        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, a human gate, or a wait for in-flight parallel work). parallel: true is a modifier on a run/agent node, not a second behavior",
         "no-multiline-inline-shell: no command in any node or loop step contains a newline or chained multi-step shell logic \u2014 anything bigger is a script file",
         "worktree-via-launch-script: an executable repo-root .sh named after the workflow plus a sibling agents-cli.conf create or reuse a git worktree and start claude, codex, or opencode inside it; bun install is its own YAML node; the workflow YAML contains no git worktree command and no workdir key",
         "loops-bounded-and-exitable: every loop declares max_iterations and exactly one explicit exit condition (a completion signal or a command-based check)",
@@ -32,7 +32,7 @@
       "files": ["fixtures/docs-site"],
       "expectations": [
         "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and launcher files for all three hosts — .claude/commands/<name>.md, .codex/skills/<name>/SKILL.md and .opencode/command/<name>.md — each pointing at the same workflow with the same input mapping",
-        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
+        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, a human gate, or a wait for in-flight parallel work). parallel: true is a modifier on a run/agent node, not a second behavior",
         "current-branch-no-worktree: the workflow runs in place — no worktree/workdir setup, no git worktree command anywhere, and no repo-root launch script",
         "no-code-pipeline-baggage: the workflow contains no test, typecheck, build, CI, or mutation nodes \u2014 the repo has none of those",
         "outline-interview-loop: the outline interview is a bounded loop designed for one-question-per-turn relay to the human, with a completion signal",
@@ -53,7 +53,7 @@
       "files": ["fixtures/bun-app"],
       "expectations": [
         "package-structure: a workflow package directory exists containing a YAML workflow file, an agents/ folder with a workflow-lead agent file, and launcher files for all three hosts — .claude/commands/<name>.md, .codex/skills/<name>/SKILL.md and .opencode/command/<name>.md — each pointing at the same workflow with the same input mapping",
-        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, or a human gate)",
+        "yaml-valid-simple-nodes: the workflow YAML parses, and every node has an id and exactly one behavior (a command, an agent invocation with a prompt, a loop, a human gate, or a wait for in-flight parallel work). parallel: true is a modifier on a run/agent node, not a second behavior",
         "current-branch-no-worktree: the workflow runs in place — no worktree/workdir setup, no git worktree command anywhere, and no repo-root launch script",
         "split-pairing-not-tdd: the slice loop uses an implementer (production code only) AND a separate unit-test writer (tests only) as independent steps \u2014 no strict-TDD self-contained implementer",
         "plain-format-and-single-approval: the spec step requests plain acceptance criteria, an automated spec review runs before the human, and there is exactly one human spec sign-off",
