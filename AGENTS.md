@@ -125,9 +125,14 @@ Key things to know before touching this content:
   test fails. It also drives each host's `stage*` function directly, so a new
   host needs a case there.
 - The generated YAML dialect (nodes: `run:`, `agent:`+`prompt:`, `loop:`,
-  `gate:`, `when:`, `parallel: true`, `wait:`) is fully specified in
-  `assets/running.md` — read it before changing anything that touches how
-  workflows are authored or executed.
+  `gate:`, `when:`, `parallel: true`, `wait:`, `allowed_tools:`) is fully
+  specified in `assets/running.md` — read it before changing anything that
+  touches how workflows are authored or executed. `allowed_tools:` names
+  host-neutral capabilities (`read`, `search`, `edit`, `shell`, `web`,
+  `spawn`), not host tool names: no host's spawn tool takes an allowlist, so
+  the lead maps the capabilities and states the scope in the spawned prompt.
+  The mapping table lives in `running.md` because that is the file the lead
+  has at run time.
 - Every generated package ships **three** in-session launchers — `.claude/commands/`,
   `.codex/skills/`, `.opencode/command/` — specified in `references/hosts.md`.
   A worktree workflow also ships `./<name>.sh` from `assets/run.sh` and
