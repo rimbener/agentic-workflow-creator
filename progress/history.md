@@ -83,3 +83,15 @@ check_package treats `wait:` as a behavior and records `parallel`; graders allow
 ## 2026-08-24 — `1a9b489` — docs: mention parallel: true and wait: in the dialect list
 
 AGENTS.md's node-type bullet now matches running.md.
+
+## 2026-08-26 — `67176c2` — feat(skill): scope a node's agent with allowed_tools
+
+`allowed_tools:` lists host-neutral capabilities (read, search, edit, shell, web, spawn) that the lead maps to its host's tools and states in the spawned prompt; no host's spawn tool takes an allowlist, so the mapping table ships in running.md.
+
+## 2026-08-26 — `7673ab3` — test(evals): record allowed_tools in package facts
+
+check_package captures `allowed_tools` on nodes and loop steps; graders treat it as a modifier, not a second behavior.
+
+## 2026-08-26 — `78b8956` — docs: mention allowed_tools in the dialect list
+
+AGENTS.md's node-type bullet now matches running.md and says why the key names capabilities.
