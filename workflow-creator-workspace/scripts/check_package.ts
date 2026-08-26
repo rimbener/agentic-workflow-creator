@@ -84,9 +84,10 @@ function nodeFacts(node: any, idx: number) {
       stepCount: Array.isArray(loop.steps) ? loop.steps.length : loop.prompt || loop.agent ? 1 : 0,
       steps: Array.isArray(loop.steps) ? loop.steps.map((s: any, i: number) => nodeFacts(s, i)) : undefined,
     }
-    for (const k of ['prompt', 'agent', 'expect']) if (loop[k] !== undefined) (facts.loop as any)[k] = loop[k]
+    for (const k of ['prompt', 'agent', 'expect', 'allowed_tools'])
+      if (loop[k] !== undefined) (facts.loop as any)[k] = loop[k]
   }
-  for (const k of ['agent', 'expect', 'when', 'when_bash', 'dir', 'gate', 'prompt', 'wait']) {
+  for (const k of ['agent', 'expect', 'when', 'when_bash', 'dir', 'gate', 'prompt', 'wait', 'allowed_tools']) {
     if (node[k] !== undefined) facts[k] = node[k]
   }
   if (typeof node.run === 'string') facts.run = node.run
@@ -154,6 +155,7 @@ for (const wf of workflows) {
       only_failures: /--only-failures/.test(raw),
       silent_or_quiet: /--silent|--quiet|-q\b|--reporter[= ]?dot/.test(raw),
       until_run: /until_run|until_bash/.test(raw),
+      allowed_tools: /allowed_tools/.test(raw),
       base_arg: /Base:\s/.test(raw),
       log_arg: /Log:\s/.test(raw),
       report_arg: /Report:\s/.test(raw),
