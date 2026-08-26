@@ -31,9 +31,10 @@ or narrowed. Two more exist only inside a loop node's body:
 
 ## Node types
 
-Every node has an `id` and exactly one behavior. `parallel: true` is a
-modifier on `run:` or `agent:`, not a second behavior. `wait:` is a
-behavior of its own.
+Every node has an `id` and exactly one behavior. `parallel: true` and
+`allowed_tools:` are modifiers on `run:` or `agent:`, not second behaviors
+(`allowed_tools:` applies to `agent:` only). `wait:` is a behavior of its
+own.
 
 ### `run:` — one command
 
@@ -46,11 +47,13 @@ usually *is* the failure; quote it, don't summarize it.
 
 1. Read the agent file (`agent:` is a path relative to this folder).
 2. Spawn **one** subagent whose prompt is: the agent file's body, then a
-   `---` divider, then the node's `prompt:` with placeholders filled. The
-   subagent works in the directory the run was launched from. Use whatever
-   your host calls to spawn one — Claude Code's Task tool, Codex's
-   `spawn_agent`, opencode's `task` tool. The agent files here are plain
-   prompts, read by you and passed on; they need no registration with the host.
+   `---` divider, then the node's `prompt:` with placeholders filled, and —
+   when the node carries `allowed_tools:` — a second `---` divider and the
+   tool-scope block below. The subagent works in the directory the run was
+   launched from. Use whatever your host calls to spawn one — Claude Code's
+   Task tool, Codex's `spawn_agent`, opencode's `task` tool. The agent files
+   here are plain prompts, read by you and passed on; they need no
+   registration with the host.
 3. Judge the step **only** by the subagent's final return line against
    `expect:` — a word, or list of words, the line must start with. Inside a
    loop, a return ending with `<promise>TOKEN</promise>` whose TOKEN names an
@@ -101,6 +104,48 @@ cannot detach, `blocked -> <id>: host cannot run this step in the background`.
 A parallel agent that returns a question or an approval is a **halt at
 collection**, not a relay: `halted -> <id>: background agent asked the human`.
 Parallel is for work that does not need the human.
+
+### `allowed_tools:` — scope an agent's tools (modifier)
+
+Allowed on an `agent:`+`prompt:` node or an agent step inside a loop — never
+on a `run:`, `loop:`, `gate:`, or `wait:` node. It is a list of **capability
+names**, host-neutral by design: hosts spell their tools differently, so the
+workflow names the capability and you map it to your host's tools.
+
+| Capability | Means | Claude Code | Codex | opencode |
+| --- | --- | --- | --- | --- |
+| `read` | read file contents | `Read` | `read` | `read` |
+| `search` | find files, search their contents | `Glob`, `Grep` | `search`, `list_files` | `glob`, `grep`, `list` |
+| `edit` | create, change, or delete files | `Write`, `Edit` | `apply_patch` | `write`, `edit`, `patch` |
+| `shell` | run shell commands | `Bash` | `exec_command` | `bash` |
+| `web` | fetch a URL, search the web | `WebFetch`, `WebSearch` | `web_search` | `webfetch` |
+| `spawn` | start a further subagent | `Task` | `spawn_agent` | `task` |
+
+An entry that is not one of those six is passed through verbatim as a host
+tool name — that is the escape hatch for an MCP tool the workflow depends on.
+
+Turn the list into this block and append it to the spawn prompt after a `---`
+divider, with `<the node's list>` replaced by the capabilities that node
+granted, comma-separated, and nothing else changed:
+
+```
+Tools for this step: <the node's list>. Work with those only. If the step
+cannot be finished within them, return `blocked -> <the capability you
+needed>` rather than working around the limit.
+```
+
+Where your host can also restrict the subagent's tools natively, do that too.
+The block goes in either way: it is what makes the agent stop and say what it
+was missing instead of improvising, and a `blocked` return is the signal the
+list was drawn too tight.
+
+A node with no `allowed_tools:` grants the agent whatever your host gives a
+subagent by default. Omitting the key is the norm; scope a node down when the
+agent has no business editing, running commands, or reaching the network.
+
+Note the granted list is what the *agent* may reach for, not a sandbox — it
+narrows the step's blast radius and makes the agent's needs explicit; it is
+not a security boundary against a determined agent.
 
 ### `wait:` — collect in-flight work
 

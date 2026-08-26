@@ -17,6 +17,12 @@ A `parallel: true` agent is spawned with the same tool, without waiting for
 its return before the next node. A `parallel: true` `run:` uses the host's
 background shell. If the host cannot detach, the lead reports `blocked`.
 
+None of the three spawn tools takes a tool allowlist, and each host spells its
+tools differently, so `allowed_tools:` names host-neutral capabilities and the
+lead maps them at spawn time — the mapping table lives in `assets/running.md`,
+which ships into every package, so the lead has it at run time. A generated
+workflow never names a host's tools; add a capability only there.
+
 Write all three. They are small, they keep one package usable by a team on
 mixed tools, and nothing else in the package changes. The launch script
 dispatches to the same three binaries; it does not replace these files.

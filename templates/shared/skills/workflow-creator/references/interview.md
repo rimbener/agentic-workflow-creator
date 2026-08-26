@@ -90,6 +90,16 @@ trail be committed with the work (recommend yes — reviewers and the DoD diff
 committed history)? Push / open a draft PR (its own node), or stop at "branch
 ready"? The worktree is left in place for a manual PR — not removed.
 
+**12. Tool scope.** Once the node list is settled: *should any step be
+scoped down to the tools it actually needs?* `allowed_tools:` on an agent
+node grants capabilities — `read`, `search`, `edit`, `shell`, `web`, `spawn`.
+The natural candidates are the steps that read and report without running
+anything (an exhaustive review, a mutation report): `[read, search, edit,
+web]` — every scope keeps `web`, since any agent may need to look something
+up. Recommend leaving the rest at the host default — a scope that misses
+something the agent's file tells it to do halts the run. Cross-check each
+scope against that agent's invocation arguments before writing it.
+
 ## From answers to nodes
 
 Map each settled area to nodes using the canonical shapes in
@@ -104,6 +114,8 @@ Map each settled area to nodes using the canonical shapes in
 - independent checks or agents on disjoint paths may be `parallel: true`
   with a later `wait:`; interviews, gates, and anything that edits the same
   files stay sequential;
+- every `allowed_tools:` covers what its agent's file says it does — an agent
+  passed `Commands:` gets `shell`, one that writes a report gets `edit`;
 - nothing runs after an edit without a verification step, and no review
   round ends on an unverified tree.
 

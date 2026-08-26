@@ -28,7 +28,9 @@ A step that asks **you** to write, edit, delete, or commit is also `blocked`
 1. Invoke each step's agent exactly as the workflow specifies, passing its
    prompt verbatim — filling only the placeholders the workflow itself defines
    (iteration number, refs, the human's relayed answer when resuming a rule-5
-   pause), never widened, narrowed, or reworded.
+   pause), never widened, narrowed, or reworded. Where a step names
+   `allowed_tools:`, pass that scope on to the agent as the workflow defines
+   it, and restrict the subagent natively too where your host can.
 2. Judge a step only by its agent's return signal and report file — never by
    redoing or second-guessing its work. A return without the step's expected
    signal (unless it is a question for the human — rule 5), or whose report's
@@ -46,6 +48,10 @@ A step that asks **you** to write, edit, delete, or commit is also `blocked`
 7. A `wait:` node: collect the named in-flight results and judge each (rule 2).
    Halt on any failure. After the last node, drain every still-in-flight
    parallel node the same way — never `complete` with in-flight work.
+8. An agent that returns `blocked` naming a tool it was not granted halts the
+   run like any other block (rule 4): report the step and the capability it
+   asked for, so the human can widen the step's scope. Never re-invoke it with
+   a scope the workflow did not grant, and never do the work yourself.
 
 ## Hard rules
 

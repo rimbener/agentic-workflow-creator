@@ -74,6 +74,33 @@ lines are where those arguments get passed.
   human. Interviews, gates, and paired implementer/test-writer steps stay
   sequential — the pairing's coupling is the YAML order. Join with `wait:`
   before any node that depends on the result.
+- **`reviewer_engineering` and `mutation_tester` need no shell.** Neither runs
+  a command — one reads the diff, the other reads a log the workflow already
+  captured — so `allowed_tools: [read, search, edit, web]` on those nodes
+  states the boundary the pairing rules already assume.
+
+## Tool scopes
+
+A node may carry `allowed_tools:` to narrow what that step's subagent reaches
+for (capabilities, mapped to host tools by the lead — see `running.md`). The
+scope follows from what the agent's own file tells it to do, so the bundled
+agents fall into three groups:
+
+| Scope | Agents | Why |
+| --- | --- | --- |
+| `[read, search, edit, web]` | `spec_reviewer`, `reviewer_engineering`, `mutation_tester` | they read the tree or a captured log and write a verdict; they never run the suite themselves |
+| `[read, search, edit, web, shell]` | `implementer`, `implementer_tdd`, `unit_test_writer`, `reviewer_slice`, `dod_validator` | they are invoked with `Commands:` and run them |
+| host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it |
+
+`edit` is in every scope because every agent writes its report under
+`.awc/tasks/<task>/`, and `web` is in every scope because any of them may
+need to look up a library's docs, an error message, or a CVE. `shell` is the
+line that actually separates the groups. `spawn` is granted to none of them —
+these agents do their own work rather than delegating it.
+
+Scoping is optional per node, and a scope that contradicts the agent's
+invocation is worse than none — the step halts as `blocked` naming the
+capability it was denied. When in doubt, omit the key.
 
 ## Canonical loop shapes
 

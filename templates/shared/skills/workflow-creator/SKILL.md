@@ -52,6 +52,19 @@ not need the human (no interview, no gate, no approval). Put a `wait:` before
 any later node that depends on that work; leftover in-flight work drains at
 the end of the list. Sequential is the default.
 
+**Tool scope is per node.** `allowed_tools:` on an `agent:` node or agent
+step narrows what that step's subagent may reach for, in host-neutral
+capability names (`read`, `search`, `edit`, `shell`, `web`, `spawn`) that the
+lead maps to its host's tools. Reach for it where a step has no business
+touching a capability — a reviewer that reads and writes its report needs no
+`shell`, and no bundled agent delegates, so none needs `spawn`. Grant
+everything the agent's own file tells it to do: an agent invoked with
+`Commands:` needs `shell`, and every agent that writes a report under
+`.awc/tasks/<task>/` needs `edit`. Every scope keeps `web` — looking up a
+library's docs or an error message is something any of them may need.
+Omitting the key grants the host's default, and that stays the norm — a scope
+drawn too tight turns into a `blocked` halt mid-run.
+
 **A script does exactly one thing.** A script with internal phases is a
 workflow hiding inside a file — where the lead can't see progress, retry a
 single step, or report where it failed. Splitting is the default; a node
@@ -194,6 +207,16 @@ before anything that depends on the results:
     wait: [lint, typecheck]
 ```
 
+A step that only reads the tree and writes its verdict says so:
+
+```yaml
+  - id: review
+    agent: agents/reviewer_engineering.md
+    prompt: "Task: {{task}}. Mode: full-review. Base: {{base}}."
+    expect: [APPROVED, CHANGES_REQUESTED]
+    allowed_tools: [read, search, edit, web]
+```
+
 These examples are illustrative, never templates to copy — every workflow's
 nodes come from its own interview.
 
@@ -212,6 +235,12 @@ nodes come from its own interview.
 - Every `parallel: true` is on a top-level `run:` or `agent:` node — never a
   loop, gate, wait, or loop step. Every `wait:` names prior `parallel: true`
   ids. A `wait:` sits before any node that depends on that work.
+- Every `allowed_tools:` is on an `agent:` node or agent step, and lists
+  capability names (`read`, `search`, `edit`, `shell`, `web`, `spawn`) or a
+  host tool name the workflow deliberately depends on. Read each scoped
+  node's agent file and confirm the list covers everything that file tells
+  the agent to do — a `Commands:` argument needs `shell`, a report file needs
+  `edit`, and every scope keeps `web`.
 - Every `{{placeholder}}` is a declared input, a var, or a loop-only one.
 - The package contains `running.md`, `agents/workflow_lead.md`, and every
   referenced agent.
