@@ -107,3 +107,11 @@ A spec step always opens from `user-story.md`, so a `story_partner` node precede
 ## 2026-08-27 — `abb1b8d` — test(evals): cover capture and confirm story paths
 
 `ticket-capture-story` and `thin-ticket-confirm` grade the lean story modes. `check_package` reports each story step with its loop context so a tokenless capture inside a token-closed loop is visible.
+
+## 2026-08-27 — `ed77630` — feat(skill): archive the task trail with a finish node
+
+The task trail is two-tiered while a run is live: `spec.md` and `acceptance-criteria.md`, the pair a human approves, sit at `.awc/tasks/in-progress/<task>/`'s root, and every other artifact lives in `tmp/` beside them. Every bundled agent names the two-tier paths; the lead learns that a `run:` node's command is the workflow acting, not a write. A workflow that writes the trail closes it with a node running `scripts/finish-task.sh` (copied verbatim from `assets/finish-task.sh`), which moves the whole directory — `tmp/` and all — to `.awc/tasks/done/<task>/` without touching git. `finish-task.test.ts` drives the script itself: the move, resume no-op, sibling isolation, kebab-case guard, and the unstaged archive; `staging.test.ts` forbids the old flat path.
+
+## 2026-08-27 — `34254d6` — feat(evals): expect the two-tier task trail and finish node
+
+Every workflow eval gains a task-trail expectation: agents write under `.awc/tasks/in-progress/<task>/` with the approved pair at the root and the rest in `tmp/`, and a `run:` node invoking `scripts/finish-task.sh` is the last node that touches the trail. The mutation eval also grades that the archive move is committed by an authored committer agent, never a `run: git commit` or the lead. `check_package` extracts `finishTaskScripts` resolved against the finish node's actual run path and a `trail_flat` string list instead of a boolean.
