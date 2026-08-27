@@ -6,6 +6,30 @@ package's `agents/` folder, tailored to this workflow:
 
 - **Keep only the modes the workflow's nodes invoke.** A build loop that
   never runs `kill-mutants` ships an implementer without that mode row.
+- **Trim a mode by name, not by section.** A mode's rules sit wherever they
+  apply, so the base templates mark the rule with the mode it belongs to: the
+  mode in backticks, the word **interviewing** for the two that ask
+  (`interview` and `capture-and-confirm`), or the phrase **a capture mode** for
+  the two that take a `Source:` (`capture` and `capture-and-confirm`).
+  `story_partner` is where this bites, and there the marks are complete — §The
+  source and the two capture rows for the capture modes; each mode row marked
+  with its own mode alone; Protocol 1, the log paragraph and the question-turn
+  ticks marked *interviewing*, with what `capture-and-confirm` adds to Protocol
+  1 in a bullet of its own; Protocols 3, 4 and 5 and §Communication each a
+  mode-neutral opener over one marked bullet per mode. So what every copy
+  needs — the list of areas a story settles, the `user_story ->` return —
+  sits above the marks and survives any trim, and no trim there has to cut
+  inside a sentence. So the trim is mechanical: drop the mode's row, then every marked
+  block no surviving mode still claims, taking the sentences inside it whole —
+  and with `capture`, the `## Open questions` material in that file, since only
+  that mode ever writes the heading. Marks nest: inside a block you keep, a
+  sentence or bullet marked for a mode you dropped goes with it. Text that
+  carries no mark holds for every mode and stays. **The frontmatter is part of
+  the trim**: `description:` names the modes in backticks, so rewrite it to the
+  modes the copy actually has — a file that still advertises one no node
+  invokes sends work to a mode it no longer carries. Renumber the protocol
+  steps that survive, and check the cross-references (`§3`, `§The source`)
+  still point where they did.
 - **Strip checks on artifacts no node produces.** A workflow without mutation
   testing gets a `dod_validator` that has never heard of `mutation.md`; one
   without slice reviews gets a validator that doesn't demand
@@ -31,8 +55,8 @@ lines are where those arguments get passed.
 | Agent | Does | Invocation arguments | Return signals |
 | --- | --- | --- | --- |
 | `workflow_lead` | Runs the workflow: invokes agents, enforces gates and caps, collects parallel work, escalates on halt. Coordination only — never writes or commits | `Task/Mode/Workflow` (supplied by the launch command) | `complete`, `halted`, `blocked` |
-| `story_partner` | Interviews the human one question at a time → `user-story.md`, keeping `story-interview-log.md` as its memory across turns. Owns the *problem*, never the solution | `Task`, `Mode: interview`, the raw request, `{{answer}}` | `user_story`; token `USER_STORY_WRITTEN` |
-| `spec_partner` | Interview (memory in `spec-interview-log.md`, `write-bundle` only) → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted` (token `SPEC_BUNDLE_WRITTEN`), `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
+| `story_partner` | Writes `user-story.md` — the artifact the spec step reads. `interview` grills the human one question at a time, `capture` structures a source they already wrote, `capture-and-confirm` does both; the interviewing modes keep `story-interview-log.md` as their memory across turns. Owns the *problem*, never the solution | `Task`, `Mode: interview \| capture \| capture-and-confirm`, `Request:` (`interview`), `Source:` (capture modes), `{{answer}}` on the looping modes | `user_story`; token `USER_STORY_WRITTEN` on the looping modes; `blocked` when `Source:` cannot be read |
+| `spec_partner` | Opens by reading `user-story.md` (`write-bundle` halts as `blocked` without it; the later modes read it when it is there). Interview (memory in `spec-interview-log.md`, `write-bundle` only) → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted` (token `SPEC_BUNDLE_WRITTEN`), `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
 | `spec_reviewer` | One-round automated review of the spec bundle → `review-spec.md`, before the human approval | `Task`, `Mode: review` | `APPROVED`, `CHANGES_REQUESTED` |
 | `implementer` | Production code only, non-TDD. Never touches tests; test findings are tagged `test-step` and left open | `Task`, `Mode: build-slice \| fix-slice-findings \| fix-review-findings \| kill-mutants \| close-dod-gaps`, `Commands:`, `Slice: <N>` on slice modes | `green`, `blocked`; token `DONE` per mode |
 | `unit_test_writer` | Unit tests only. Never touches production code; defects a test exposes stay recorded as open production rows | `Task`, `Mode: cover-criteria \| cover-gaps`, `Commands:`, `Slice: <N>`, `Report:` on `cover-gaps` | `covered`, `blocked`; token `DONE` on `cover-gaps` only |
@@ -44,6 +68,18 @@ lines are where those arguments get passed.
 
 ## Pairing rules
 
+- **A spec step always has a story step.** `spec_partner` opens by reading
+  `user-story.md` and treats what it settles as decided, so a workflow that
+  specs anything puts a `story_partner` node ahead of it — the mode is the
+  dial, from a full interview down to a single `capture` of a ticket the human
+  pasted. Whatever `capture` leaves undecided it writes under
+  `## Open questions`, and those are the first areas the spec interview
+  settles; that handover is what keeps the problem side from going unasked.
+  The two asking modes settle those areas themselves, and so does a `capture`
+  whose source was complete, so their story carries no such heading. The rule
+  runs one way: a spec step needs a story step, and a story step is free to
+  stand alone — a workflow whose whole output is a user story is a story step
+  and nothing more.
 - **Non-TDD split**: `implementer` (production code) + `unit_test_writer`
   (tests) are independent — neither references or waits on the other's
   internals; the workflow's step order is the only coupling.
@@ -90,7 +126,7 @@ agents fall into three groups:
 | --- | --- | --- |
 | `[read, search, edit, web]` | `spec_reviewer`, `reviewer_engineering`, `mutation_tester` | they read the tree or a captured log and write a verdict; they never run the suite themselves |
 | `[read, search, edit, web, shell]` | `implementer`, `implementer_tdd`, `unit_test_writer`, `reviewer_slice`, `dod_validator` | they are invoked with `Commands:` and run them |
-| host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it, and writes its own log every turn |
+| host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it, and writes its own log every turn; a `capture` reads whatever `Source:` names, a URL included |
 
 `edit` is in every scope because every agent writes its report under
 `.awc/tasks/<task>/`, and `web` is in every scope because any of them may
@@ -118,6 +154,48 @@ Interview (`until: USER_STORY_WRITTEN` / `SPEC_BUNDLE_WRITTEN`, cap ~20–30):
    belongs to `write-bundle` alone, so a later approval loop never writes into
    an interview slot. Pass `{{answer}}` and nothing more: the lead never
    reconstructs earlier turns into the prompt.
+
+The story half has two leaner shapes, for a workflow whose problem statement
+already exists — a spec written elsewhere, a ticket, a design doc. Both still
+produce `user-story.md`, so the spec step reads the same file either way:
+
+Capture (a plain node, no loop, no questions):
+
+1. `story_partner` — `Mode: capture. Source: {{source}}` — `expect: user_story`
+
+   `{{source}}` is a path, a URL, or the request text itself, declared as an
+   input like any other. The agent decides which by shape, narrowly: a path is
+   one space-free token that starts with `/` or `./`, ends in a file
+   extension, or names something in the repo; a URL starts with `http://` or
+   `https://`; anything else — a sentence, a pasted ticket body, a slug like
+   `fix/login-redirect` — *is* the material. Only a path- or URL-shaped value
+   that will not open halts the step, so a workflow may pass either a dump
+   file or the ticket text through the same input. A source
+   behind an authenticated tool gets a `run:` node ahead of this one that
+   dumps it to a file, and `Source:` names that file — the capture reads, it
+   does not fetch credentials. What the source leaves undecided lands under
+   `## Open questions` in the story, and the spec interview asks it. Single
+   run, so `expect:` alone judges it: this mode returns no token, so a
+   `capture` placed inside `until: USER_STORY_WRITTEN` could never close that
+   loop — it belongs on a plain node.
+
+Capture, then confirm (`until: USER_STORY_WRITTEN`, cap ~10):
+
+1. `story_partner` — `Mode: capture-and-confirm. Source: {{source}}. The human's previous answer: {{answer}}` — `expect: user_story`
+
+   Turn 1 reads the repo first, then records the source in the log — a fact the
+   README or the code already answers is never queued as a question — and then
+   does what any interview turn does: asks the first area the source left open
+   — or, when the source settles every area, writes the story and closes the
+   loop right there. Every
+   later turn is an ordinary interview turn, same log, same closing rule. The
+   cap is lower because the source did the opening work.
+
+   Each turn of both looping modes therefore ends one of two ways — a question
+   the lead relays, or the story plus its token. A turn that does neither
+   leaves the loop with nothing to relay and no signal, and the run walks to
+   its cap; that is why `capture`'s tokenless return belongs on its own node
+   rather than inside this loop.
 
 Single human sign-off of an artifact (`until: SPEC_APPROVED`, cap ~10):
 

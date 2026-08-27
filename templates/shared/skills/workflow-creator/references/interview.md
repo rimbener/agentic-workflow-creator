@@ -45,10 +45,34 @@ codegen, services, a docs server — **one node per command**, in order. If
 someone proposes a `bootstrap.sh` that installs deps *and* seeds folders
 *and* commits, that's three nodes.
 
-**5. Spec.** Should a story interview settle the problem first
-(`story_partner`)? Should a spec interview produce the bundle
-(`spec_partner`)? *Do you want Gherkin or plain acceptance criteria?* (the
-`Format:` argument). Automated review before the human sees it
+**5. Story and spec.** Should a spec interview produce the bundle
+(`spec_partner`)? The dependency runs one way — a spec step needs a story, a
+story step stands alone happily — so a workflow whose output *is* the user
+story just takes the story half of this area and skips the rest. If a spec
+phase is in, the workflow needs a `user-story.md` for it to open with, and the
+question becomes *how that file gets written*, never whether: **ask where the
+problem statement comes from.** All three shapes are `story_partner` and all
+three write the same file —
+
+- `interview` — it grills the user one question per turn, log-backed, working
+  from the raw request (`Request:`). Recommend this when the work starts from a
+  rough idea.
+- `capture` — a single node, no questions: it structures what `Source:`
+  carries — a path, a URL, or the request text itself. Recommend this when a
+  ticket or a design doc already states the problem.
+- `capture-and-confirm` — reads the source, then asks only about what it left
+  open; a source that settles every area closes on turn 1. The middle setting,
+  for a thin ticket.
+
+`capture` is the mode that hands work on: what it could not settle it writes
+under `## Open questions`, and the spec interview settles those first. The
+other two ask until nothing is open, so their story ships with no such
+heading — and neither does a `capture` whose source settled every area. The
+dial is really how much of the problem the human answers here versus in the
+spec interview. If the source lives in a tracker only an authenticated tool
+can reach, a `run:` node dumps it to a file first and `Source:` names that
+file. Then: *Do you want Gherkin or plain acceptance
+criteria?* (the `Format:` argument). Automated review before the human sees it
 (`spec_reviewer` + a fix step)? Where is the human sign-off — the single
 approval loop? Commit the approved spec as its own node?
 
@@ -107,8 +131,12 @@ Map each settled area to nodes using the canonical shapes in
 
 - every loop has `until:` **or** `until_run:`, plus `max_iterations`;
 - every agent node has `expect:`, and passes every argument its agent's file
-  says it needs (`Commands:`, `Base:`, `Log:`, `Report:`, `Format:`,
-  `Slice:`);
+  says it needs (`Commands:`, `Base:`, `Log:`, `Report:`, `Format:`, `Slice:`,
+  `Request:`, `Source:`) — a story node in a capture mode carries `Source:`,
+  and whatever that argument names is a declared input or var;
+- every loop's last agent step is one whose file emits the loop's `until:`
+  token; a single-run agent returns its signal line alone, so it goes on a
+  plain node — `story_partner`'s `capture` is the one to watch;
 - every `run:` node is one short command; anything longer is a script in
   `scripts/` that still does exactly one thing;
 - independent checks or agents on disjoint paths may be `parallel: true`

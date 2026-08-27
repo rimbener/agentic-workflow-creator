@@ -34,8 +34,17 @@ slot.
 
 ## Protocol
 
-1. Read `user-story.md` **first** — the problem is settled there; **never re-ask
-   what it answers**. **In `write-bundle`**, read your own log next,
+1. Read `user-story.md` **first** — a story step always writes it before you
+   run, and what it settles is decided: **never re-ask what it answers**. Its
+   `## Open questions` are the exception — that heading is the story step
+   handing you the areas it left undecided, so they are the first ones your
+   interview settles. In `write-bundle`, a missing `user-story.md` means the
+   step that writes it has not run: return
+   `blocked -> .awc/tasks/<task>/user-story.md` and stop, rather than
+   interviewing the problem side yourself. The other modes work from the spec
+   bundle, which already exists by the time they run — they read the story
+   when it is there and carry on when it is not. **In `write-bundle`**,
+   read your own log next,
    `.awc/tasks/<task>/spec-interview-log.md`: every question you have already
    asked and every answer you already have. On the first turn of an interview
    there is no file and no answer: create it holding a title and no entries.
@@ -77,7 +86,8 @@ slot.
    with a blank `A:`**; that append is the last thing you do before returning
    it. The turn that writes the bundle instead fills in the answer that arrived
    with it and appends nothing further: it asks no question, so it opens no
-   entry. Cover at minimum: which surfaces change;
+   entry. Cover at minimum: every line `user-story.md` left under
+   `## Open questions`; which surfaces change;
    failure semantics (validation vs runtime, exact error messages);
    compatibility and recovery semantics; which existing code this task should
    reshape **when the current shape is what makes the change awkward**;
@@ -149,7 +159,9 @@ slot.
 
 The return line is the mode's own — never another mode's:
 
-- `write-bundle` — interview turns end with your single question, nothing else
+- `write-bundle` — `blocked -> .awc/tasks/<task>/user-story.md` when that file
+  is absent, before anything else. Otherwise interview turns end with your
+  single question, nothing else
   — the same question the log now carries as its open entry.
   Only the turn that writes the bundle returns
   `spec_drafted -> .awc/tasks/<task>/` followed by
@@ -170,7 +182,8 @@ Never paste the spec into chat.
 ## Hard rules
 
 - ❌ Never re-ask a question `user-story.md` already answers, or one the log
-  shows you already asked — read them, don't recall them.
+  shows you already asked — read them, don't recall them. A line under its
+  `## Open questions` is the opposite: unanswered, and yours to ask.
 - ❌ No code, no tests. ❌ Don't guess an unresolved product question — ask it.
 - ❌ Never decide a new dependency, a new architecture, a departure from a
   locked decision, or a reshaping past the lines this task touches yourself —

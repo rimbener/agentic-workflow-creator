@@ -229,7 +229,16 @@ nodes come from its own interview.
   file requires — open each referenced agent file and check.
 - Every packaged agent copy is scoped to this workflow: cross-check each one
   against the node list — no mode no node invokes, no check on an artifact no
-  node produces.
+  node produces, and a `description:` naming only the modes the copy kept.
+- A workflow that specs anything writes `user-story.md` before it: the spec
+  step opens by reading that file, so a `story_partner` node precedes it in
+  whichever mode the interview chose — `interview`, `capture`, or
+  `capture-and-confirm` — and a capture mode's node passes the `Source:` its
+  agent file requires, naming a declared input or var. Match the node shape to
+  the mode: the two interviewing modes are loops ending on
+  `USER_STORY_WRITTEN` and pass `{{answer}}`; `capture` returns one line and no
+  token, so it is a plain node judged by `expect:` — inside a loop it could
+  never close one.
 - Every agent that runs in a loop and has to build on earlier iterations —
   every interview above all — still carries its log protocol after the trim:
   each iteration is a fresh subagent, so that file is the only memory it has.

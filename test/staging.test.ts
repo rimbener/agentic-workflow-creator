@@ -313,6 +313,340 @@ describe('the shared payload', () => {
     // The log is the memory; the lead never rebuilds history into the prompt.
     expect(catalog).toContain('Pass `{{answer}}` and nothing more')
   })
+
+  // spec_partner opens by reading user-story.md and treats it as settled, so
+  // that file has to exist however lean the story step is. The three modes are
+  // the dial; a capture hands what it could not settle to the spec interview
+  // under `## Open questions` instead of leaving it unasked.
+  test('the story step always writes user-story.md, in one of three modes', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    // Assert on squashed text: these files are hard-wrapped prose, so a
+    // reflow must not fail the test.
+    const read = (...parts: string[]) =>
+      readFileSync(path.join(skillDir, ...parts), 'utf8').replace(/\s+/g, ' ')
+
+    const story = read('assets', 'agents', 'story_partner.md')
+    for (const mode of ['interview', 'capture', 'capture-and-confirm']) {
+      expect(story).toContain(`\`${mode}\``)
+    }
+    expect(story).toContain('Source:') // the capture modes' argument
+    expect(story).toContain('## Open questions') // the handover to the spec step
+
+    // The spec side names the same handover, and halts when the file is absent
+    // rather than interviewing the problem half itself.
+    const spec = read('assets', 'agents', 'spec_partner.md')
+    expect(spec).toContain('## Open questions')
+    expect(spec).toContain('blocked -> .awc/tasks/<task>/user-story.md')
+
+    // The pairing rule, the question that settles it, and the package check.
+    const pairing = read('references', 'agent-catalog.md')
+    expect(pairing).toContain('A spec step always has a story step')
+    // Only `capture` leaves the heading behind — the pairing rule says which.
+    expect(pairing).toContain('Whatever `capture` leaves undecided')
+    // The description names the modes too, so the trim reaches frontmatter.
+    expect(story).toContain('`capture-and-confirm` does both')
+    expect(read('references', 'interview.md')).toContain(
+      'ask where the problem statement comes from',
+    )
+    expect(read('SKILL.md')).toContain(
+      'A workflow that specs anything writes `user-story.md` before it',
+    )
+  })
+
+  // A loop closes on a token, so every turn of an interviewing mode has to end
+  // in something the lead can act on: a question to relay, or the story plus
+  // its token. capture ends in neither, which is why it may not sit in a loop
+  // — the run would walk to max_iterations with the story already written.
+  test('each story mode matches the node shape that can judge it', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const read = (...parts: string[]) =>
+      readFileSync(path.join(skillDir, ...parts), 'utf8').replace(/\s+/g, ' ')
+
+    const story = read('assets', 'agents', 'story_partner.md')
+    // Every interviewing turn asks or writes — never both, never neither.
+    expect(story).toContain(
+      'either **asks one question** or **writes the file**',
+    )
+    // capture-and-confirm turn 1 is that same choice, so a complete source
+    // closes the loop on turn 1 instead of stranding it.
+    expect(story).toContain('makes **turn 1** that closing turn')
+    // capture returns no token: nothing for an `until:` to fire on.
+    expect(story).toContain(
+      '- In `capture`, the single run returns that line alone, judged by `expect:`. Add no token',
+    )
+
+    const catalog = read('references', 'agent-catalog.md')
+    expect(catalog).toContain('could never close that loop')
+    // One definition of "settled": a captured line counts as an answer does,
+    // and an answer that decides a queued line strikes it. Two definitions
+    // would send a later turn back over what the source already settled.
+    expect(story).toContain('That record counts exactly as the entries do')
+    expect(story).toContain('strike that one line')
+    // The captured record is two lists, and only the queue half loses lines —
+    // striking a settled area would put it back in the queue to be re-asked.
+    expect(story).toContain('### Settled')
+    expect(story).toContain('### Open')
+    expect(story).toContain('Only the **Open** list')
+    // Every block an interviewing mode owns carries the word, so a capture-only
+    // copy can drop them by name instead of by judgement.
+    expect(story).toContain("This step is an interviewing mode's alone")
+    expect(story).toContain('In an interviewing mode, every **question** turn')
+    // Protocols 3, 4, 5 and Communication carry a marked bullet per mode under
+    // a mode-neutral opener, so a capture-only copy keeps neither the
+    // one-question rule nor the closing-turn language only a loop can reach.
+    expect(story).toContain('- In an interviewing mode, ask, **one question')
+    expect(story).toContain('- In `capture-and-confirm`, the log opens with')
+    expect(story).toContain('- In `capture-and-confirm`, the source got there')
+    expect(story).toContain('- In `capture-and-confirm`, a source that settles')
+    expect(story).toContain('- In `capture-and-confirm`, the turn that carries')
+    expect(story).toContain('- In an interviewing mode, name it out loud')
+    expect(story).toContain('- In an interviewing mode, it is the turn when')
+    expect(story).toContain('- In an interviewing mode, a loop is waiting')
+    expect(story).toContain('- In `capture`, take each area the source')
+    expect(story).toContain('- In `capture`, a collision the source walks into')
+    expect(story).toContain('- In `capture`, that turn is the single run')
+    expect(story).toContain('- In `capture`, the single run returns that line')
+    expect(catalog).toContain('a mode-neutral opener over one marked bullet')
+    expect(catalog).toContain('Marks nest')
+    expect(story).not.toContain('mode that can ask')
+    expect(catalog).toContain('Trim a mode by name')
+    // Only `capture` leaves the handover heading behind; the doc that offers
+    // the choice has to say so, and that a full source closes on turn 1.
+    const interviewRef = read('references', 'interview.md')
+    expect(interviewRef).toContain('`capture` is the mode that hands work on')
+    expect(interviewRef).toContain('closes on turn 1')
+    // Both the design walk and the handoff check state the shape rule.
+    expect(read('references', 'interview.md')).toContain(
+      '`Request:`, `Source:`',
+    )
+    expect(read('SKILL.md')).toContain('it could never close one')
+  })
+
+  // What every mode needs sits above the marks, so a capture-only trim cannot
+  // carry it off: the list of areas to cover, and the return line the node's
+  // `expect:` matches. Losing either leaves a capture with nothing to extract,
+  // or with no signal for the lead to judge.
+  test('a capture-only trim keeps the areas and the return line', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const read = (...parts: string[]) =>
+      readFileSync(path.join(skillDir, ...parts), 'utf8').replace(/\s+/g, ' ')
+
+    const story = read('assets', 'agents', 'story_partner.md')
+    expect(story).toContain('**The areas a story settles.** Every mode covers')
+    for (const area of [
+      '**who**',
+      '**what**',
+      '**why**',
+      '**success**',
+      '**edges**',
+    ]) {
+      expect(story).toContain(area)
+    }
+    expect(story).toContain(
+      "That line is what the node's `expect:` matches, in every mode",
+    )
+    expect(story).toContain('`user_story -> .awc/tasks/<task>/user-story.md`')
+    // Both arguments are named where the agent reads them, so the handoff
+    // check ("open each agent file") can enforce either one.
+    expect(story).toContain('`Request:` carries the raw request')
+    expect(story).toContain('`Source:` carries or names the raw material')
+    // Inline request text IS the source; a path- or URL-shaped value that will
+    // not open is a halt. Both halves say so where the agent reads them — the
+    // §The source rule and the return convention it returns by.
+    expect(story).toContain('A slash alone makes nothing a path')
+    expect(story).toContain(
+      'A path-shaped or URL-shaped `Source:` that will not open is a halt',
+    )
+    expect(story).toContain('A capture mode has one other return')
+    // The catalog's capture shape decides the same way, or a creator following
+    // it would pass a slug as a path and the step would halt on a real run.
+    const catalogShape = read('references', 'agent-catalog.md')
+    expect(catalogShape).toContain('The agent decides which by shape, narrowly')
+    expect(catalogShape).toContain('one space-free token')
+    expect(catalogShape).toContain('slug like `fix/login-redirect`')
+    // An empty handover heading reads as work the spec step must go find.
+    expect(story).toContain('left out entirely when the source settled')
+    const catalog = read('references', 'agent-catalog.md')
+    expect(catalog).toContain('sits above the marks and survives any trim')
+    // The description lists the modes, so the trim has to reach it too.
+    expect(catalog).toContain('**The frontmatter is part of the trim**')
+    expect(read('SKILL.md')).toContain(
+      'a `description:` naming only the modes the copy kept',
+    )
+    // The two ask-side prohibitions belong to the modes that ask.
+    expect(story).toContain('- ❌ In an interviewing mode, never ask two')
+  })
+})
+
+// A block is one bullet, one numbered protocol step, one table row, or one
+// paragraph — the unit the catalog tells the skill to keep or drop whole.
+// Indented continuations (including fenced examples) belong to the block above.
+function markdownBlocks(md: string): string[] {
+  const out: string[] = []
+  let cur: string[] = []
+  let prevBlank = true
+  const push = () => {
+    if (cur.join('\n').trim()) out.push(cur.join('\n'))
+    cur = []
+  }
+  let fenced = false
+  for (const line of md.split('\n')) {
+    // A fenced example belongs to whatever introduced it — splitting inside one
+    // would strand its lines in blocks of their own and survive any trim.
+    const fence = /^\s*```/.test(line)
+    const fresh =
+      !fenced &&
+      (/^\s*(?:[-*]|\d+\.)\s/.test(line) ||
+        /^#{1,6}\s/.test(line) ||
+        /^\|/.test(line) ||
+        (prevBlank && line.trim() !== '' && !/^\s/.test(line)))
+    if (fresh) push()
+    if (fence) fenced = !fenced
+    cur.push(line)
+    prevBlank = line.trim() === ''
+  }
+  push()
+  return out
+}
+
+// story_partner is trimmed per package, and the trim is by mark. These run the
+// recipe the catalog gives — drop every block no surviving mode claims — and
+// check what is left, which is what a phrase assertion on the base template
+// cannot do.
+describe('trimming story_partner by mark', () => {
+  const story = readFileSync(
+    path.join(
+      sharedDir(),
+      'skills',
+      'workflow-creator',
+      'assets',
+      'agents',
+      'story_partner.md',
+    ),
+    'utf8',
+  )
+  // The marks the catalog defines, and the recipe it gives: drop a block when
+  // it carries a mark and no surviving mode claims it. Sentences marked for a
+  // dropped mode inside a block you keep are trimmed by hand after — the
+  // nesting rule — so this checks the block-level half of the trim.
+  // Case-insensitive: a mark opening a sentence reads as "A capture mode …".
+  const MARKED =
+    /interviewing|`interview`|`capture`|`capture-and-confirm`|a capture mode/i
+  // The frontmatter is rewritten rather than dropped (the catalog says so), and
+  // a block under a marked `##` heading inherits that heading's mark — §The
+  // source is a capture-mode section, and the catalog trims it as one.
+  const body = story.replace(/^---\n[\s\S]*?\n---\n/, '')
+  const marksOf = (block: string, heading: string) =>
+    MARKED.test(block) ? block : MARKED.test(heading) ? heading : ''
+  const trimTo = (surviving: RegExp) => {
+    let heading = ''
+    return markdownBlocks(body)
+      .filter((block) => {
+        if (/^##\s/.test(block)) heading = block
+        const mark = marksOf(block, heading)
+        return !mark || surviving.test(mark)
+      })
+      .join('\n')
+      .replace(/\s+/g, ' ')
+  }
+
+  // Material no capture-only copy can act on: a log it never opens, a token it
+  // never returns, an entry it never appends.
+  const INTERVIEW_ONLY = [
+    'story-interview-log.md',
+    'USER_STORY_WRITTEN',
+    'blank `A:`',
+    'one question at a time',
+  ]
+
+  test('each mode row is marked with its own mode alone', () => {
+    const rows = markdownBlocks(body).filter((b) => /^\| `[a-z-]+` \|/.test(b))
+    expect(rows).toHaveLength(3)
+    const others: Record<string, RegExp> = {
+      interview: /`capture`|`capture-and-confirm`|a capture mode/i,
+      capture: /`interview`|interviewing|`capture-and-confirm`/i,
+      'capture-and-confirm': /`interview`|`capture`/i,
+    }
+    for (const row of rows) {
+      const mode = row.match(/^\| `([a-z-]+)` \|/)?.[1] ?? ''
+      const otherModes = others[mode]
+      expect(otherModes).toBeDefined()
+      expect({
+        mode,
+        leaks: otherModes?.test(row.slice(mode.length + 4)) ?? true,
+      }).toMatchObject({ leaks: false })
+    }
+  })
+
+  test('every interview-only block carries an interviewing mark', () => {
+    for (const block of markdownBlocks(body)) {
+      const token = INTERVIEW_ONLY.find((t) => block.includes(t))
+      if (token) {
+        expect({
+          token,
+          marked: /interviewing|`interview`/i.test(block),
+          block,
+        }).toMatchObject({ marked: true })
+      }
+    }
+  })
+
+  // The mirror: an interview-only copy drops the source, its halt and its
+  // handover heading, and still keeps the story shape it writes.
+  test('an interview-only copy drops the source and keeps the story shape', () => {
+    const kept = trimTo(/interviewing|`interview`/i)
+    expect(kept).toContain('## Acceptance criteria')
+    expect(kept).toContain('**who** (which persona/user)')
+    expect(kept).toContain('story-interview-log.md')
+    expect(kept).toContain('USER_STORY_WRITTEN')
+    for (const token of [
+      '## Open questions',
+      '`Source:` carries',
+      'blocked ->',
+      // no row advertising a mode this package has no node for
+      '| `capture` |',
+      '| `capture-and-confirm` |',
+      // and no turn-1 source protocol it could never run
+      'capture-and-confirm',
+      '## From the source',
+    ]) {
+      expect(kept).not.toContain(token)
+    }
+  })
+
+  // The middle mode keeps both halves: it reads a source and it interviews.
+  test('a confirm-only copy keeps the source and the interview', () => {
+    const kept = trimTo(/interviewing|`capture-and-confirm`|a capture mode/i)
+    expect(kept).toContain('story-interview-log.md')
+    expect(kept).toContain('## From the source')
+    expect(kept).toContain('`Source:` carries or names the raw material')
+    expect(kept).toContain('USER_STORY_WRITTEN')
+    expect(kept).toContain('## Acceptance criteria')
+    for (const token of [
+      '`Request:` carries',
+      // the handover heading is `capture`'s output; a confirm story has none
+      'under `## Open questions`',
+      '| `interview` |',
+      '| `capture` |',
+    ]) {
+      expect(kept).not.toContain(token)
+    }
+  })
+
+  test('a capture-only copy keeps the areas, the story shape and the signal', () => {
+    const kept = trimTo(/`capture`|a capture mode/i)
+    // What every mode needs survives...
+    expect(kept).toContain('**who** (which persona/user)')
+    expect(kept).toContain('`user_story -> .awc/tasks/<task>/user-story.md`')
+    expect(kept).toContain('## Acceptance criteria')
+    expect(kept).toContain('`Source:` carries or names the raw material')
+    expect(kept).toContain('## Open questions')
+    // ...including the fact lookup, which is every mode's, and the mode row.
+    expect(kept).toContain('**Look facts up yourself.**')
+    expect(kept).toContain('| `capture` | A single run, no questions')
+    // ...and nothing an unlooped single run could not do is left behind.
+    for (const token of INTERVIEW_ONLY) expect(kept).not.toContain(token)
+  })
 })
 
 describe('cleanup', () => {
