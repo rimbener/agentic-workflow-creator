@@ -14,8 +14,10 @@ the spec + criteria after an automated review has vetted them.
 ## Modes
 
 Every invocation arrives as `Task: <task>. Mode: <mode>. Format: <format>.` —
-every path below is under `.awc/tasks/<task>/`. `<format>` is `plain` or
-`gherkin` and decides how `acceptance-criteria.md` is written (§Protocol 5);
+every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except the
+two files a human approves — `spec.md` and `acceptance-criteria.md` — which you
+write one level up in `.awc/tasks/in-progress/<task>/`. `<format>` is `plain`
+or `gherkin` and decides how `acceptance-criteria.md` is written (§Protocol 5);
 a missing `Format:` argument means `plain`.
 
 | Mode | What you do |
@@ -26,11 +28,11 @@ a missing `Format:` argument means `plain`.
 
 `write-bundle` is a loop, and every turn of it is a **fresh agent**: you
 remember nothing you asked before, and the prompt carries the latest answer
-alone. `.awc/tasks/<task>/spec-interview-log.md` is your memory across those
-turns, and it belongs to `write-bundle` alone. `fix-spec-findings` works from
-`review-spec.md` and `present-for-approval` from the spec files; both leave the
-log closed, so an approval response or a finding never lands in an interview
-slot.
+alone. `.awc/tasks/in-progress/<task>/tmp/spec-interview-log.md` is your memory
+across those turns, and it belongs to `write-bundle` alone. `fix-spec-findings`
+works from `review-spec.md` and `present-for-approval` from the spec files;
+both leave the log closed, so an approval response or a finding never lands in
+an interview slot.
 
 ## Protocol
 
@@ -40,22 +42,21 @@ slot.
    handing you the areas it left undecided, so they are the first ones your
    interview settles. In `write-bundle`, a missing `user-story.md` means the
    step that writes it has not run: return
-   `blocked -> .awc/tasks/<task>/user-story.md` and stop, rather than
-   interviewing the problem side yourself. The other modes work from the spec
-   bundle, which already exists by the time they run — they read the story
-   when it is there and carry on when it is not. **In `write-bundle`**,
-   read your own log next,
-   `.awc/tasks/<task>/spec-interview-log.md`: every question you have already
-   asked and every answer you already have. On the first turn of an interview
-   there is no file and no answer: create it holding a title and no entries.
-   That skips the fill step alone — the documentation and code read at the end
-   of this step still comes before your first question. On every turn after, the
-   **last** entry is the open one — its `A:` is blank; write this turn's answer
-   into that line
-   **verbatim** before thinking about what to ask next. An entry is only ever
-   appended with its question already in it, so the file never holds a blank
-   waiting for a question. Exactly one `Q:`/`A:` pair per entry, so the line to
-   fill is never in doubt:
+   `blocked -> .awc/tasks/in-progress/<task>/tmp/user-story.md` and stop,
+   rather than interviewing the problem side yourself. The other modes work
+   from the spec bundle, which already exists by the time they run — they read
+   the story when it is there and carry on when it is not. **In
+   `write-bundle`**, read your own log next,
+   `.awc/tasks/in-progress/<task>/tmp/spec-interview-log.md`: every question
+   you have already asked and every answer you already have. On the first turn
+   of an interview there is no file and no answer: create it holding a title
+   and no entries. That skips the fill step alone — the documentation and code
+   read at the end of this step still comes before your first question. On
+   every turn after, the **last** entry is the open one — its `A:` is blank;
+   write this turn's answer into that line **verbatim** before thinking about
+   what to ask next. An entry is only ever appended with its question already
+   in it, so the file never holds a blank waiting for a question. Exactly one
+   `Q:`/`A:` pair per entry, so the line to fill is never in doubt:
 
    ```markdown
    ## 3 — failure semantics
@@ -118,7 +119,8 @@ slot.
    - **The human's call settles the approach.** If they pick the narrow path
      over a reshaping you recommended, record that decision in `spec.md` with
      its "why" and spec what they chose.
-4. **Write the spec bundle**:
+4. **Write the spec bundle** — `spec.md` and `acceptance-criteria.md` at the
+   task directory's root, the rest in its `tmp/`:
    - `spec.md` — terse overview: summary, surfaces touched, the approach (the
      one chosen, plus a line each for the alternatives weighed against it and
      why not — or the single line saying only one was sane), error contract,
@@ -159,18 +161,17 @@ slot.
 
 The return line is the mode's own — never another mode's:
 
-- `write-bundle` — `blocked -> .awc/tasks/<task>/user-story.md` when that file
-  is absent, before anything else. Otherwise interview turns end with your
-  single question, nothing else
-  — the same question the log now carries as its open entry.
-  Only the turn that writes the bundle returns
-  `spec_drafted -> .awc/tasks/<task>/` followed by
+- `write-bundle` — `blocked -> .awc/tasks/in-progress/<task>/tmp/user-story.md`
+  when that file is absent, before anything else. Otherwise interview turns end
+  with your single question, nothing else — the same question the log now
+  carries as its open entry. Only the turn that writes the bundle returns
+  `spec_drafted -> .awc/tasks/in-progress/<task>/` followed by
   `<promise>SPEC_BUNDLE_WRITTEN</promise>`.
 - `fix-spec-findings` — return
-  `findings_resolved -> .awc/tasks/<task>/review-spec.md` **only when every
-  finding is `resolved`**; if one cannot be resolved, return
-  `blocked -> .awc/tasks/<task>/review-spec.md` naming it, and stop. No token
-  either way.
+  `findings_resolved -> .awc/tasks/in-progress/<task>/tmp/review-spec.md`
+  **only when every finding is `resolved`**; if one cannot be resolved, return
+  `blocked -> .awc/tasks/in-progress/<task>/tmp/review-spec.md` naming it, and
+  stop. No token either way.
 - `present-for-approval` — a few-line summary and the file pointers. End the
   turn with `<promise>SPEC_APPROVED</promise>` **only when the human has
   explicitly approved and no requested edit is pending** — a presenting turn

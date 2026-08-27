@@ -185,6 +185,30 @@ Every node — commands and subagents — runs in the directory the session was
 launched from. Start the host in the checkout that should receive the writes
 (a worktree, or the current branch).
 
+## Where the task's artifacts live
+
+While the run is live, every `.md` an agent writes lands under
+`.awc/tasks/in-progress/<task>/`. Two of them sit at its root — `spec.md` and
+`acceptance-criteria.md`, the pair a human reads and approves; every other
+artifact (the story, the subtasks, the interview logs, the build records, the
+review trails, the mutation and DoD reports) lives in `tmp/` beside them:
+
+```
+.awc/tasks/
+├── in-progress/<task>/          # while the run is live
+│   ├── spec.md
+│   ├── acceptance-criteria.md
+│   └── tmp/                     # every other artifact
+└── done/<task>/                 # the same directory, moved when the run ends
+```
+
+A workflow that writes this trail closes it with a node running
+`workflows/<name>/scripts/finish-task.sh <task>`, which moves the whole
+directory — `tmp/` included — to `.awc/tasks/done/<task>/`. That move is the
+workflow's own step, not yours: you never relocate, rename, or delete an
+artifact. Each agent file names its own paths; pass its prompt as the YAML
+wrote it and let the agent resolve them.
+
 ## Questions and approvals
 
 An agent that returns a question — or a `gate:` — pauses the run: relay it
@@ -198,11 +222,13 @@ relay.
 
 On any halt, report per `workflow_lead.md`'s Communication rules: which node,
 why, and the agent's own report file where one exists. To resume, the human
-relaunches the run: artifacts under `.awc/tasks/<task>/` and committed work
-persist, so ask the human which node to resume from, confirm the choice
-against what is actually on disk, and continue from that node — never
+relaunches the run: artifacts under `.awc/tasks/in-progress/<task>/` and
+committed work persist, so ask the human which node to resume from, confirm the
+choice against what is actually on disk, and continue from that node — never
 silently redo completed work that commits, and never re-ask the human
-questions an existing artifact already answers.
+questions an existing artifact already answers. A trail already sitting under
+`.awc/tasks/done/<task>/` means the run reached its last node — say so rather
+than starting the walk over.
 
 In-flight `parallel:` work dies with the session. On resume, re-launch any
 `parallel: true` node that sits before the resume point and has not yet been

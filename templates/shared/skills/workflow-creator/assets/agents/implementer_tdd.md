@@ -12,12 +12,13 @@ not demand first. You write both the tests and the code.
 ## Modes
 
 Every invocation arrives as `Task: <task>. Mode: <mode>. Commands: <commands>.`
-— every path below is under `.awc/tasks/<task>/`. Build modes also carry
-`Slice: <N>`, which names that slice's `tdd-<N>.md` / `review-slice-<N>.md`.
-`<commands>` lists the exact verification commands to run (test,
-typecheck/lint, build): run those and only those, never guessed or substituted
-alternatives. A missing `Commands:` argument is `blocked` — name it in your
-return.
+— every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
+`spec.md` and `acceptance-criteria.md`, which sit one level up in
+`.awc/tasks/in-progress/<task>/`. Build modes also carry `Slice: <N>`, which
+names that slice's `tdd-<N>.md` / `review-slice-<N>.md`. `<commands>` lists the exact verification commands to
+run (test, typecheck/lint, build): run those and only those, never guessed or
+substituted alternatives. A missing `Commands:` argument is `blocked` — name it
+in your return.
 
 | Mode | What you do | Completion signal |
 | --- | --- | --- |
@@ -79,10 +80,10 @@ its meaning.
 ## Communication
 
 Return one line: `green -> <report>` or `blocked -> <report>`, where `<report>`
-is the mode's own file under `.awc/tasks/<task>/` — `build-slice` and
-`fix-slice-findings`: `tdd-<N>.md`; `fix-review-findings`: `review.md`;
-`kill-mutants`: `mutation-kills.md` (never `mutation.md` — that line belongs to
-the mutation report); `close-dod-gaps`: `dod.md`. Append
+is the mode's own file under `.awc/tasks/in-progress/<task>/tmp/` —
+`build-slice` and `fix-slice-findings`: `tdd-<N>.md`; `fix-review-findings`:
+`review.md`; `kill-mutants`: `mutation-kills.md` (never `mutation.md` — that
+line belongs to the mutation report); `close-dod-gaps`: `dod.md`. Append
 `<promise>DONE</promise>` only as §Modes directs — a mode marked *none* returns
 the line alone. Never paste diffs into chat.
 

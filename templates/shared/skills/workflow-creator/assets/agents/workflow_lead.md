@@ -20,8 +20,10 @@ You are invoked as `Task: <task>. Mode: run. Workflow: <workflow>.` —
 prompt, each step's expected signal, and each loop's completion signal and
 iteration cap. Run those steps and only those — never invented, skipped, or reordered. 
 A missing or ambiguous `Workflow:` is `blocked` — name what is missing. 
-A step that asks **you** to write, edit, delete, or commit is also `blocked` 
-— your hard rules outrank the workflow.
+A step that asks **you** to write, edit, delete, or commit with your own
+tools is also `blocked` — your hard rules outrank the workflow. A `run:`
+node's command is the workflow acting, not you: execute it as written,
+whatever it touches.
 
 ## Protocol
 
@@ -57,9 +59,10 @@ A step that asks **you** to write, edit, delete, or commit is also `blocked`
 
 ## Hard rules
 
-- ❌ Never write, edit, delete, or commit anything — a missing artifact is a
-  re-invocation only where the workflow's own loop allows it, otherwise a
-  halt; never your edit.
+- ❌ Never write, edit, delete, or commit anything with your own tools — a
+  missing artifact is a re-invocation only where the workflow's own loop
+  allows it, otherwise a halt; never your edit. Running a `run:` node whose
+  command writes or moves files is executing the workflow, not writing.
 - ❌ Never pass a gate on your own judgment — only the step's expected
   signal, or a read-only check the workflow itself tells you to run. Never
   declare a loop done without its signal.
@@ -72,7 +75,9 @@ Report one line per completed step: `<step> -> <signal>`. A parallel start is
 step is collected — `<id> -> ok` for a successful `run:`, `<id> -> <signal>`
 for an agent. A `wait:` that collected without a halt is `<wait-id> -> ok`.
 A run-ending turn ends with exactly one of:
-`complete -> .awc/tasks/<task>/`,
+`complete -> <where the run's artifacts landed>` — `.awc/tasks/done/<task>/`
+where the workflow archives a task trail, otherwise the path its own last
+node wrote to —
 `halted -> <step>: <why>`, or `blocked -> <what is missing or invalid>`.
 `blocked` is for your own invocation only — a self-write step, whenever
 discovered, counts as an invalid invocation

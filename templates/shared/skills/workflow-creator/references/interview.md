@@ -26,9 +26,9 @@ node. But relentless means thorough, not repetitive:
 workflow's kebab-case name? What does "done" look like, observably?
 
 **2. Inputs.** What must the human supply at launch? Default: one `task`
-input — a kebab id that names `.awc/tasks/<task>/` and the branch. Freeform
-prose (the request itself) can ride along as a second input. Anything else a
-node needs (ticket URL, target dir) is another input or a var.
+input — a kebab id that names `.awc/tasks/in-progress/<task>/` and the branch.
+Freeform prose (the request itself) can ride along as a second input. Anything
+else a node needs (ticket URL, target dir) is another input or a var.
 
 **3. Isolation.** *Do you want the workflow to work in a worktree or on the
 current branch?* Worktree → the worktree path (`.worktrees/<task>` default)
@@ -109,10 +109,15 @@ predicate on the node)?
 approve — pre-merge `gate:`, a mid-run checkpoint? Every gate is a `gate:`
 node or an interactive loop, never an agent's own judgment.
 
-**11. Finalize.** Commit-message convention? Should the `.awc/tasks/<task>/`
-trail be committed with the work (recommend yes — reviewers and the DoD diff
-committed history)? Push / open a draft PR (its own node), or stop at "branch
-ready"? The worktree is left in place for a manual PR — not removed.
+**11. Finalize.** Commit-message convention? Should the `.awc/tasks/` trail be
+committed with the work (recommend yes — reviewers and the DoD diff committed
+history)? A workflow whose agents write a task trail ends with a `finish` node
+running `workflows/<name>/scripts/finish-task.sh` (copied from
+`assets/finish-task.sh`), which moves
+`.awc/tasks/in-progress/<task>/` to `.awc/tasks/done/<task>/` and nothing more;
+a committed trail needs a committer-agent node after it to commit that move.
+Push / open a draft PR (its own node), or stop at "branch ready"? The worktree
+is left in place for a manual PR — not removed.
 
 **12. Tool scope.** Once the node list is settled: *should any step be
 scoped down to the tools it actually needs?* `allowed_tools:` on an agent

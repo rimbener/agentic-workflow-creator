@@ -33,8 +33,10 @@ Read these before starting (silently — they are your working knowledge):
    anything you skipped and why. **Get an explicit yes before writing files.**
 4. **Write the package** (layout below): the YAML, the agents (instantiate
    bundled bases tailored to this workflow's steps; author missing ones —
-   both per the catalog's rules), the scripts, `running.md` copied verbatim
-   from `assets/running.md`, a short README, the three in-session launchers,
+   both per the catalog's rules), the scripts — `scripts/finish-task.sh`
+   copied verbatim from `assets/finish-task.sh` among them — `running.md`
+   copied verbatim from `assets/running.md`, a short README, the three
+   in-session launchers,
    and — when isolation is a worktree — `./<name>.sh` copied from
    `assets/run.sh` with `__WORKTREE_PARENT__` set.
 5. **Validate** (checklist below), then hand off: how to launch, what the run
@@ -60,8 +62,9 @@ touching a capability — a reviewer that reads and writes its report needs no
 `shell`, and no bundled agent delegates, so none needs `spawn`. Grant
 everything the agent's own file tells it to do: an agent invoked with
 `Commands:` needs `shell`, and every agent that writes a report under
-`.awc/tasks/<task>/` needs `edit`. Every scope keeps `web` — looking up a
-library's docs or an error message is something any of them may need.
+`.awc/tasks/in-progress/<task>/` needs `edit`. Every scope keeps `web` —
+looking up a library's docs or an error message is something any of them may
+need.
 Omitting the key grants the host's default, and that stays the norm — a scope
 drawn too tight turns into a `blocked` halt mid-run.
 
@@ -72,6 +75,19 @@ script earns its place only when its steps are one atomic operation from the
 workflow's point of view. The launch script (`./<name>.sh`) is not a node
 script: it creates or reuses the worktree and starts the host, then the lead
 takes over. `bun install` stays its own YAML node.
+
+**The task trail has a place.** Every artifact the bundled agents write lands
+under `.awc/tasks/in-progress/<task>/`, and only `spec.md` and
+`acceptance-criteria.md` — the pair a human reads and approves — sit at its
+root; every other artifact goes in `tmp/` beside them. A workflow that writes
+that trail closes it with a node running
+`workflows/<name>/scripts/finish-task.sh` — a `run:` path is written from the
+launch directory, not from beside the YAML — which moves the whole directory
+to `.awc/tasks/done/<task>/`. Agent files name their own paths, so everything
+that touches the trail, `wait:` included, is a node before that one; only a
+node that neither reads nor writes trail artifacts — a committer staging the
+moved paths, a push — may follow. An agent you author
+writes there too, so its workflow archives the same way.
 
 **Commands print only on failure.** Every line of output lands in someone's
 context. Recommend `bun test --only-failures`, quiet reporters, `--silent`
@@ -112,6 +128,7 @@ workflows/<name>/
 ├── running.md         # execution contract — verbatim copy of assets/running.md
 ├── agents/            # workflow_lead.md + every agent the nodes reference
 └── scripts/           # one script = one thing; chmod +x
+    └── finish-task.sh # copy of assets/finish-task.sh — archives the task trail
 .claude/commands/<name>.md      # in-session launcher — Claude Code
 .codex/skills/<name>/SKILL.md   # in-session launcher — Codex
 .opencode/command/<name>.md     # in-session launcher — opencode
@@ -149,7 +166,7 @@ name: fix-bug
 description: One bug report → a reviewed, committed fix
 
 inputs:
-  - name: task            # kebab id; names .awc/tasks/<task>/ and the branch
+  - name: task            # kebab id; names the task directory and the branch
   - name: request         # the bug report, in the reporter's own words
 
 vars:
@@ -186,6 +203,9 @@ nodes:
 
   - id: ship-gate
     gate: "Slices done. Review the diff on task/{{task}} — approve to finish."
+
+  - id: finish
+    run: workflows/fix-bug/scripts/finish-task.sh {{task}}
 ```
 
 Independent checks overlap with `parallel: true`; `wait:` collects them
@@ -259,6 +279,18 @@ nodes come from its own interview.
 - Every `{{placeholder}}` is a declared input, a var, or a loop-only one.
 - The package contains `running.md`, `agents/workflow_lead.md`, and every
   referenced agent.
+- A workflow whose agents write a task trail carries a `finish` node running
+  `workflows/<name>/scripts/finish-task.sh {{task}}` — the path written from
+  the launch directory, since that is where a `run:` executes — and that script
+  is an executable verbatim copy of `assets/finish-task.sh`. It is the last
+  node that touches the trail: every artifact-writing node, and any `wait:` on
+  trail-writing parallel work, comes before it, and only a node that neither
+  reads nor writes trail artifacts may follow. A workflow that commits its
+  trail commits the archive move too, in a committer-agent node placed there.
+- Every artifact path an agent copy names is an in-progress one:
+  `.awc/tasks/in-progress/<task>/tmp/<file>.md`, except `spec.md` and
+  `acceptance-criteria.md` at `.awc/tasks/in-progress/<task>/`. Only the lead's
+  `complete ->` line names `.awc/tasks/done/<task>/`.
 - All three in-session launchers exist — `.claude/commands/<name>.md`,
   `.codex/skills/<name>/SKILL.md`, `.opencode/command/<name>.md` — each
   pointing at the right paths and mapping its arguments onto every declared

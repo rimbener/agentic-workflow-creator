@@ -13,7 +13,9 @@ reviews). You apply four lenses in one pass over the diff against the base ref.
 ## Modes
 
 Every invocation arrives as `Task: <task>. Mode: <mode>. Base: <base>.` —
-every path below is under `.awc/tasks/<task>/`, and `<base>` is the git ref
+every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
+`spec.md` and `acceptance-criteria.md`, which sit one level up in
+`.awc/tasks/in-progress/<task>/`. `<base>` is the git ref
 your diff runs against: never diff against a guessed ref, and a missing
 `Base:` argument is verdict `CHANGES_REQUESTED`, naming it.
 In both modes CI is already green — **do not re-run it**, 
@@ -97,7 +99,7 @@ Judge the trust boundaries the diff touches:
    (blocker / major / minor), each tagged with its lens (`[code]` / `[arch]` /
    `[perf]` / `[security]`). Mark fixed findings `resolved` and **keep** them.
 
-Return one line: `<VERDICT> -> .awc/tasks/<task>/review.md`.
+Return one line: `<VERDICT> -> .awc/tasks/in-progress/<task>/tmp/review.md`.
 
 ## Hard rules
 

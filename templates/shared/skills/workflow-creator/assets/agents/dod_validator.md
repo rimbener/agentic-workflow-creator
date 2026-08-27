@@ -15,8 +15,11 @@ name, a line from `review.md` or `mutation.md`.
 ## Invocation
 
 You are invoked as `Task: <task>. Mode: validate. Commands: <commands>.
-Base: <base>.` — every path below is under `.awc/tasks/<task>/`. `<commands>`
-lists the exact check commands to run (test, typecheck/lint, build, smoke):
+Base: <base>.` — every path below is under
+`.awc/tasks/in-progress/<task>/tmp/`, except `spec.md` and
+`acceptance-criteria.md`, which sit one level up in
+`.awc/tasks/in-progress/<task>/`. `<commands>` lists the exact check commands
+to run (test, typecheck/lint, build, smoke):
 run those and only those, never guessed or substituted alternatives. `<base>`
 is the git ref the dependency diff runs against — never a guessed ref. A
 missing `Commands:` or `Base:` argument is `DOD_FAILED`, naming it. 
@@ -73,9 +76,9 @@ Write `dod.md` and state the verdict in it. You do not end the loop
 
 ## Verdict
 
-- All items pass → `PASS -> .awc/tasks/<task>/dod.md`.
-- Anything else → `DOD_FAILED -> .awc/tasks/<task>/dod.md`; say exactly
-  what failed and where so the fix step can close the gap.
+- All items pass → `PASS -> .awc/tasks/in-progress/<task>/tmp/dod.md`.
+- Anything else → `DOD_FAILED -> .awc/tasks/in-progress/<task>/tmp/dod.md`; say
+  exactly what failed and where so the fix step can close the gap.
 
 Opening and merging the PR is a **manual human step** afterward.
 

@@ -280,6 +280,75 @@ describe('the shared payload', () => {
     }
   })
 
+  // The task trail is two-tiered while a run is live: only the pair a human
+  // approves sits at the task directory's root, everything else in tmp/. An
+  // agent naming a bare .awc/tasks/<task>/ path would write outside both, and
+  // the finish node that archives the trail would leave it behind.
+  test('every agent writes into the in-progress trail, and one node archives it', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const agentsDir = path.join(skillDir, 'assets', 'agents')
+    const read = (...parts: string[]) =>
+      readFileSync(path.join(skillDir, ...parts), 'utf8')
+
+    for (const file of readdirSync(agentsDir)) {
+      const body = readFileSync(path.join(agentsDir, file), 'utf8')
+      // The old flat path, which is a prefix of neither tier.
+      expect(body).not.toContain('.awc/tasks/<task>/')
+      // Only the lead reports the archived location; every other agent works
+      // against the live trail.
+      if (file !== 'workflow_lead.md') {
+        expect(body).not.toContain('.awc/tasks/done/')
+      }
+    }
+    // The lead is copied unchanged into every package, so its end line names
+    // the archive as the trail case rather than the only one.
+    const lead = readFileSync(path.join(agentsDir, 'workflow_lead.md'), 'utf8')
+    expect(lead).toContain('.awc/tasks/done/<task>/')
+    expect(lead).not.toContain('complete -> .awc/tasks/done/<task>/')
+
+    // The two files a human approves sit a level above tmp/, so every agent
+    // that reads or writes them has to be told where they are — a blanket
+    // tmp/ prefix would send a builder looking for the contract in the
+    // scratch directory. (finish-task.test.ts drives the script itself.)
+    for (const file of [
+      'dod_validator.md',
+      'implementer.md',
+      'implementer_tdd.md',
+      'reviewer_engineering.md',
+      'reviewer_slice.md',
+      'spec_partner.md',
+      'spec_reviewer.md',
+      'unit_test_writer.md',
+    ]) {
+      const body = readFileSync(path.join(agentsDir, file), 'utf8').replace(
+        /\s+/g,
+        ' ',
+      )
+      expect(body).toContain('`spec.md` and `acceptance-criteria.md`')
+      expect(body).toContain('.awc/tasks/in-progress/<task>/`')
+    }
+
+    // The move is a node running a script, so the lead never relocates a file.
+    expect(existsSync(path.join(skillDir, 'assets', 'finish-task.sh'))).toBe(
+      true,
+    )
+    // A `run:` command executes from the launch directory, not beside the
+    // YAML, so the canonical node has to carry the package-relative path.
+    for (const doc of [
+      read('SKILL.md'),
+      read('references', 'agent-catalog.md'),
+      read('assets', 'running.md'),
+    ]) {
+      expect(doc).toContain('workflows/')
+      expect(doc).toMatch(/workflows\/[^\s`]+\/scripts\/finish-task\.sh/)
+    }
+    // running.md ships inside every package, so it carries the layout the
+    // lead reads at run time.
+    const running = read('assets', 'running.md')
+    expect(running).toContain('.awc/tasks/in-progress/<task>/')
+    expect(running).toContain('.awc/tasks/done/<task>/')
+  })
+
   // Every loop iteration spawns a fresh subagent, so an interviewer's only
   // memory of earlier turns is the log file its own prompt names. Losing that
   // — or letting the closing turn open one more entry — is what makes an
@@ -336,7 +405,9 @@ describe('the shared payload', () => {
     // rather than interviewing the problem half itself.
     const spec = read('assets', 'agents', 'spec_partner.md')
     expect(spec).toContain('## Open questions')
-    expect(spec).toContain('blocked -> .awc/tasks/<task>/user-story.md')
+    expect(spec).toContain(
+      'blocked -> .awc/tasks/in-progress/<task>/tmp/user-story.md',
+    )
 
     // The pairing rule, the question that settles it, and the package check.
     const pairing = read('references', 'agent-catalog.md')
@@ -445,7 +516,9 @@ describe('the shared payload', () => {
     expect(story).toContain(
       "That line is what the node's `expect:` matches, in every mode",
     )
-    expect(story).toContain('`user_story -> .awc/tasks/<task>/user-story.md`')
+    expect(story).toContain(
+      '`user_story -> .awc/tasks/in-progress/<task>/tmp/user-story.md`',
+    )
     // Both arguments are named where the agent reads them, so the handoff
     // check ("open each agent file") can enforce either one.
     expect(story).toContain('`Request:` carries the raw request')
@@ -637,7 +710,9 @@ describe('trimming story_partner by mark', () => {
     const kept = trimTo(/`capture`|a capture mode/i)
     // What every mode needs survives...
     expect(kept).toContain('**who** (which persona/user)')
-    expect(kept).toContain('`user_story -> .awc/tasks/<task>/user-story.md`')
+    expect(kept).toContain(
+      '`user_story -> .awc/tasks/in-progress/<task>/tmp/user-story.md`',
+    )
     expect(kept).toContain('## Acceptance criteria')
     expect(kept).toContain('`Source:` carries or names the raw material')
     expect(kept).toContain('## Open questions')

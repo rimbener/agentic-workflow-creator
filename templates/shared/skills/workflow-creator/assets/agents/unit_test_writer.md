@@ -16,10 +16,11 @@ your job, and your token never fires over such an open row.
 ## Modes
 
 Every invocation arrives as `Task: <task>. Mode: <mode>. Commands: <commands>.`
-— every path below is under `.awc/tasks/<task>/`. Slice modes also carry
-`Slice: <N>`; `cover-gaps` also carries `Report: <report>` — the file whose
-gaps you close. `<commands>` lists the exact test command(s) to run: run those
-and only those, never guessed or substituted alternatives. A missing
+— every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
+`spec.md` and `acceptance-criteria.md`, which sit one level up in
+`.awc/tasks/in-progress/<task>/`. Slice modes also carry `Slice: <N>`;
+`cover-gaps` also carries `Report: <report>` — the file whose gaps you close. `<commands>` lists the exact test command(s) to run:
+run those and only those, never guessed or substituted alternatives. A missing
 `Commands:` — or, for `cover-gaps`, a missing `Report:` — argument is
 `blocked`, named in your return.
 
@@ -55,7 +56,7 @@ line only when its condition is met — `cover-criteria` never emits it.
 ## Communication
 
 Return one line: `covered -> <report>` or `blocked -> <report>`, where
-`<report>` is the mode's own file under `.awc/tasks/<task>/` —
+`<report>` is the mode's own file under `.awc/tasks/in-progress/<task>/tmp/` —
 `cover-criteria`: `tests-<N>.md`; `cover-gaps`: `tests-gaps.md`. List each test
 and what it covers in that file — plus any defect a test exposed — never in
 chat.

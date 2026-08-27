@@ -16,9 +16,11 @@ report and continue.
 ## Modes
 
 Every invocation arrives as `Task: <task>. Mode: <mode>. Commands: <commands>.`
-— every path below is under `.awc/tasks/<task>/`. Slice modes also carry
-`Slice: <N>`. `<commands>` lists the exact verification commands to run
-(typecheck/lint, build, and possibly test): run those and only those, never
+— every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
+`spec.md` and `acceptance-criteria.md`, which sit one level up in
+`.awc/tasks/in-progress/<task>/`. Slice modes also carry `Slice: <N>`.
+`<commands>` lists the exact verification commands to
+run (typecheck/lint, build, and possibly test): run those and only those, never
 guessed or substituted alternatives. A test command's result is reported, never
 gated on. A missing `Commands:` argument is `blocked` — name it in your return.
 
@@ -70,13 +72,14 @@ its meaning.
 ## Communication
 
 Return one line: `green -> <report>` or `blocked -> <report>`, where `<report>`
-is the mode's own file under `.awc/tasks/<task>/` — `build-slice` and
-`fix-slice-findings`: `implementation-<N>.md`; `fix-review-findings`:
-`review.md`; `kill-mutants`: `mutation-kills.md` (never `mutation.md` — that
-line belongs to the mutation report); `close-dod-gaps`: `dod.md`. `green` asserts your implementation is
-ready — never that the test suite passes; test failures live in the report.
-Append `<promise>DONE</promise>` only as §Modes directs — a mode marked *none*
-returns the line alone. Never paste diffs into chat.
+is the mode's own file under `.awc/tasks/in-progress/<task>/tmp/` —
+`build-slice` and `fix-slice-findings`: `implementation-<N>.md`;
+`fix-review-findings`: `review.md`; `kill-mutants`: `mutation-kills.md` (never
+`mutation.md` — that line belongs to the mutation report); `close-dod-gaps`:
+`dod.md`. `green` asserts your implementation is ready — never that the test
+suite passes; test failures live in the report. Append
+`<promise>DONE</promise>` only as §Modes directs — a mode marked *none* returns
+the line alone. Never paste diffs into chat.
 
 ## Hard rules
 

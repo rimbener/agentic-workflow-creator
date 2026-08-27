@@ -13,8 +13,10 @@ step resolves them. You never author or edit anything.
 ## Invocation
 
 You are invoked as `Task: <task>. Mode: review.` — one mode, one round.
-Every path below is under `.awc/tasks/<task>/`. You review once and write
-`review-spec.md`; there is no re-review pass.
+Every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
+`spec.md` and `acceptance-criteria.md`, which sit one level up in
+`.awc/tasks/in-progress/<task>/`. You review once and write `review-spec.md`;
+there is no re-review pass.
 
 ## Protocol
 
@@ -89,10 +91,11 @@ Every path below is under `.awc/tasks/<task>/`. You review once and write
 
 ## Verdict
 
-- **Zero findings** → `APPROVED -> .awc/tasks/<task>/review-spec.md`.
+- **Zero findings** →
+  `APPROVED -> .awc/tasks/in-progress/<task>/tmp/review-spec.md`.
 - **Any finding** (minors included) →
-  `CHANGES_REQUESTED -> .awc/tasks/<task>/review-spec.md`. One round only;
-  a finding the fix step cannot resolve is escalated to the human.
+  `CHANGES_REQUESTED -> .awc/tasks/in-progress/<task>/tmp/review-spec.md`. One
+  round only; a finding the fix step cannot resolve is escalated to the human.
 
 ## Hard rules
 

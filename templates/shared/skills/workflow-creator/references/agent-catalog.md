@@ -44,11 +44,15 @@ workflow-specific to trim, so every package copies it unchanged. When no
 bundled agent fits a step, author a new one — see "Authoring a new agent" at
 the end.
 
-Every agent writes its artifacts under `.awc/tasks/<task>/` and returns one
-line, usually `signal -> <report file>`. Arguments arrive in the invocation
-prompt and are never guessed — a missing required argument makes the agent
-return `blocked` (or its own failure verdict). The workflow YAML's `prompt:`
-lines are where those arguments get passed.
+Every agent writes its artifacts under the task's directory and returns one
+line, usually `signal -> <report file>`. While a run is live that directory is
+`.awc/tasks/in-progress/<task>/`: `spec.md` and `acceptance-criteria.md` — the
+pair a human approves — sit at its root, and every other artifact lives in
+`tmp/` beside them. A workflow that writes this trail ends by moving the whole
+directory to `.awc/tasks/done/<task>/` (see "Finishing a run" below).
+Arguments arrive in the invocation prompt and are never guessed — a missing required argument makes
+the agent return `blocked` (or its own failure verdict). The workflow YAML's
+`prompt:` lines are where those arguments get passed.
 
 ## The agents
 
@@ -129,10 +133,10 @@ agents fall into three groups:
 | host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it, and writes its own log every turn; a `capture` reads whatever `Source:` names, a URL included |
 
 `edit` is in every scope because every agent writes its report under
-`.awc/tasks/<task>/`, and `web` is in every scope because any of them may
-need to look up a library's docs, an error message, or a CVE. `shell` is the
-line that actually separates the groups. `spawn` is granted to none of them —
-these agents do their own work rather than delegating it.
+`.awc/tasks/in-progress/<task>/`, and `web` is in every scope because any of
+them may need to look up a library's docs, an error message, or a CVE.
+`shell` is the line that actually separates the groups. `spawn` is granted to
+none of them — these agents do their own work rather than delegating it.
 
 Scoping is optional per node, and a scope that contradicts the agent's
 invocation is worse than none — the step halts as `blocked` naming the
@@ -243,6 +247,40 @@ DoD settle (`until: DONE`, cap ~2):
 Trim steps the interview ruled out (no split pairing → drop the
 `unit_test_writer` steps; TDD → replace both builders with `implementer_tdd`).
 
+## Finishing a run
+
+A workflow whose agents write a task trail archives it in one node at the end —
+no agent does this:
+
+```yaml
+  - id: finish
+    run: workflows/<name>/scripts/finish-task.sh {{task}}
+```
+
+`scripts/finish-task.sh` is copied verbatim from `assets/finish-task.sh` into
+the package's `scripts/`, `chmod +x`. Moving
+`.awc/tasks/in-progress/<task>/` — `tmp/` and all — to
+`.awc/tasks/done/<task>/` is the whole of it: it touches git not at all, and
+re-running it on a resumed run is a no-op, so the node needs no `when:`. It
+rejects a `<task>` that is not kebab-case, and halts when there is no trail to
+archive — so a workflow whose agents write somewhere else entirely ships no
+`finish` node.
+
+**Write the path from the launch directory.** A `run:` command executes where
+the session started (the repo or worktree root), not beside the YAML — only
+`agent:` paths are workflow-relative. So the node names
+`workflows/<name>/scripts/finish-task.sh`, matching the package layout.
+
+The move lands in the working tree uncommitted. A workflow that commits its
+trail commits it the way it commits any ownerless artifact — a small authored
+committer agent, invoked with the two paths this move touches (see "Commits
+always belong to an agent" above) — in a node after `finish`.
+
+`finish` goes after everything that reads or writes an artifact: after the DoD,
+after every gate, and after a `wait:` for every `parallel: true` node that
+writes to the trail. Draining those at the end of the list would leave them
+writing into a directory that has already moved.
+
 ## Authoring a new agent
 
 When a step needs an agent the catalog lacks (an e2e runner, a docs writer, a
@@ -260,17 +298,18 @@ the same design rules the bundled ones obey:
    report paths, refs, formats) arrives in the invocation; a missing required
    argument returns `blocked`, naming it.
 6. **One return line** — `signal -> <report file>`, artifacts under
-   `.awc/tasks/<task>/`, never pasted into chat. Loop-enders append
+   `.awc/tasks/in-progress/<task>/` — `tmp/` unless a human approves the file
+   directly — never pasted into chat. Loop-enders append
    `<promise>DONE</promise>` only when their documented condition holds.
 7. **A blocked command is `blocked`** — never "verified by inspection".
 8. **A loop that builds on earlier turns names its own log.** Every iteration
    is a fresh subagent and the prompt carries `{{answer}}`'s latest value alone
    (see `running.md`), so any agent asking the human one question per turn —
    an interview, a triage, an outline session — gets a log under
-   `.awc/tasks/<task>/`, named in the agent file, in the shape the bundled
-   interviewers use: one `Q:`/`A:` entry per question, headed by the area it
-   settles — a follow-up opens a new entry repeating that area rather than a
-   second pair under an old one, which keeps "the open entry" the last one and
+   `.awc/tasks/in-progress/<task>/tmp/`, named in the agent file, in the shape
+   the bundled interviewers use: one `Q:`/`A:` entry per question, headed by
+   the area it settles — a follow-up opens a new entry repeating that area
+   rather than a second pair under an old one, which keeps "the open entry" the last one and
    nothing else. The agent reads it before anything else and fills the arriving
    answer in; a question turn also appends the next question with a blank
    `A:`, and the closing turn appends nothing, because it asks nothing. The

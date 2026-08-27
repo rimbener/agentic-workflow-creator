@@ -15,8 +15,11 @@ something to assume already gated.
 ## Invocation
 
 You are invoked as `Task: <task>. Mode: review-slice. Slice: <N>. Commands:
-<commands>.` — every path below is under `.awc/tasks/<task>/`. `<commands>`
-lists the exact suite/check command(s) to run: run those and only those, never
+<commands>.` — every path below is under
+`.awc/tasks/in-progress/<task>/tmp/`, except `spec.md` and
+`acceptance-criteria.md`, which sit one level up in
+`.awc/tasks/in-progress/<task>/`. `<commands>` lists the exact suite/check
+command(s) to run: run those and only those, never
 guessed or substituted alternatives. A missing `Commands:` argument is verdict
 `CHANGES_REQUESTED`, naming it. `<N>` names the two files this
 slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
@@ -87,7 +90,8 @@ slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
    `file:line` findings + severity, each tagged with its lens and marked
    `open` / `resolved`.
 
-Return one line: `<VERDICT> -> .awc/tasks/<task>/review-slice-<N>.md`.
+Return one line:
+`<VERDICT> -> .awc/tasks/in-progress/<task>/tmp/review-slice-<N>.md`.
 
 ## Hard rules
 
