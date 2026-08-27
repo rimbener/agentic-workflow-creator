@@ -119,3 +119,7 @@ Every workflow eval gains a task-trail expectation: agents write under `.awc/tas
 ## 2026-08-27 — `b092714` — chore(config): symlink .opencode to the shared commands and skills
 
 `.opencode/commands` and `.opencode/skills` point at `.agents/`, so opencode reads the repo-tailored command and skill dirs from the same source of truth Claude Code already uses via `.claude`. A local `.opencode/.gitignore` keeps the installed plugin dep and its lockfile untracked.
+
+## 2026-08-27 — `7aa24da` — feat: add --update mode and workflow-updater skill
+
+Added `--update` flag to the CLI: opens a session on the workflow-updater skill instead of workflow-creator, for changing an existing workflow package. The mode system (`src/mode.ts`) controls which skills are staged and which initial prompt each host reads. The updater reads the dialect and agent bases from `../workflow-creator/`, so the creator ships in both modes while the updater ships only under `--update`. Includes eval material for grading update diffs, staging tests for mode switching and symlink collisions, updated smoke tests, and documentation for the new flag and updater workflow.
