@@ -115,3 +115,7 @@ The task trail is two-tiered while a run is live: `spec.md` and `acceptance-crit
 ## 2026-08-27 — `34254d6` — feat(evals): expect the two-tier task trail and finish node
 
 Every workflow eval gains a task-trail expectation: agents write under `.awc/tasks/in-progress/<task>/` with the approved pair at the root and the rest in `tmp/`, and a `run:` node invoking `scripts/finish-task.sh` is the last node that touches the trail. The mutation eval also grades that the archive move is committed by an authored committer agent, never a `run: git commit` or the lead. `check_package` extracts `finishTaskScripts` resolved against the finish node's actual run path and a `trail_flat` string list instead of a boolean.
+
+## 2026-08-27 — `b092714` — chore(config): symlink .opencode to the shared commands and skills
+
+`.opencode/commands` and `.opencode/skills` point at `.agents/`, so opencode reads the repo-tailored command and skill dirs from the same source of truth Claude Code already uses via `.claude`. A local `.opencode/.gitignore` keeps the installed plugin dep and its lockfile untracked.
