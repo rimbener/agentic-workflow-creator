@@ -95,3 +95,7 @@ check_package captures `allowed_tools` on nodes and loop steps; graders treat it
 ## 2026-08-26 — `78b8956` — docs: mention allowed_tools in the dialect list
 
 AGENTS.md's node-type bullet now matches running.md and says why the key names capabilities.
+
+## 2026-08-27 — `7c448e9` — feat(agents): spec a balanced approach, refactoring included
+
+spec_partner weighs the narrow change against the proper one and specifies the balance — the smallest change that still lands on good practice — with a needed refactor in the spec and in the slice that needs it. spec_reviewer flags both the workaround and the overreach; the implementers carry out a reshaping the subtask names.

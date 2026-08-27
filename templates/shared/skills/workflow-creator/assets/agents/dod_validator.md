@@ -36,7 +36,7 @@ Write `dod.md` and state the verdict in it. You do not end the loop
 
    | Dimension | What passes |
    | --- | --- |
-   | **Functionality** | Every criterion in `acceptance-criteria.md` is covered by a passing test; the task does what `spec.md` says, error paths included |
+   | **Functionality** | Every criterion in `acceptance-criteria.md` is covered by a passing test; every `refactor:` entry in `subtask-N.md` landed, its `preserves:` clause pinned by a passing test; the task does what `spec.md` says, error paths included |
    | **Code quality** | No debug leftovers, no TODO without an issue, no dead code; useful error messages; comments explain the *why* |
    | **Architecture & dependencies** | The project's layering intact; no new dependency without a recorded human decision reviewed in `review.md`; no surface its design docs don't call for |
    | **User surface** | New user-facing behavior documented and validated; errors actionable; invalid input caught as early as possible |

@@ -43,13 +43,21 @@ Verify with the commands passed in your invocation's `Commands:`, and follow
 the project's documented architecture and conventions.
 
 Work the subtasks in slice order. For each subtask, flip its status todo →
-in_progress, implement the smallest change that satisfies its acceptance criteria,
-and run typecheck/lint after every meaningful step.
+in_progress, implement the smallest change that satisfies its acceptance
+criteria, and — when the subtask carries a `refactor:` entry — make that move
+too: the spec asked for it, so it is part of the subtask, never optional
+cleanup. Verify it the way you verify everything else — typecheck/lint and
+build green — then record in `implementation-<N>.md` what the entry's
+`preserves:` clause names and what you read to satisfy yourself it still
+holds. That record is a claim, not a certification: the slice review runs the
+suite and rules on the clause, so test outcomes stay reported here, never
+gated on. Run typecheck/lint after every meaningful step.
 
 **Per-slice gate**, before the slice closes: the slice's behavior matches its
-acceptance criteria; typecheck/lint and build green; the slice's docs updates
-landed; a short summary of what changed — plus any test failures or coverage
-gaps observed — logged in `implementation-<N>.md`.
+acceptance criteria; every `refactor:` entry on the slice's subtasks landed;
+typecheck/lint and build green; the slice's docs updates landed; a short
+summary of what changed — plus any test failures or coverage gaps observed —
+logged in `implementation-<N>.md`.
 
 ## A blocked command is `blocked`, never "verified by inspection"
 
@@ -74,6 +82,9 @@ returns the line alone. Never paste diffs into chat.
 
 - ❌ Never write, edit, delete, or weaken a test; a test finding is never marked
   `resolved` — tag it `test-step` and leave it open.
+- ❌ Never undo a `refactor:` the spec asked for to quiet a test that reached
+  into the shape it replaced — the move stands; tag that test `test-step` and
+  say so in your return.
 - ❌ Don't build ahead for future scenarios. ❌ Don't self-mark the task done.
 - ❌ Never spawn a subagent; never background a long command and return.
 - ❌ Never ask the human to run a command mid-run — a denied command is `blocked`.

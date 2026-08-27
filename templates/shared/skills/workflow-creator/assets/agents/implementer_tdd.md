@@ -42,13 +42,24 @@ in_progress, then:
 - **RED** — write ONE failing test that encodes the next criterion. Tests are
   hermetic: mock external processes and services.
 - **GREEN** — the minimum code that passes.
-- **REFACTOR** — on green only.
-- Log each cycle and the `criterion → test` map in `tdd-<N>.md` — this slice's own file.
+- **REFACTOR** — on green only. A subtask's `refactor:` entry lands in this
+  step **once**, on the cycle that turns the subtask's last criterion green —
+  the behavior it reshapes exists by then, and repeating the move on earlier
+  cycles is churn. Make the move the spec asked for, keep the suite green and
+  its `preserves:` clause true. When no existing test exercises that clause,
+  characterize it **first** — a passing test that pins the behavior, written
+  before the move — and log it beside the criterion map in `tdd-<N>.md` as
+  `refactor:<subtask id> → test`, so the slice review can see the clause is
+  exercised. (A move that changes behavior arrives as a criterion instead, and
+  rides the RED→GREEN cycle like any other.)
+- Log each cycle, the `criterion → test` map, and any `refactor:` pin in
+  `tdd-<N>.md` — this slice's own file.
 
 **Per-slice gate**, before the slice's commit: every criterion the slice owns is
-covered by a passing test; full suite, typecheck/lint, and build green; the
-slice's docs updates landed; `tdd-<N>.md` trimmed to the map plus one line per
-cycle.
+covered by a passing test; every `refactor:` entry on the slice's subtasks
+landed; full suite, typecheck/lint, and build green; the
+slice's docs updates landed; `tdd-<N>.md` trimmed to the map — the criteria
+**and** every `refactor:` pin — plus one line per cycle.
 
 ## Re-work (fix modes)
 

@@ -25,16 +25,29 @@ slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
 
 ## Lenses
 
-1. **Correctness against the contract** — the slice's acceptance criteria are each
-   covered by a concrete test (check the slice's `criterion → test` map), and the tests bite — a
-   test that cannot fail is a finding. Error paths covered, not just the happy
-   path. No behavior built ahead of a scenario; no scope creep past the subtask.
+1. **Correctness against the contract** — the slice's acceptance criteria are
+   each covered by a concrete test (check the slice's `criterion → test` map,
+   where a `refactor:` pin is listed too), and the tests bite — a test that
+   cannot fail is a finding. Error paths covered, not just the happy path.
+   Every `refactor:` entry on the slice's subtasks is present in the diff — an
+   omitted one is a **major**, and one that reaches past what the entry names
+   is scope creep. Rule on each entry's `preserves:` clause against the suite
+   you ran, and say which kind of red it is: a failure showing the behavior
+   itself changed is a **blocker** left untagged — the code is what must
+   change — while a test that fails only because it reached into the old shape
+   (importing a moved symbol, asserting an internal call path) is a `test-step`
+   **blocker**: the test follows the move, the move stands. A
+   clause no test exercises is a `test-step` finding too, never a pass on the
+   implementer's reading of it. No behavior built ahead of a scenario; no
+   scope creep past the subtask.
 2. **Project conventions** — the project's documented architecture, layering,
-   and conventions respected; nothing added that its design docs do not call
-   for.
+   and conventions respected; nothing added that its design docs or the
+   approved spec do not call for.
 3. **Code quality** — short functions, one reason to change, revealing names, no
-   duplication, no magic numbers; SOLID, YAGNI, KISS, DRY. No debug leftovers,
-   no commented-out code, no TODO without an issue. Comments explain the *why*,
+   duplication, no magic numbers; SOLID, YAGNI, KISS, DRY — judged against the
+   approved spec: a module or seam a criterion or a `refactor:` entry asked for
+   is the spec's call, not gold-plating; one nothing asked for is. No debug
+   leftovers, no commented-out code, no TODO without an issue. Comments explain the *why*,
    short and not redundant with the code or documentation.
 4. **User surface** — for any slice touching a user-facing surface (CLI, API,
    config, UI): output/errors consistent with their neighbors; messages
@@ -56,10 +69,13 @@ slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
    `review-slice-<N>.md`. Every failing test is a **blocker** finding; never
    approve over a red suite. Tag every finding whose fix is a test — a red or
    missing test, a missing `criterion → test` map, a test that cannot fail —
-   `test-step` in addition to its lens: the workflow routes those to the test
-   step, not to the production-code fix. A slice whose build step doesn't write
-   tests may legitimately arrive before its tests exist — that is a `test-step`
-   blocker, not proof of broken code.
+   `test-step` in addition to its lens — the workflow routes those to the test
+   step, not to the production-code fix. **Except** a red test showing a
+   `refactor:` move changed behavior: the fix there is the production code, so
+   leave that one untagged. A test merely coupled to the shape the move
+   replaced is `test-step` like any other test fix. A slice whose build step doesn't write tests may legitimately
+   arrive before its tests exist — that is a `test-step` blocker, not proof of
+   broken code.
 2. Read the slice's diff since the previous slice commit **plus** any new
    untracked files the slice added, plus the slice's `criterion → test` map. Do not
    review outside the slice's diff, and do not read a prior slice's files.

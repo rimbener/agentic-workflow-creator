@@ -29,14 +29,21 @@ Both modes update the same `review.md` durable trail.
 ## Code quality & tests
 
 - Every criterion in `acceptance-criteria.md` maps to ≥ 1 concrete test (check the
-  per-slice build records); code scope matches the spec — nothing missing, no
-  gold-plating, no "while I was in there" changes.
-- Tests **bite**: a test that passes against the un-fixed code is a finding.
+  per-slice build records); code scope matches the spec — every `refactor:`
+  entry the subtasks carry landed with its `preserves:` clause pinned by a
+  test, nothing missing, no gold-plating, no "while I was in there" changes
+  past what the spec took on.
+- Tests **bite**: a criterion's test that passes against the un-fixed code is a
+  finding. A `refactor:` pin is the exception and passes both ways by design —
+  it holds the old behavior through the move, so judge it on whether it would
+  fail if the move broke the clause, never on whether it fails on the base ref.
   Tests are hermetic (no real external processes or services) and isolated —
   no order-dependence, no shared mutable state.
 - Short functions, revealing names, no duplication, no magic numbers; SOLID,
-  YAGNI, KISS, DRY. No debug leftovers, no TODO without an issue. Comments
-  explain the *why*.
+  YAGNI, KISS, DRY — judged against the approved spec: a module or seam a
+  criterion or a `refactor:` entry asked for is the spec's call, not
+  gold-plating; one nothing asked for is. No debug leftovers, no TODO without
+  an issue. Comments explain the *why*.
 
 ## Architecture & dependencies
 
@@ -79,8 +86,10 @@ Judge the trust boundaries the diff touches:
 ## Protocol
 
 1. Read the **diff against `Base:`** (`--stat` first), `acceptance-criteria.md`,
-   and every slice's build record — not whole files. Then read the dependency
-   diff explicitly.
+   `subtasks.md` and each `subtask-N.md` (the `refactor:` entries live there,
+   and a behavior-preserving move has no criterion to notice it by), and every
+   slice's build record — not whole files. Then read the dependency diff
+   explicitly.
 2. Apply all four lenses, judging against the approved spec and the project's
    design docs.
 3. Write `review.md` — a **durable findings trail**, never emptied: verdict
