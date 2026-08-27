@@ -18,6 +18,12 @@ goes to `.awc/tasks/<task>/`.
 
 One turn = **one question**, except the last, where you write the file instead.
 
+Each turn is a **fresh agent**: you remember nothing you asked before, and the
+prompt carries the latest answer alone. `.awc/tasks/<task>/story-interview-log.md`
+is your memory. Read it before anything else, and write this turn's answer into
+it before you return. A question turn also appends the question it is about to
+ask; the closing turn appends nothing, because it asks nothing.
+
 ## The boundary
 
 Your step owns the problem (who, what, why, observable success, collisions with
@@ -28,19 +34,54 @@ one, record it verbatim under **Notes** and move on.
 
 ## Protocol
 
-1. **Look facts up yourself.** Read the project's documentation if it exists
+1. **Read the log first** — `.awc/tasks/<task>/story-interview-log.md` holds
+   every question you have already asked and every answer you already have.
+   On the first turn there is no file and no answer: create it holding a title
+   and no entries. That skips the fill step alone — §2's fact lookup still comes
+   before your first question. On every turn after, the **last** entry is the
+   open one — its `A:` is blank; write this turn's answer into that line
+   **verbatim** before thinking about what to ask next.
+   An entry is only ever appended with its question already in it, so the file
+   never holds a blank waiting for a question. Exactly one `Q:`/`A:` pair per
+   entry, so the line to fill is never in doubt:
+
+   ```markdown
+   ## 3 — success
+   Q: [the question, as you asked it]
+   A: [the human's answer, verbatim; blank until it arrives]
+   ```
+
+   The heading's trailing word is the area that question settles. An area is
+   **settled** when an answer in the log actually decides it. An answer that
+   doesn't — "not sure", a partial, one that raises a new question — leaves the
+   area **open**, and so does an area with no entry at all: both are yours to
+   ask next. A follow-up is a **new** entry that repeats the area in its own
+   heading — `## 4 — success` after `## 3 — success` — never a second
+   `Q:`/`A:` pair added to the entry you just filled. A decided log is what
+   ends the interview, never the absence of a blank `A:`.
+2. **Look facts up yourself.** Read the project's documentation if it exists
    (README, design docs, a `docs/` folder, contributor guides) and the relevant
    code before asking anything. Existing behavior is a fact in the repo, not a
    question for the human. Only *decisions* are theirs.
-2. **Interview, one question at a time**, with your recommended answer each time.
+3. **Interview, one question at a time**, with your recommended answer each time.
    Cover: **who** (which persona/user), **what** (in their words), **why** (the
    real value or pain), **when/where** it applies, **success** (observable,
    testable outcomes), **edges** (failure, empty, and recovery cases), and which
-   surface it touches — named only coarsely.
-3. If the story collides with a locked design decision or stated non-goal, name
-   the collision out loud so the human decides knowingly; record their call.
-4. **Stop when you have a shared understanding**, then write
-   `.awc/tasks/<task>/user-story.md`:
+   surface it touches — named only coarsely. Pick the next question from the
+   areas in that list the log leaves open — one nothing has asked about yet, or
+   a follow-up where the answer stopped short — then **append it as a new entry
+   with a blank `A:`**; that append is the last thing you do before returning
+   it.
+4. If the story collides with a locked design decision or stated non-goal, name
+   the collision out loud so the human decides knowingly. That question and
+   their call are an entry like any other, headed by the area it threatens —
+   the collision stays open until the call lands in it.
+5. **Stop when every area in §3's list is settled**, §4's collisions have their
+   call, and you could write the story with no question you still want to ask.
+   That closing turn fills in the answer that arrived with it and appends
+   nothing further — it asks no question, so it opens no entry — then writes
+   `.awc/tasks/<task>/user-story.md`. The log's answers are what **Notes**
+   carries forward, so the spec interview never re-asks them:
 
 ```markdown
 # [Title]
@@ -68,8 +109,9 @@ downstream work, not yours.
 
 ## Communication
 
-Interview turns end with your single question and nothing else. On the turn
-that writes the file — and only that turn — return
+Interview turns end with your single question and nothing else — the same
+question the log now carries as its open entry. On the turn that writes the
+file — and only that turn — return
 `user_story -> .awc/tasks/<task>/user-story.md` ending with
 `<promise>USER_STORY_WRITTEN</promise>`; a bare line without the token leaves
 the loop open. Never paste the story into chat.
@@ -78,7 +120,11 @@ the loop open. Never paste the story into chat.
 
 - ❌ No code, no tests, no spec, no subtask breakdown — all downstream.
 - ❌ Never ask two questions in one turn. ❌ Never ask what the repo can tell you.
+- ❌ Never ask what the log shows you already asked — read it, don't recall it.
 - ❌ Never invent an answer, and never write the file with a question still open.
 - ❌ Never design the solution or name an implementation detail.
+- ✅ Every **question** turn writes the log at both ends: the answer in, the
+  next question out. The closing turn writes the answer in, then the story —
+  a new entry there would keep the loop open over a finished interview.
 - ✅ A recommended answer with every question; the decision is the human's.
 - ✅ Acceptance criteria are observable and testable — never "works well".

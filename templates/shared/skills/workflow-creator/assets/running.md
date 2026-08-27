@@ -27,7 +27,8 @@ or narrowed. Two more exist only inside a loop node's body:
 
 - `{{iteration}}` — the current iteration, starting at 1
 - `{{answer}}` — the human's most recent relayed answer inside this node
-  (empty on the first iteration)
+  (empty on the first iteration). The **latest** answer alone — the ones
+  before it are not in it; see the memory rule under `loop:`
 
 ## Node types
 
@@ -81,6 +82,16 @@ Holds either a single `agent:`+`prompt:` (a one-step body) or a `steps:` list
 Run the body in order; that completes one iteration. Hitting
 `max_iterations` without the signal is a **halt, not a success** — that halt
 is the escalation.
+
+**Each iteration is a fresh subagent.** Spawning is the only mechanism a host
+gives you, so iteration N starts blank: the questions iteration N-1 asked, the
+reasoning it did, and — beyond `{{answer}}`'s single latest value — the answers
+it got are gone with it. A body that has to build on what came before, an
+interview above all, therefore keeps its own record on disk; the agent file
+names that file and the shape of it, and the agent reads it each turn. Your
+part is to spawn the iteration and pass the prompt as the YAML wrote it,
+filled verbatim — reconstructing earlier turns into the prompt is the agent's
+log's job, not yours.
 
 ### `gate:` — human approval
 

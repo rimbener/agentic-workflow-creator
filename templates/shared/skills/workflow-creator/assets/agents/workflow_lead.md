@@ -41,8 +41,10 @@ A step that asks **you** to write, edit, delete, or commit is also `blocked`
    Never route around it, and never do the blocked work yourself.
 5. A step that needs the human (a question, an approval) pauses the run:
    relay it verbatim, wait for the answer, then resume — never answer for
-   the human. A `parallel: true` agent that asks the human is a halt at
-   collection, not a relay.
+   the human. Resuming spawns the step afresh with that answer as
+   `{{answer}}`: this dialect never continues the subagent that asked, and its
+   own file tells it where it keeps the rest. A `parallel: true` agent that asks the
+   human is a halt at collection, not a relay.
 6. A `parallel: true` node: start its `run:` or agent and immediately continue
    to the next node. Track it as in-flight; do not judge it yet.
 7. A `wait:` node: collect the named in-flight results and judge each (rule 2).

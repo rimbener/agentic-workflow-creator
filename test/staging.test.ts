@@ -279,6 +279,40 @@ describe('the shared payload', () => {
       expect(catalogAgents).toContain(file)
     }
   })
+
+  // Every loop iteration spawns a fresh subagent, so an interviewer's only
+  // memory of earlier turns is the log file its own prompt names. Losing that
+  // — or letting the closing turn open one more entry — is what makes an
+  // interview re-ask settled questions or run to max_iterations.
+  test('every interviewer owns a named log, and the dialect says why', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const catalog = readFileSync(
+      path.join(skillDir, 'references', 'agent-catalog.md'),
+      'utf8',
+    )
+    const logs = {
+      story_partner: 'story-interview-log.md',
+      spec_partner: 'spec-interview-log.md',
+    }
+    for (const [agent, log] of Object.entries(logs)) {
+      const body = readFileSync(
+        path.join(skillDir, 'assets', 'agents', `${agent}.md`),
+        'utf8',
+      )
+      expect(body).toContain(log)
+      expect(body).toContain('blank `A:`') // a question turn opens an entry
+      expect(body).toContain('appends nothing') // the closing turn does not
+      expect(catalog).toContain(log)
+    }
+
+    const running = readFileSync(
+      path.join(skillDir, 'assets', 'running.md'),
+      'utf8',
+    )
+    expect(running).toContain('Each iteration is a fresh subagent')
+    // The log is the memory; the lead never rebuilds history into the prompt.
+    expect(catalog).toContain('Pass `{{answer}}` and nothing more')
+  })
 })
 
 describe('cleanup', () => {

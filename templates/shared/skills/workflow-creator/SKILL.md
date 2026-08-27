@@ -230,6 +230,12 @@ nodes come from its own interview.
 - Every packaged agent copy is scoped to this workflow: cross-check each one
   against the node list — no mode no node invokes, no check on an artifact no
   node produces.
+- Every agent that runs in a loop and has to build on earlier iterations —
+  every interview above all — still carries its log protocol after the trim:
+  each iteration is a fresh subagent, so that file is the only memory it has.
+  Check the closing turn too — it fills the arriving answer in and appends no
+  new entry, or the loop never reaches its token — and that the log is scoped
+  to the mode that interviews. Its node passes `{{answer}}` and nothing more.
 - Every `run:` is one short command with failure-only output where the tool
   allows it.
 - Every `parallel: true` is on a top-level `run:` or `agent:` node — never a

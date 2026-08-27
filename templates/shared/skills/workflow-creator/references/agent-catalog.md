@@ -31,8 +31,8 @@ lines are where those arguments get passed.
 | Agent | Does | Invocation arguments | Return signals |
 | --- | --- | --- | --- |
 | `workflow_lead` | Runs the workflow: invokes agents, enforces gates and caps, collects parallel work, escalates on halt. Coordination only — never writes or commits | `Task/Mode/Workflow` (supplied by the launch command) | `complete`, `halted`, `blocked` |
-| `story_partner` | Interviews the human one question at a time → `user-story.md`. Owns the *problem*, never the solution | `Task`, `Mode: interview`, the raw request, `{{answer}}` | `user_story`; token `USER_STORY_WRITTEN` |
-| `spec_partner` | Interview → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted` (token `SPEC_BUNDLE_WRITTEN`), `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
+| `story_partner` | Interviews the human one question at a time → `user-story.md`, keeping `story-interview-log.md` as its memory across turns. Owns the *problem*, never the solution | `Task`, `Mode: interview`, the raw request, `{{answer}}` | `user_story`; token `USER_STORY_WRITTEN` |
+| `spec_partner` | Interview (memory in `spec-interview-log.md`, `write-bundle` only) → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted` (token `SPEC_BUNDLE_WRITTEN`), `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
 | `spec_reviewer` | One-round automated review of the spec bundle → `review-spec.md`, before the human approval | `Task`, `Mode: review` | `APPROVED`, `CHANGES_REQUESTED` |
 | `implementer` | Production code only, non-TDD. Never touches tests; test findings are tagged `test-step` and left open | `Task`, `Mode: build-slice \| fix-slice-findings \| fix-review-findings \| kill-mutants \| close-dod-gaps`, `Commands:`, `Slice: <N>` on slice modes | `green`, `blocked`; token `DONE` per mode |
 | `unit_test_writer` | Unit tests only. Never touches production code; defects a test exposes stay recorded as open production rows | `Task`, `Mode: cover-criteria \| cover-gaps`, `Commands:`, `Slice: <N>`, `Report:` on `cover-gaps` | `covered`, `blocked`; token `DONE` on `cover-gaps` only |
@@ -90,7 +90,7 @@ agents fall into three groups:
 | --- | --- | --- |
 | `[read, search, edit, web]` | `spec_reviewer`, `reviewer_engineering`, `mutation_tester` | they read the tree or a captured log and write a verdict; they never run the suite themselves |
 | `[read, search, edit, web, shell]` | `implementer`, `implementer_tdd`, `unit_test_writer`, `reviewer_slice`, `dod_validator` | they are invoked with `Commands:` and run them |
-| host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it |
+| host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it, and writes its own log every turn |
 
 `edit` is in every scope because every agent writes its report under
 `.awc/tasks/<task>/`, and `web` is in every scope because any of them may
@@ -103,6 +103,21 @@ invocation is worse than none — the step halts as `blocked` naming the
 capability it was denied. When in doubt, omit the key.
 
 ## Canonical loop shapes
+
+Interview (`until: USER_STORY_WRITTEN` / `SPEC_BUNDLE_WRITTEN`, cap ~20–30):
+
+1. `story_partner` — `Mode: interview. Request: {{request}}. The human's previous answer: {{answer}}` — `expect: user_story`
+
+   or, for the spec half — `spec_partner` — `Mode: write-bundle. Format: {{format}}. The human's previous answer: {{answer}}` — `expect: spec_drafted`
+
+   Every iteration spawns a **new** subagent, and `{{answer}}` is the latest
+   answer alone (see `running.md`), so the agent's memory of the interview is
+   the log file it reads and extends each turn — that file is what keeps the
+   loop from re-asking a settled question. Each interviewer owns one log
+   (`story-interview-log.md`, `spec-interview-log.md`), and `spec_partner`'s
+   belongs to `write-bundle` alone, so a later approval loop never writes into
+   an interview slot. Pass `{{answer}}` and nothing more: the lead never
+   reconstructs earlier turns into the prompt.
 
 Single human sign-off of an artifact (`until: SPEC_APPROVED`, cap ~10):
 
@@ -170,3 +185,19 @@ the same design rules the bundled ones obey:
    `.awc/tasks/<task>/`, never pasted into chat. Loop-enders append
    `<promise>DONE</promise>` only when their documented condition holds.
 7. **A blocked command is `blocked`** — never "verified by inspection".
+8. **A loop that builds on earlier turns names its own log.** Every iteration
+   is a fresh subagent and the prompt carries `{{answer}}`'s latest value alone
+   (see `running.md`), so any agent asking the human one question per turn —
+   an interview, a triage, an outline session — gets a log under
+   `.awc/tasks/<task>/`, named in the agent file, in the shape the bundled
+   interviewers use: one `Q:`/`A:` entry per question, headed by the area it
+   settles — a follow-up opens a new entry repeating that area rather than a
+   second pair under an old one, which keeps "the open entry" the last one and
+   nothing else. The agent reads it before anything else and fills the arriving
+   answer in; a question turn also appends the next question with a blank
+   `A:`, and the closing turn appends nothing, because it asks nothing. The
+   first turn has no file and no answer — it creates the log and asks — and an
+   entry is only ever appended with its question in it, so no blank sits there
+   waiting for one and holds the loop open.
+   Scope the log to the mode that interviews — other modes read the artifacts.
+   The node passes `{{answer}}` and nothing more.

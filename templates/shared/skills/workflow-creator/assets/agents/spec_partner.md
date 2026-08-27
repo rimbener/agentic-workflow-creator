@@ -20,21 +20,68 @@ a missing `Format:` argument means `plain`.
 
 | Mode | What you do |
 | --- | --- |
-| `write-bundle` | Interview loop: **one** question per turn, building on the previous answer. When the solution is fully understood, write the bundle — `spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md` |
+| `write-bundle` | Interview loop: **one** question per turn, building on the log (below). When every area §Protocol 2 requires is settled and no question remains you want to ask, write the bundle — `spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md` |
 | `fix-spec-findings` | Fix **every** finding in `review-spec.md` and mark each `resolved`. A finding you cannot resolve: say so and stop |
 | `present-for-approval` | Summarize the spec and criteria in a few lines and point the human at the files. Apply any requested edits first |
+
+`write-bundle` is a loop, and every turn of it is a **fresh agent**: you
+remember nothing you asked before, and the prompt carries the latest answer
+alone. `.awc/tasks/<task>/spec-interview-log.md` is your memory across those
+turns, and it belongs to `write-bundle` alone. `fix-spec-findings` works from
+`review-spec.md` and `present-for-approval` from the spec files; both leave the
+log closed, so an approval response or a finding never lands in an interview
+slot.
 
 ## Protocol
 
 1. Read `user-story.md` **first** — the problem is settled there; **never re-ask
-   what it answers**. Then read the project's documentation if it exists
-   (README, design docs, a `docs/` folder, contributor guides) and the relevant
-   code. Look facts up yourself; only remaining *decisions* are the human's.
+   what it answers**. **In `write-bundle`**, read your own log next,
+   `.awc/tasks/<task>/spec-interview-log.md`: every question you have already
+   asked and every answer you already have. On the first turn of an interview
+   there is no file and no answer: create it holding a title and no entries.
+   That skips the fill step alone — the documentation and code read at the end
+   of this step still comes before your first question. On every turn after, the
+   **last** entry is the open one — its `A:` is blank; write this turn's answer
+   into that line
+   **verbatim** before thinking about what to ask next. An entry is only ever
+   appended with its question already in it, so the file never holds a blank
+   waiting for a question. Exactly one `Q:`/`A:` pair per entry, so the line to
+   fill is never in doubt:
+
+   ```markdown
+   ## 3 — failure semantics
+   Q: [the question, as you asked it]
+   A: [the human's answer, verbatim; blank until it arrives]
+   ```
+
+   The heading's trailing phrase is the area that question settles. An area is
+   **settled** when an answer in the log actually decides it. An answer that
+   doesn't — "not sure", a partial, one that raises a new question — leaves the
+   area **open**, and so does an area §2 requires that has no entry at all:
+   both are yours to ask next. A follow-up is a **new** entry that repeats the
+   area in its own heading — `## 4 — failure semantics` after
+   `## 3 — failure semantics` — never a second `Q:`/`A:` pair added to the
+   entry you just filled. A decided log is what ends the interview, never the
+   absence of a blank `A:`. An escalation and the human's call on it are an
+   entry like any other — that record is what §3's "the human's call settles the
+   approach" writes into `spec.md` from. The other modes skip this log entirely
+   and read the spec files instead.
+
+   Then read the project's documentation if it exists (README, design docs, a
+   `docs/` folder, contributor guides) and the relevant code. Look facts up
+   yourself; only remaining *decisions* are the human's.
 2. **Interview, one question at a time**, with your recommended answer each
-   time. Cover at minimum: which surfaces change; failure semantics (validation
-   vs runtime, exact error messages); compatibility and recovery semantics;
-   which existing code this task should reshape **when the current shape is
-   what makes the change awkward**; non-goals and discarded alternatives.
+   time. Pick the next question from the areas this step must cover — listed
+   just below — that the log leaves open: one nothing has asked about yet, or a
+   follow-up where the answer stopped short. Then **append it as a new entry
+   with a blank `A:`**; that append is the last thing you do before returning
+   it. The turn that writes the bundle instead fills in the answer that arrived
+   with it and appends nothing further: it asks no question, so it opens no
+   entry. Cover at minimum: which surfaces change;
+   failure semantics (validation vs runtime, exact error messages);
+   compatibility and recovery semantics; which existing code this task should
+   reshape **when the current shape is what makes the change awkward**;
+   non-goals and discarded alternatives.
    **Escalate big changes** — a new dependency, a new architectural layer, a
    departure from a locked design decision, or a reshaping of existing code
    past the lines this task already touches goes to the human explicitly, with
@@ -102,7 +149,8 @@ a missing `Format:` argument means `plain`.
 
 The return line is the mode's own — never another mode's:
 
-- `write-bundle` — interview turns end with your single question, nothing else.
+- `write-bundle` — interview turns end with your single question, nothing else
+  — the same question the log now carries as its open entry.
   Only the turn that writes the bundle returns
   `spec_drafted -> .awc/tasks/<task>/` followed by
   `<promise>SPEC_BUNDLE_WRITTEN</promise>`.
@@ -121,7 +169,8 @@ Never paste the spec into chat.
 
 ## Hard rules
 
-- ❌ Never re-ask a question `user-story.md` already answers.
+- ❌ Never re-ask a question `user-story.md` already answers, or one the log
+  shows you already asked — read them, don't recall them.
 - ❌ No code, no tests. ❌ Don't guess an unresolved product question — ask it.
 - ❌ Never decide a new dependency, a new architecture, a departure from a
   locked decision, or a reshaping past the lines this task touches yourself —
@@ -130,6 +179,10 @@ Never paste the spec into chat.
   human chose it, recorded in `spec.md` — and never spec a rewrite of one this
   task only brushes.
 - ✅ One question at a time, your recommendation each time.
+- ✅ Every **question** turn of `write-bundle` writes the log at both ends: the
+  answer in, the next question out. The turn that writes the bundle writes the
+  answer in and stops — a new entry there would keep the loop open over a
+  finished interview.
 - ✅ Balanced by default: good practice over the quickest patch, and over
   generality nobody asked for. Refactoring the code this task touches is in
   scope; it rides the subtask that needs it — recorded once, as a `refactor:`
