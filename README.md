@@ -52,6 +52,8 @@ Agents:
   opencode        Launch opencode with the bundled workflow skill
 
 Options:
+  --update        Open the session on workflow-updater, to change a workflow
+                  package this repo already has (default: create a new one)
   --keep          Do not delete the temp folder on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
   -h, --help      Show help
@@ -81,6 +83,21 @@ workflows/<name>/                 # the workflow, its agents and scripts
 .codex/skills/<name>/SKILL.md     # in-session launcher — Codex
 .opencode/command/<name>.md       # in-session launcher — opencode
 ```
+
+## Changing a workflow you already have
+
+```bash
+awc claude --update
+```
+
+That opens the session on the **workflow-updater** skill instead. It reads the
+package already in your repo — its nodes, the modes each agent copy kept, its
+scripts and launchers — audits it against the current dialect, and works one
+change at a time: add or drop a phase, swap the pairing, change the inputs,
+isolation or commands, or bring an older package back in line. Updating is
+surgical on purpose: the package holds decisions and hand-edits from before,
+so the change and its ripples are planned with you and applied, and nothing
+else is touched.
 
 ## Use locally (without publishing)
 

@@ -7,6 +7,7 @@ describe('parseCli', () => {
     expect(cli.agent).toBe('claude')
     expect(cli.keep).toBe(false)
     expect(cli.tmpDir).toBe('.awc-tmp')
+    expect(cli.update).toBe(false)
     expect(cli.passthrough).toEqual([])
   })
 
@@ -16,10 +17,22 @@ describe('parseCli', () => {
     expect(cli.tmpDir).toBe('/tmp/x')
   })
 
+  test('--update selects the update session', () => {
+    expect(parseCli(['claude', '--update']).update).toBe(true)
+  })
+
   test('passthrough after --', () => {
-    const cli = parseCli(['claude', '--keep', '--', '--version', '--keep'])
+    const cli = parseCli([
+      'claude',
+      '--keep',
+      '--',
+      '--version',
+      '--keep',
+      '--update',
+    ])
     expect(cli.keep).toBe(true)
-    expect(cli.passthrough).toEqual(['--version', '--keep'])
+    expect(cli.update).toBe(false)
+    expect(cli.passthrough).toEqual(['--version', '--keep', '--update'])
   })
 
   test('no agent', () => {

@@ -1,6 +1,6 @@
 ---
 name: workflow-creator
-description: Interview the user and generate a complete lead-run agentic workflow package — a YAML of tiny nodes plus the agents and single-purpose scripts it needs, executed step by step by a workflow_lead agent. Use whenever the user wants to create, design, scaffold, or iterate on an agentic workflow, mentions a workflow YAML, orchestrating agents, a spec/build/review pipeline, or automating a multi-step dev process with agents — even if they never say the word "workflow".
+description: Interview the user and generate a complete lead-run agentic workflow package — a YAML of tiny nodes plus the agents and single-purpose scripts it needs, executed step by step by a workflow_lead agent. Use whenever the user wants to create, design, or scaffold an agentic workflow, mentions a workflow YAML, orchestrating agents, a spec/build/review pipeline, or automating a multi-step dev process with agents — even if they never say the word "workflow".
 ---
 
 # Workflow Creator
@@ -18,6 +18,17 @@ Read these before starting (silently — they are your working knowledge):
 - `references/interview.md` — how to interview and every area to settle.
 - `references/hosts.md` — the three in-session launcher files every package
   ships, plus the launch script a worktree workflow copies from `assets/run.sh`.
+
+**A package that already exists is an update, not a creation.** If the repo
+already holds a `workflows/<name>/` package and the ask is to change it — add a
+phase, swap the pairing, change the inputs, bring it up to date — a full
+interview and a regenerated package would overwrite decisions and hand-edits
+that are already in there. Say so, then hand it over: if the **workflow-updater
+skill is loaded in this session**, that skill is where the change belongs — give
+it the request rather than sending the user anywhere. If it is not, point them at
+`awc <agent> --update`, which opens a session on it and works from what the
+package already says. Iterating on a package **this session** just designed
+stays here: the decisions behind it are still in the conversation.
 
 ## Process
 

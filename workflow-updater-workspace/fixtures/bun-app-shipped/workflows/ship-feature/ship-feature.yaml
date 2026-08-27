@@ -1,0 +1,118 @@
+name: ship-feature
+description: One feature request → a reviewed, DoD-validated branch ready for a PR
+
+inputs:
+  - name: task            # kebab id; names the task directory and the branch
+  - name: request         # the feature request, in the requester's own words
+
+vars:
+  commands: "workflows/ship-feature/scripts/check.sh"   # typecheck + suite; quiet when green
+  test_command: "bun test --only-failures"
+  base: main
+
+nodes:
+  - id: install
+    run: bun install --silent
+
+  # The problem side, settled with the human before anything is specified.
+  - id: story
+    loop:
+      agent: agents/story_partner.md
+      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}. The human's previous answer: {{answer}}"
+      expect: user_story
+      until: USER_STORY_WRITTEN
+      max_iterations: 20
+
+  - id: spec
+    loop:
+      agent: agents/spec_partner.md
+      prompt: "Task: {{task}}. Mode: write-bundle. Format: plain. The human's previous answer: {{answer}}"
+      expect: spec_drafted
+      until: SPEC_BUNDLE_WRITTEN
+      max_iterations: 30
+
+  # Vetted automatically first, so the human approves a clean bundle.
+  - id: spec-review
+    agent: agents/spec_reviewer.md
+    prompt: "Task: {{task}}. Mode: review."
+    expect: [APPROVED, CHANGES_REQUESTED]
+    allowed_tools: [read, search, edit, web]
+
+  - id: spec-fixes
+    agent: agents/spec_partner.md
+    prompt: "Task: {{task}}. Mode: fix-spec-findings. Format: plain."
+    expect: findings_resolved
+
+  # The one content sign-off in the run.
+  - id: spec-approval
+    loop:
+      agent: agents/spec_partner.md
+      prompt: "Task: {{task}}. Mode: present-for-approval. Format: plain. The human's response: {{answer}}"
+      expect: SPEC_APPROVED
+      until: SPEC_APPROVED
+      max_iterations: 10
+
+  - id: commit-spec
+    agent: agents/committer.md
+    prompt: "Task: {{task}}. Mode: commit. Paths: .awc/tasks/in-progress/{{task}}. Message: docs({{task}}): approved spec and acceptance criteria."
+    expect: committed
+    allowed_tools: [read, search, shell, web]
+
+  # One vertical slice per iteration; the last step's DONE means every slice
+  # in subtasks.md is built.
+  - id: build
+    loop:
+      steps:
+        - agent: agents/implementer_tdd.md
+          prompt: "Task: {{task}}. Mode: build-slice. Slice: {{iteration}}. Commands: {{commands}}."
+          expect: green
+        - run: workflows/ship-feature/scripts/check.sh
+        - agent: agents/reviewer_slice.md
+          prompt: "Task: {{task}}. Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}."
+          expect: [APPROVED, CHANGES_REQUESTED]
+        - agent: agents/implementer_tdd.md
+          prompt: "Task: {{task}}. Mode: fix-slice-findings. Slice: {{iteration}}. Commands: {{commands}}."
+          expect: green
+      until: DONE
+      max_iterations: 6
+
+  # The reviewer reads a verified tree and never runs the checks itself, so a
+  # check step sits on both sides of the fix.
+  - id: review-round
+    loop:
+      steps:
+        - run: workflows/ship-feature/scripts/check.sh
+        - agent: agents/reviewer_engineering.md
+          prompt: "Task: {{task}}. Mode: full-review. Base: {{base}}."
+          expect: [APPROVED, CHANGES_REQUESTED]
+          allowed_tools: [read, search, edit, web]
+        - agent: agents/implementer_tdd.md
+          prompt: "Task: {{task}}. Mode: fix-review-findings. Commands: {{commands}}."
+          expect: green
+        - run: workflows/ship-feature/scripts/check.sh
+      until: DONE
+      max_iterations: 2
+
+  - id: dod
+    loop:
+      steps:
+        - agent: agents/dod_validator.md
+          prompt: "Task: {{task}}. Mode: validate. Commands: {{commands}}. Base: {{base}}."
+          expect: [PASS, DOD_FAILED]
+        - agent: agents/implementer_tdd.md
+          prompt: "Task: {{task}}. Mode: close-dod-gaps. Commands: {{commands}}."
+          expect: green
+      until: DONE
+      max_iterations: 2
+
+  - id: ship-gate
+    gate: "Slices built, reviewed and DoD-validated on task/{{task}}. Review the diff against {{base}} — approve to archive the task trail and finish."
+
+  - id: finish
+    run: workflows/ship-feature/scripts/finish-task.sh {{task}}
+
+  - id: commit-trail
+    agent: agents/committer.md
+    prompt: "Task: {{task}}. Mode: commit. Paths: .awc/tasks. Message: chore({{task}}): archive task trail."
+    expect: committed
+    allowed_tools: [read, search, shell, web]

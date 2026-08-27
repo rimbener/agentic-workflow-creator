@@ -3,6 +3,7 @@ import { parseArgs } from 'node:util'
 export interface ParsedCli {
   agent: string | undefined
   keep: boolean
+  update: boolean
   tmpDir: string
   help: boolean
   version: boolean
@@ -18,6 +19,7 @@ export function parseCli(argv: string[]): ParsedCli {
     args: own,
     options: {
       keep: { type: 'boolean', default: false },
+      update: { type: 'boolean', default: false },
       'tmp-dir': { type: 'string', default: '.awc-tmp' },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'v', default: false },
@@ -28,6 +30,7 @@ export function parseCli(argv: string[]): ParsedCli {
   return {
     agent: positionals[0],
     keep: values.keep,
+    update: values.update,
     tmpDir: values['tmp-dir'],
     help: values.help,
     version: values.version,

@@ -7,6 +7,7 @@ import {
   symlinkSync,
 } from 'node:fs'
 import path from 'node:path'
+import { type Mode, promptFile } from './mode'
 
 // Removes any stale folder first: a previous `kill -9` skips cleanup handlers,
 // so every run self-heals before staging.
@@ -19,12 +20,18 @@ export function cleanup(tmpDir: string): void {
   rmSync(tmpDir, { recursive: true, force: true })
 }
 
-export function readPrompt(hostDir: string): string {
-  return readFileSync(path.join(hostDir, 'prompt.md'), 'utf8').trim()
+export function readPrompt(hostDir: string, mode: Mode = 'create'): string {
+  return readFileSync(path.join(hostDir, promptFile(mode)), 'utf8').trim()
 }
 
-export function copySkills(sharedDir: string, dest: string): void {
-  copyEntries(path.join(sharedDir, 'skills'), dest)
+// `skip` leaves out skill directories this session does not open in — see
+// src/mode.ts for which, and why the creator is never one of them.
+export function copySkills(
+  sharedDir: string,
+  dest: string,
+  skip: string[] = [],
+): void {
+  copyEntries(path.join(sharedDir, 'skills'), dest, skip)
 }
 
 export function copyCommands(sharedDir: string, dest: string): void {
@@ -36,8 +43,9 @@ export function copyPayload(
   sharedDir: string,
   skillsDest: string,
   commandsDest: string,
+  skipSkills: string[] = [],
 ): void {
-  copySkills(sharedDir, skillsDest)
+  copySkills(sharedDir, skillsDest, skipSkills)
   copyCommands(sharedDir, commandsDest)
 }
 
@@ -64,9 +72,10 @@ export function copyCommandsAsSkills(sharedDir: string, dest: string): void {
 // through into the user's own skill or command. Dropping the link first keeps
 // the copy a real file inside the temp dir and leaves the original untouched
 // (`rmSync` unlinks a symlink rather than following it).
-function copyEntries(src: string, dest: string): void {
+function copyEntries(src: string, dest: string, skip: string[] = []): void {
   mkdirSync(dest, { recursive: true })
   for (const entry of entriesOf(src)) {
+    if (skip.includes(entry)) continue
     const target = path.join(dest, entry)
     rmSync(target, { recursive: true, force: true })
     cpSync(path.join(src, entry), target, { recursive: true })

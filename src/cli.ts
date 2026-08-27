@@ -5,6 +5,7 @@ import { runCodex } from './agents/codex'
 import { runOpencode } from './agents/opencode'
 import { type ParsedCli, parseCli } from './args'
 import { loadHosts } from './hosts'
+import { mode } from './mode'
 import { packageJsonPath } from './paths'
 
 const RUNNERS: Record<string, typeof runClaude> = {
@@ -28,6 +29,8 @@ Agents:
 ${agents}
 
 Options:
+  --update        Open the session on workflow-updater, to change a workflow
+                  package this repo already has (default: create a new one)
   --keep          Do not delete the temp folder on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
   -h, --help      Show this help
@@ -83,6 +86,7 @@ function main(): void {
   run({
     tmpDir: cli.tmpDir,
     keep: cli.keep,
+    mode: mode(cli.update),
     passthrough: cli.passthrough,
   })
 }

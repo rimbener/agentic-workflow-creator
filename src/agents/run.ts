@@ -1,9 +1,11 @@
 import { spawn } from 'node:child_process'
+import type { Mode } from '../mode'
 import { cleanup } from '../staging'
 
 export interface AgentOptions {
   tmpDir: string
   keep: boolean
+  mode: Mode
   passthrough: string[]
 }
 

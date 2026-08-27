@@ -56,6 +56,8 @@ Agents:
   opencode        Launch opencode with the bundled workflow skill
 
 Options:
+  --update        Open the session on workflow-updater, to change a workflow
+                  package the repo already has (default: create a new one)
   --keep          Do not delete .awc-tmp/ on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
   -h, --help      Show help
@@ -76,7 +78,12 @@ Exit code: `awc` exits with the agent process's exit code (`143` on SIGTERM).
    - Create `.awc-tmp/` in the current working directory.
    - Place the shared payload (`templates/shared/skills/`, `templates/shared/commands/`)
      under the names the target agent looks for — see the host table below.
-   - Read the initial prompt from `templates/hosts/<agent>/prompt.md`.
+   - The session's mode decides two of those inputs (`src/mode.ts`): a default
+     session leaves out `skills/workflow-updater/`, while `--update` stages it
+     alongside `workflow-creator` — the updater reads the dialect and the agent
+     bases from `../workflow-creator/`, so the creator ships either way.
+   - Read the initial prompt from `templates/hosts/<agent>/prompt.md`, or
+     `prompt-update.md` under `--update`. Each host ships both.
 3. **Launch**
    - Spawn the agent with `stdio: "inherit"` so the interactive TUI owns the terminal,
      plus any passthrough args.
@@ -119,31 +126,41 @@ Consequences, and why this is the chosen design:
 - Writes through a link (a refreshed token, a new session file) land in the user's real
   config dir, so `codex resume` and opencode session history keep working.
 - Staging never writes into the real config dir; deleting `.awc-tmp/` removes only links.
-  This needs care on name collisions: if the user already has their own
-  `workflow-creator` skill or `awc-status` command, the shadow's link for that name is
-  the copy destination, and `cpSync` follows a symlinked destination. `copyPayload`
-  therefore unlinks each target name before copying, so the session gets a real file in
-  the temp dir and the user's original is left alone.
+  This needs care on name collisions: if the user already has a skill or command of
+  their own by one of the payload's names — `workflow-creator`, `workflow-updater`,
+  `awc-status` — the shadow's link for that name is the copy destination, and `cpSync`
+  follows a symlinked destination. `copyPayload` therefore unlinks each target name
+  before copying, so the session gets a real file in the temp dir and the user's
+  original is left alone. It also means "the payload is not staged" has to be tested as
+  *no real file of ours*, never as *no entry*: a user's own `workflow-updater` is
+  shadowed in as a link in every session, `--update` or not.
 
 ## Bundled workflow template
 
 ```
 templates/
 ├── shared/                          # host-neutral payload, staged into every host
-│   ├── skills/workflow-creator/
+│   ├── skills/workflow-creator/     # every session
 │   │   ├── SKILL.md                 # interview → design → generate a lead-run workflow package
 │   │   ├── references/              # interview checklist, agent catalog, host launcher table
 │   │   └── assets/
 │   │       ├── running.md           # execution contract, copied into every generated package
+│   │       ├── run.sh               # worktree launch template
+│   │       ├── finish-task.sh       # archives a run's task trail; copied into a package
+│   │       ├── agents-cli.conf      # host roster — add or remove a host only here
 │   │       └── agents/              # base agent templates the skill instantiates per workflow
+│   ├── skills/workflow-updater/     # `--update` sessions only
+│   │   ├── SKILL.md                 # locate → inventory → audit → scoped plan → apply → validate
+│   │   └── references/              # package inventory + audit, change playbook, scoped interview
 │   └── commands/
-│       └── awc-status.md            # /awc-status — summarize workflow progress
+│       └── awc-status.md            # /awc-status — summarize session progress
 └── hosts/
     ├── claude/
-    │   ├── prompt.md                # initial user message for the session
+    │   ├── prompt.md                # initial user message — create session
+    │   ├── prompt-update.md         # initial user message — `--update` session
     │   └── plugin/.claude-plugin/plugin.json
-    ├── codex/prompt.md
-    └── opencode/prompt.md
+    ├── codex/{prompt.md, prompt-update.md}
+    └── opencode/{prompt.md, prompt-update.md}
 ```
 
 The template content is a starting point; iterating on it does not require code changes.
@@ -161,6 +178,7 @@ The template content is a starting point; iterating on it does not require code 
 │   │   ├── claude.ts   # stage via --plugin-dir
 │   │   ├── codex.ts    # stage via CODEX_HOME shadow
 │   │   └── opencode.ts # stage via OPENCODE_CONFIG_DIR shadow
+│   ├── mode.ts         # what --update changes: skills skipped, prompt file read
 │   ├── staging.ts      # temp folder reset/copy/shadow/remove
 │   └── paths.ts        # resolve packaged templates/ relative to dist/cli.js
 ├── templates/…         # (above)
@@ -176,8 +194,13 @@ The template content is a starting point; iterating on it does not require code 
 - **Test**: `bun test` for units; `scripts/smoke.sh` for each installed agent — one
   `--version` run exercising the full stage/spawn/cleanup cycle (which also pins the
   assumption that each CLI short-circuits on `--version` with the initial prompt already
-  in argv), and a second under `--keep` asserting the payload landed as real files under
-  that host's directory names.
+  in argv), a second under `--keep` asserting the payload landed as real files under
+  that host's directory names, and a third under `--update --keep` for the same in that
+  mode, plus the assertion that a default session stages no `workflow-updater`. Each
+  staged mode is then checked against the host's own offline listing, so the test sees
+  what the model would load rather than what is on disk. `--version` never reads the
+  initial prompt, so which of the two prompts a host puts on argv is a unit test
+  (`the launch command each host builds`), not a smoke check.
 - `templates/` is resolved relative to the compiled entry file
   (`new URL("../templates", import.meta.url)`), never relative to `process.cwd()`,
   so it works via `npx`, global install, and local `node dist/cli.js` alike.

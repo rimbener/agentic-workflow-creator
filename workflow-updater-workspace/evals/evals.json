@@ -1,0 +1,87 @@
+{
+  "skill_name": "workflow-updater",
+  "notes": "Each eval starts from a repo that already holds a generated workflow package, so the graded object is the diff, not a package. Every eval carries the two assertions that make an update an update: the ripples landed, and nothing outside the change was touched. Run the with-skill arm under `awc <agent> --update`; the baseline arm is the same prompt with no updater staged.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "add-mutation-untrims-the-validator",
+      "prompt": "This repo has a ship-feature workflow I run for every feature. I want mutation testing added to it — StrykerJS, scoped to the files the task changed, capped at 3 rounds, and I don't want an agent able to end that loop by claiming it passed. Everything else about the workflow stays as it is. I'm away from the keyboard after this — make your recommended calls and apply the change.",
+      "expected_output": "The mutation phase added to workflows/ship-feature/ship-feature.yaml: a run: step running Stryker scoped to the changed files with its log captured, a mutation_tester node reading that log, fix steps, a check step closing the round, and a loop ending on until_run: with a gate script that reads Stryker's own log — plus the ripples: a mutation_tester agent copy instantiated from the base, kill-mutants restored to the implementer_tdd copy, the mutation checks restored to the dod_validator copy, a log-path var, the README's node table updated. Nothing else in the package changed.",
+      "files": [
+        "fixtures/bun-app-shipped"
+      ],
+      "expectations": [
+        "mutation-loop-ends-on-until-run: the mutation loop declares max_iterations 3 and until_run: pointing at a script that reads Stryker's own log — never an until: token, which would let an agent end the loop by asserting, and the round ends with a check step — mutation tools refuse to start on a red suite, so an iteration that ends on an unverified tree strands the next one",
+        "mutation-tester-instantiated: workflows/ship-feature/agents/mutation_tester.md exists, matches the bundled base's structure and arguments (Task, Mode: report, Log:), and the node invoking it passes a Log: path that some earlier run: step actually writes",
+        "dod-validator-untrimmed-from-base: the dod_validator copy checks mutation.md again — and that text matches the bundled base rather than being freshly written prose, since the workflow's copy had it trimmed away",
+        "implementer-regains-kill-mutants: the implementer_tdd copy carries the kill-mutants mode again, taken from its base, and its description: line names it",
+        "gate-script-single-purpose: the mutation gate script exists, is executable, does exactly one thing (read the tool's log and exit 0/non-zero), and is invoked by the loop's until_run:",
+        "ripples-complete: a var holds the mutation log path, the README's node walkthrough lists the new nodes, and the mutation phase sits before any node that archives or commits the task trail",
+        "nothing-else-touched: no change to the story/spec/build/review/dod node shapes, the launchers, ship-feature.sh, agents-cli.conf, running.md, or any agent the change does not reach — every hunk in the diff traces to the mutation request",
+        "package-still-valid: the YAML parses, every node has exactly one behavior, every agent path resolves, every loop has a cap and one exit condition, and every agent node passes the arguments its agent file requires",
+        "positive-phrasing: nothing added describes what the workflow used to do or what was rejected"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "swap-pairing-and-add-an-input",
+      "prompt": "Two changes to the ship-feature workflow. First: we're dropping strict TDD — I want the production code and the unit tests owned by two separate agents, so an implementer that only touches production code plus a test writer that only touches tests. Second: the workflow should take a ticket URL as a third input, and the spec step should get it. Go ahead and apply both; use your recommended defaults for anything I haven't pinned down.",
+      "expected_output": "The slice loop rewritten to the split pairing (implementer + unit_test_writer instantiated from their bases, cover-criteria and cover-gaps steps, the implementer's fix step last so its DONE still closes the loop), implementer_tdd deleted, the later findings loops carrying both fix steps — and a third input threaded through the YAML placeholders, all three in-session launchers, ship-feature.sh's usage/args/step-3, and the README.",
+      "files": [
+        "fixtures/bun-app-shipped"
+      ],
+      "expectations": [
+        "split-pairing-applied: the slice loop uses an implementer (production code only) and a separate unit_test_writer (tests only), both instantiated from their bundled bases and trimmed to the modes the nodes invoke",
+        "tdd-agent-removed: agents/implementer_tdd.md is gone and no node references it",
+        "loop-ender-still-correct: the last agent step of each rewritten loop is the one whose agent file emits that loop's until: token — the implementer's fix mode, after the test writer's cover-gaps step",
+        "findings-routing-added: the cover-gaps steps are passed a Report: naming the findings file the preceding review actually writes",
+        "input-threaded-everywhere: the third input is declared in inputs:, used by the spec node's prompt, and mapped in all three in-session launchers AND in ship-feature.sh's usage line, args block and step 3 — with the mapping worded the same across them",
+        "launcher-placeholder-discipline: the Claude Code and opencode launchers still carry their argument placeholder exactly once each, inside its fenced slot",
+        "nothing-else-touched: the story, spec-review, approval, review-round, dod, gate and finish nodes keep their shapes; running.md, agents-cli.conf and the committer agent are unchanged",
+        "package-still-valid: the YAML parses, every agent path resolves, every agent node passes the arguments its agent file requires, and no orphan agent or var is left behind",
+        "positive-phrasing: no artifact says the workflow no longer uses TDD or echoes the pairing that was replaced"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "bring-a-stale-package-up-to-date",
+      "prompt": "The add-endpoint workflow in here was generated a good while back and I haven't touched it since. Can you bring it in line with how these packages are supposed to look now? Keep what we changed in it ourselves — there's stuff in those agent files we added on purpose.",
+      "expected_output": "An audit against the current dialect, then the migration: the task trail moved to .awc/tasks/in-progress/<task>/ with tmp/, scripts/finish-task.sh copied verbatim from the base plus a finish node placed after everything that touches the trail (and before the trail commit), running.md re-copied verbatim, the missing opencode launcher written — with the owner's hand-edits (the route-registration lens in reviewer_slice, the route-coverage row in dod_validator) carried across, and the independent findings offered rather than silently applied.",
+      "files": [
+        "fixtures/bun-app-drifted"
+      ],
+      "expectations": [
+        "audit-reported-before-changing: the session reports what drifted (flat .awc/tasks/<task>/ trail, no finish node or finish-task.sh, stale running.md, missing .opencode launcher) before applying anything, and separates findings the request depends on from ones the user could decline",
+        "hand-edits-preserved: the route-registration lens in reviewer_slice.md and the route-coverage row in dod_validator.md survive the migration verbatim — re-instantiating those agents from their bases without carrying these across is the failure this eval exists to catch",
+        "trail-layout-migrated: every agent file writes to .awc/tasks/in-progress/<task>/, with spec.md and acceptance-criteria.md at its root and every other artifact under tmp/",
+        "finish-node-added-and-placed: scripts/finish-task.sh is an executable verbatim copy of the base, a finish node runs it with the path written from the launch directory, it sits after every node that reads or writes the trail, and the trail commit follows it and commits the archive move",
+        "running-md-refreshed: workflows/add-endpoint/running.md is byte-identical to the skill's assets/running.md",
+        "opencode-launcher-written: .opencode/command/add-endpoint.md exists, maps the same inputs as the other two launchers, and is worded to match them",
+        "in-place-stays-in-place: no launch script or agents-cli.conf is added — the package runs on the current branch and the request did not ask to change that",
+        "nothing-else-touched: the node sequence, the caps, the pairing, the inputs and the launcher argument mappings are what they were — a package brought up to date is not a package redesigned, and findings the user did not accept stay unapplied",
+        "package-still-valid: the YAML parses, every agent and script path resolves, and every agent node passes the arguments its agent file requires",
+        "positive-phrasing: no artifact narrates the migration or describes the layout the package used to have"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "drop-a-phase-and-sweep-the-orphans",
+      "prompt": "The exhaustive engineering review at the end of ship-feature is costing us more than it catches — the per-slice reviews already find most of it. Take it out. Leave everything else alone.",
+      "expected_output": "The review-round loop removed, and the orphans it leaves swept: the reviewer_engineering agent file deleted, the implementer_tdd copy's fix-review-findings mode trimmed (description line included), the base var dropped if nothing else uses it, the README's walkthrough row removed — and the DoD validator checked for anything it validates that no node now produces.",
+      "files": [
+        "fixtures/bun-app-shipped"
+      ],
+      "expectations": [
+        "phase-removed: the review-round loop is gone from the YAML",
+        "agent-file-deleted: agents/reviewer_engineering.md is removed, since no node invokes it any more",
+        "mode-trimmed-from-implementer: the implementer_tdd copy no longer carries fix-review-findings, and its description: line no longer advertises it",
+        "validator-checked: the dod_validator copy no longer requires review.md — a validator demanding a report no node produces would fail every future run",
+        "orphans-swept: no var, input, script or wait: id is left behind that only the removed phase used; base is either still used by a surviving node or dropped",
+        "readme-updated: the README's node walkthrough no longer lists the removed phase",
+        "nothing-else-touched: the story, spec, build, dod, gate, finish and commit nodes keep their shapes, and the launchers, launch script and running.md are unchanged",
+        "package-still-valid: the YAML parses, every agent and script path resolves, and every remaining agent node passes the arguments its agent file requires",
+        "no-scar-tissue: nothing in the README, the YAML comments or any agent prompt says the workflow used to have an exhaustive review or explains its removal"
+      ]
+    }
+  ]
+}

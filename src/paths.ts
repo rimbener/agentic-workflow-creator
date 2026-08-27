@@ -8,8 +8,10 @@ export function templatesDir(): string {
   return fileURLToPath(new URL('../templates', import.meta.url))
 }
 
-// The host-neutral payload every agent gets: the workflow-creator skill and
-// the awc-status command. Each host module places these where it looks for them.
+// The host-neutral payload: the bundled skills and the awc-status command.
+// Each host module places these where it looks for them. Which skills a given
+// session gets is src/mode.ts's call — workflow-creator and awc-status ship in
+// every session, workflow-updater only under `--update`.
 export function sharedDir(): string {
   return path.join(templatesDir(), 'shared')
 }
