@@ -99,3 +99,11 @@ AGENTS.md's node-type bullet now matches running.md and says why the key names c
 ## 2026-08-27 — `7c448e9` — feat(agents): spec a balanced approach, refactoring included
 
 spec_partner weighs the narrow change against the proper one and specifies the balance — the smallest change that still lands on good practice — with a needed refactor in the spec and in the slice that needs it. spec_reviewer flags both the workaround and the overreach; the implementers carry out a reshaping the subtask names.
+
+## 2026-08-27 — `7c1cb52` — feat(skill): add capture modes so a ready-made problem still writes a story
+
+A spec step always opens from `user-story.md`, so a `story_partner` node precedes it. `interview`, `capture`, and `capture-and-confirm` are the dial for how that file gets written; leftover capture questions hand off to the spec interview under `## Open questions`.
+
+## 2026-08-27 — `abb1b8d` — test(evals): cover capture and confirm story paths
+
+`ticket-capture-story` and `thin-ticket-confirm` grade the lean story modes. `check_package` reports each story step with its loop context so a tokenless capture inside a token-closed loop is visible.
