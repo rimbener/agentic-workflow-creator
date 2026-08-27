@@ -156,6 +156,10 @@ function storySteps(nodes: StoryNode[]) {
   return found
 }
 
+// A flat trail path: `.awc/tasks/` continuing into a segment that is neither
+// tier. A closing delimiter right after `tasks/` is prose naming the root.
+const TRAIL_FLAT = /\.awc\/tasks\/(?!in-progress[/\s`"']|done[/\s`"'])[\w<>{}.-]+/g
+
 function collectRefs(doc: any): { agents: string[]; scripts: string[] } {
   const agents = new Set<string>()
   const scripts = new Set<string>()
@@ -209,6 +213,9 @@ for (const wf of workflows) {
     refs: {
       agents: Object.fromEntries(refs.agents.map((a) => [a, resolveRef(a)])),
       scripts: Object.fromEntries(refs.scripts.map((s) => [s, resolveRef(s)])),
+      // The path a node actually runs, so it can be compared against where
+      // the file sits (package.finishTaskScripts). Prose cannot reach here.
+      finishTask: refs.scripts.filter((s) => /finish-task\.sh$/.test(s)),
     },
     greps: {
       git_worktree: GIT_WORKTREE.test(raw),
@@ -230,6 +237,13 @@ for (const wf of workflows) {
       // whole-file greps above; the per-node view is `storySteps` below
       stryker: /stryker/i.test(raw),
       push_or_pr: /git\s+push|gh\s+pr|pull request creat/i.test(raw),
+      // The task trail is two-tiered while a run is live and moves when it
+      // ends. `trail_flat` lists what it matched rather than answering yes:
+      // prose naming the `.awc/tasks/` root is not a flat path, so a grader
+      // reads the strings instead of trusting a boolean.
+      trail_in_progress: /\.awc\/tasks\/in-progress\//.test(raw),
+      trail_done: /\.awc\/tasks\/done\//.test(raw),
+      trail_flat: [...raw.matchAll(TRAIL_FLAT)].map((m) => m[0]),
     },
   })
 }
@@ -253,6 +267,9 @@ report.package = {
     opencode: files.filter((f) => /^\.opencode\/commands?\//.test(rel(f))).map(rel),
   },
   agentFiles: files.filter((f) => /agents\/[^/]+\.md$/.test(rel(f))).map(rel),
+  // A finish node names this path from the launch directory, so graders can
+  // compare `finish_task_ref` above against where the file really is.
+  finishTaskScripts: files.filter((f) => /finish-task\.sh$/.test(rel(f))).map(rel),
   scriptFiles: files
     .filter((f) => /scripts\/[^/]+\.(sh|mjs|ts|js|py)$/.test(rel(f)))
     .map((f) => ({ file: rel(f), executable: isExec(f), lines: readFileSync(f, 'utf8').split('\n').length })),
