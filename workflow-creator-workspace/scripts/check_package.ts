@@ -28,6 +28,12 @@ const files = walk(repo)
 const rel = (p: string) => path.relative(repo, p)
 const isExec = (p: string) => (statSync(p).mode & 0o111) !== 0
 const GIT_WORKTREE = /git\s+worktree/
+// Which story_partner mode a node invokes, if any — the mode decides the node
+// shape that can judge it (a token-closed loop, or a plain single-run node).
+// Longest alternative first: `capture` would otherwise match the `capture` in
+// `capture-and-confirm`, since \b fires at the hyphen.
+const STORY_MODE = /Mode:\s*(capture-and-confirm|capture|interview)\b/g
+const STORY_MODE_ONE = new RegExp(STORY_MODE.source)
 
 // Find candidate workflow YAMLs: any yaml with a top-level nodes/steps/jobs list.
 const yamlFiles = files.filter((f) => /\.ya?ml$/.test(f))
@@ -95,6 +101,61 @@ function nodeFacts(node: any, idx: number) {
   return facts
 }
 
+// Every story step in the tree, with the loop context that decides whether the
+// node shape can judge it: an interviewing mode needs a loop closing on its
+// token and the relayed answer in its prompt; a `capture` returns no token, so
+// a loop around it can only run to its cap. Reported per node, not as a
+// whole-file grep, since the grep cannot tell a looped capture from a plain one.
+type StoryNode = Record<string, unknown>
+
+function loopFacts(loop: StoryNode) {
+  return {
+    until: loop.until ?? null,
+    until_run: loop.until_run ?? loop.untilRun ?? loop.until_bash ?? null,
+    max_iterations: loop.max_iterations ?? loop.maxIterations ?? null,
+  }
+}
+
+function storySteps(nodes: StoryNode[]) {
+  const found: Record<string, unknown>[] = []
+  const visit = (node: StoryNode, loop: StoryNode | null, at: string): void => {
+    if (!node || typeof node !== 'object') return
+    const prompt = typeof node.prompt === 'string' ? node.prompt : ''
+    const mode = prompt.match(STORY_MODE_ONE)?.[1]
+    if (mode) {
+      found.push({
+        at,
+        mode,
+        agent: node.agent ?? null,
+        expect: node.expect ?? null,
+        source_arg: /Source:\s*\S/.test(prompt),
+        request_arg: /Request:\s*\S/.test(prompt),
+        relays_answer: /\{\{\s*answer\s*\}\}/.test(prompt),
+        in_loop: loop ? loopFacts(loop) : null,
+      })
+    }
+    const loopKey = node.loop
+    if (loopKey && typeof loopKey === 'object') {
+      const l = loopKey as StoryNode
+      if (Array.isArray(l.steps)) {
+        let i = 0
+        for (const step of l.steps) {
+          visit(step as StoryNode, l, `${at}.loop.steps[${i}]`)
+          i += 1
+        }
+      } else {
+        visit(l, l, `${at}.loop`)
+      }
+    }
+  }
+  let i = 0
+  for (const node of nodes) {
+    visit(node, null, `nodes[${i}]${node?.id ? `#${node.id}` : ''}`)
+    i += 1
+  }
+  return found
+}
+
 function collectRefs(doc: any): { agents: string[]; scripts: string[] } {
   const agents = new Set<string>()
   const scripts = new Set<string>()
@@ -144,6 +205,7 @@ for (const wf of workflows) {
     inputs: doc.inputs ?? null,
     nodeCount: nodes.length,
     nodes: nodes.map(nodeFacts),
+    storySteps: storySteps(nodes as StoryNode[]),
     refs: {
       agents: Object.fromEntries(refs.agents.map((a) => [a, resolveRef(a)])),
       scripts: Object.fromEntries(refs.scripts.map((s) => [s, resolveRef(s)])),
@@ -161,6 +223,11 @@ for (const wf of workflows) {
       report_arg: /Report:\s/.test(raw),
       commands_arg: /Commands:\s/.test(raw),
       slice_arg: /Slice:\s/.test(raw),
+      source_arg: /Source:\s/.test(raw),
+      request_arg: /Request:\s/.test(raw),
+      story_modes: [...raw.matchAll(STORY_MODE)].map((m) => m[1]),
+      user_story_token: /USER_STORY_WRITTEN/.test(raw),
+      // whole-file greps above; the per-node view is `storySteps` below
       stryker: /stryker/i.test(raw),
       push_or_pr: /git\s+push|gh\s+pr|pull request creat/i.test(raw),
     },

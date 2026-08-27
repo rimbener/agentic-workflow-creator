@@ -649,6 +649,100 @@ describe('trimming story_partner by mark', () => {
   })
 })
 
+// The eval material has to exercise the lean story path too: a capture-only
+// package is where the trim, the tokenless node shape and the inline source
+// all fail quietly if they regress.
+describe('the eval material', () => {
+  const workspace = path.join(
+    import.meta.dir,
+    '..',
+    'workflow-creator-workspace',
+  )
+
+  test('an eval prompts the capture path, and the fact extractor reads it', () => {
+    const evals = JSON.parse(
+      readFileSync(path.join(workspace, 'evals', 'evals.json'), 'utf8'),
+    )
+    const names: string[] = evals.evals.flatMap(
+      (e: { expectations: string[] }) =>
+        e.expectations.map((x) => x.split(':')[0]),
+    )
+    for (const key of [
+      'capture-story-single-node',
+      'capture-story-agent-trimmed',
+      'spec-opens-from-the-story',
+      // The pairing rule's default path: a prompt that asks for a spec and
+      // leaves the story to defaults still has to get one.
+      'story-step-precedes-spec',
+      // The middle setting: reads the source, then asks only what is open.
+      'confirm-story-loop-shape',
+      'confirm-story-records-the-source',
+    ]) {
+      expect(names).toContain(key)
+    }
+    // A capture story skips only the story interview — the spec half still
+    // interviews, so its log contract is still graded.
+    const capture = evals.evals.find(
+      (e: { name: string }) => e.name === 'ticket-capture-story',
+    )
+    expect(capture.expectations.map((x: string) => x.split(':')[0])).toContain(
+      'interview-loop-has-memory',
+    )
+
+    const checker = readFileSync(
+      path.join(workspace, 'scripts', 'check_package.ts'),
+      'utf8',
+    )
+    // Longest alternative first, or `capture` swallows `capture-and-confirm`
+    // at the hyphen and every confirm node reports as a plain capture.
+    expect(checker).toContain('(capture-and-confirm|capture|interview)')
+  })
+
+  // The mode decides the node shape, and only a per-node view can show it: a
+  // whole-file grep reports `capture` and `until: USER_STORY_WRITTEN` for a
+  // package where the capture sits *inside* that loop and can never close it.
+  test('the checker reports each story step with its loop context', () => {
+    const pkg = path.join(mkdtempSync(path.join(tmpdir(), 'awc-pkg-')), 'pkg')
+    const wf = path.join(pkg, 'workflows', 'demo')
+    mkdirSync(wf, { recursive: true })
+    writeFileSync(
+      path.join(wf, 'demo.yaml'),
+      [
+        'inputs: [task, source]',
+        'nodes:',
+        '  - id: story',
+        '    loop:',
+        '      agent: agents/story_partner.md',
+        '      prompt: "Task: {{task}}. Mode: capture. Source: {{source}}"',
+        '      expect: user_story',
+        '      until: USER_STORY_WRITTEN',
+        '      max_iterations: 10',
+        '  - id: confirm',
+        '    agent: agents/story_partner.md',
+        '    prompt: "Task: {{task}}. Mode: capture-and-confirm. Source: {{source}}. The human\'s previous answer: {{answer}}"',
+        '    expect: user_story',
+        '',
+      ].join('\n'),
+    )
+
+    const script = path.join(workspace, 'scripts', 'check_package.ts')
+    const run = Bun.spawnSync(['bun', script, pkg])
+    expect(run.exitCode).toBe(0)
+    const steps = JSON.parse(run.stdout.toString()).workflows[0].storySteps
+
+    // A tokenless capture wrapped in a token-closed loop: visible as such.
+    expect(steps[0].mode).toBe('capture')
+    expect(steps[0].in_loop.until).toBe('USER_STORY_WRITTEN')
+    expect(steps[0].relays_answer).toBe(false)
+    // A confirm turn on a plain node: no loop to relay its question into.
+    expect(steps[1].mode).toBe('capture-and-confirm')
+    expect(steps[1].in_loop).toBeNull()
+    expect(steps[1].source_arg).toBe(true)
+
+    rmSync(path.dirname(pkg), { recursive: true, force: true })
+  })
+})
+
 describe('cleanup', () => {
   test('removes the temp folder and is idempotent', () => {
     const tmp = freshTmp()
