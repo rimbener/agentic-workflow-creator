@@ -135,3 +135,11 @@ Punctuation fix in the enumeration of the three session skills.
 ## 2026-08-28 — `2eeb801` — feat(evals): grade the slice review's base ref
 
 Creator evals expect a base ref on the slice reviews and required-args checks naming them; the updater evals' `package-still-valid` notes the migrated YAML carries `Base:`. The `bun-app-shipped` baseline is regenerated against the reworked bases.
+
+## 2026-08-28 — `784cd0e` — feat(skill): allow any-case ids for task, name and branch prefix
+
+The kebab-case guard becomes a charset rule — letters, digits, hyphens, or underscores, in any case — applied to the `task` input (`run.sh`, `finish-task.sh`, and the prose that teaches them), the workflow name, and the launch-time branch prefix. The prefix alone cannot start with a hyphen: it opens the branch name, and git parses a leading `-` as a flag — `git worktree add -b '-task/foo'` still fails after `--`, so the regex is the whole fix. Resuming now verifies the reused worktree has `<prefix>/<task>` checked out; on a case-insensitive volume a task id differing only by case resolves to the same directory, and proceeding would run on the wrong branch. `run-script.test.ts` covers the rejections (spaces, dots, slashes, leading hyphens), any-case acceptances end to end, and the branch-mismatch guard; `finish-task.test.ts` accepts `My-Task` and `My_Task`.
+
+## 2026-08-28 — `ccae331` — chore(evals): sync the update fixtures with the any-case id rule
+
+`bun-app-shipped` mirrors the reworked templates — both scripts, the three launchers, the YAML input comment, the README input row — keeping the baseline a current-dialect package. `bun-app-drifted` keeps every graded drift (flat trail, no finish node, stale `running.md`, missing opencode launcher, the two hand-edits) but loses its period kebab wording, so what is stale is only what the validation checklist catches.
