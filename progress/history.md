@@ -123,3 +123,15 @@ Every workflow eval gains a task-trail expectation: agents write under `.awc/tas
 ## 2026-08-27 — `7aa24da` — feat: add --update mode and workflow-updater skill
 
 Added `--update` flag to the CLI: opens a session on the workflow-updater skill instead of workflow-creator, for changing an existing workflow package. The mode system (`src/mode.ts`) controls which skills are staged and which initial prompt each host reads. The updater reads the dialect and agent bases from `../workflow-creator/`, so the creator ships in both modes while the updater ships only under `--update`. Includes eval material for grading update diffs, staging tests for mode switching and symlink collisions, updated smoke tests, and documentation for the new flag and updater workflow.
+
+## 2026-08-28 — `d880a22` — feat(skill): name the slice diff base, widen agent authoring
+
+The slice review's diff base is a named handoff, never a guessed ref: `reviewer_slice` takes `Base:` and diffs later slices from the `closing-commit:` line the previous slice's fix step wrote into its build record; the implementers record that line, the catalog states the pairing, and the canonical loop passes `Base: {{base}}`. Bundled bases become defaults, not the menu — a slot no base fits gets an authored agent, and the spec-step pairing binds through `user-story.md` rather than the agent name. `workflow_lead` cites `running.md` for loop, parallel and question mechanics instead of restating them; creator and updater prose is de-duplicated and tightened throughout. `staging.test.ts` pins the handoff's three sides — reviewer, builders, catalog pairing.
+
+## 2026-08-28 — `159b9bd` — style(hosts): use semicolons in the codex update prompt's skill list
+
+Punctuation fix in the enumeration of the three session skills.
+
+## 2026-08-28 — `2eeb801` — feat(evals): grade the slice review's base ref
+
+Creator evals expect a base ref on the slice reviews and required-args checks naming them; the updater evals' `package-still-valid` notes the migrated YAML carries `Base:`. The `bun-app-shipped` baseline is regenerated against the reworked bases.
