@@ -20,8 +20,8 @@ task="$1"
 
 # The task id names a directory under the trail and nothing else — a value
 # carrying a slash or a dot segment would move a directory outside it.
-if [[ ! "$task" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-  echo "task must be kebab-case (a-z, 0-9, single hyphens): $task" >&2
+if [[ ! "$task" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "task must be an id of letters, digits, hyphens, or underscores: $task" >&2
   exit 1
 fi
 

@@ -32,7 +32,7 @@ Codex to run the ship-feature workflow with the same two values.
 
 | Input | What it carries |
 | --- | --- |
-| `task` | a kebab id — it names `.awc/tasks/in-progress/<task>/` and the branch |
+| `task` | an id of letters, digits, hyphens, or underscores, in any case — it names `.awc/tasks/in-progress/<task>/` and the branch |
 | `request` | the feature request, in the requester's own words |
 
 ## What the run does

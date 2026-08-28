@@ -22,7 +22,7 @@ add-endpoint workflow with the same two values.
 
 | Input | What it carries |
 | --- | --- |
-| `task` | a kebab id — it names `.awc/tasks/<task>/` |
+| `task` | an id — it names `.awc/tasks/<task>/` |
 | `request` | the endpoint request, in the requester's own words |
 
 ## What the run does

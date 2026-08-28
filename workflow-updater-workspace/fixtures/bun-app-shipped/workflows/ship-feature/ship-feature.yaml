@@ -2,7 +2,7 @@ name: ship-feature
 description: One feature request → a reviewed, DoD-validated branch ready for a PR
 
 inputs:
-  - name: task            # kebab id; names the task directory and the branch
+  - name: task            # id of letters, digits, hyphens, underscores; names the task directory and the branch
   - name: request         # the feature request, in the requester's own words
 
 vars:

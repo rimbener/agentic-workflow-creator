@@ -2,7 +2,7 @@ name: add-endpoint
 description: One endpoint request → a reviewed, DoD-validated change on the current branch
 
 inputs:
-  - name: task            # kebab id; names the task directory and the branch
+  - name: task            # id of letters, digits, hyphens, underscores; names the task directory and the branch
   - name: request         # the endpoint request, in the requester's own words
 
 vars:

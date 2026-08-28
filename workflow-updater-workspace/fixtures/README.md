@@ -31,7 +31,8 @@ asks for a change grades the change, not a cleanup. What it deliberately does
 Verified as generated: the YAML parses with one behavior per node, every agent
 and script path resolves, `running.md` is byte-identical to the skill's,
 `check.sh` runs green and silent against the fixture, and `ship-feature.sh`
-refuses both an uncommitted package and a non-kebab task id.
+refuses both an uncommitted package and a task id with anything outside
+letters, digits, hyphens, and underscores.
 
 ## `bun-app-drifted`
 
