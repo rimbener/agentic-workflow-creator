@@ -64,8 +64,8 @@ HOST=$2
 shift 2
 REQUEST=$*
 
-if [[ ! "$TASK" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-  echo "task must be a kebab-case id (got: $TASK)" >&2
+if [[ ! "$TASK" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "task must be an id of letters, digits, hyphens, or underscores (got: $TASK)" >&2
   exit 2
 fi
 
@@ -96,12 +96,12 @@ default_name=$(basename "$0" .sh)
 ask NAME "Workflow name" "$default_name" "${AWC_NAME-}"
 ask BRANCH_PREFIX "Branch prefix" "task" "${AWC_BRANCH_PREFIX-}"
 
-if [[ ! "$NAME" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-  echo "workflow name must be a kebab-case id (got: $NAME)" >&2
+if [[ ! "$NAME" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "workflow name must be an id of letters, digits, hyphens, or underscores (got: $NAME)" >&2
   exit 2
 fi
-if [[ ! "$BRANCH_PREFIX" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
-  echo "branch prefix must be a kebab-case id (got: $BRANCH_PREFIX)" >&2
+if [[ ! "$BRANCH_PREFIX" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]]; then
+  echo "branch prefix must be an id of letters, digits, hyphens, or underscores, starting with a letter or digit (got: $BRANCH_PREFIX)" >&2
   exit 2
 fi
 
@@ -157,7 +157,14 @@ branch_checkout_path() {
 }
 
 if is_registered_worktree "$WORKTREE"; then
-  :
+  # Resume must land on the same branch it created. On a case-insensitive
+  # volume a task id differing only by case resolves to this same directory;
+  # proceeding would run the workflow on the wrong branch.
+  checked_out=$(git -C "$WORKTREE" branch --show-current)
+  if [[ "$checked_out" != "$BRANCH" ]]; then
+    echo "worktree $WORKTREE has ${checked_out:-a detached HEAD} checked out, expected ${BRANCH}" >&2
+    exit 1
+  fi
 elif [[ -e "$WORKTREE" || -L "$WORKTREE" ]]; then
   echo "path exists but is not a linked worktree: $WORKTREE" >&2
   exit 1
@@ -202,7 +209,7 @@ ${TASK} ${REQUEST}
 
 1. Read workflows/${NAME}/agents/workflow_lead.md — that is your role; follow it exactly.
 2. Read workflows/${NAME}/running.md — the execution contract for the workflow file.
-3. Fill the workflow's inputs from the args block: the first word is \`task\` (the kebab id); everything after it is \`request\`. A missing required input is \`blocked\` — ask for it instead of running.
+3. Fill the workflow's inputs from the args block: the first word is \`task\` (the task id); everything after it is \`request\`. A missing required input is \`blocked\` — ask for it instead of running.
 4. Run the workflow, top to bottom: Task: ${TASK}. Mode: run. Workflow: workflows/${NAME}/${NAME}.yaml."
 
 exec "${cmd[@]}" "$PROMPT"

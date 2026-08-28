@@ -76,7 +76,7 @@ The launch arguments, verbatim:
 1. Read workflows/<name>/agents/workflow_lead.md — that is your role; follow it exactly.
 2. Read workflows/<name>/running.md — the execution contract for the workflow file.
 3. Fill the workflow's inputs from the args block: the first word is `task`
-   (the kebab id); everything after it is `request`. A missing required
+   (the task id); everything after it is `request`. A missing required
    input is `blocked` — ask for it instead of running.
 4. Run the workflow, top to bottom: Task: <task>. Mode: run. Workflow: workflows/<name>/<name>.yaml.
 ```
@@ -98,7 +98,7 @@ You are the workflow lead for this run — coordination only.
 
 1. Read workflows/<name>/agents/workflow_lead.md — that is your role; follow it exactly.
 2. Read workflows/<name>/running.md — the execution contract for the workflow file.
-3. Fill the workflow's inputs from the user's message: the kebab id they name
+3. Fill the workflow's inputs from the user's message: the task id they name
    is `task`; the rest of their request is `request`. A missing required
    input is `blocked` — ask for it instead of running.
 4. Run the workflow, top to bottom: Task: <task>. Mode: run. Workflow: workflows/<name>/<name>.yaml.
@@ -122,7 +122,9 @@ it asks for both on `/dev/tty` (defaults: the script's basename, `task`) — pro
 and answer stay on the terminal even if stdout/stderr are redirected. Headless
 runs (no TTY on stdin, stdout, or stderr) use those defaults and do not read
 stdin — stdin is left for the host. Override with `AWC_NAME` and
-`AWC_BRANCH_PREFIX`.
+`AWC_BRANCH_PREFIX`. Both must be ids of letters, digits, hyphens, or
+underscores, and the prefix cannot start with a hyphen: it opens the branch
+name, and git would parse a leading `-` as a flag.
 
 Leave everything below the FILL block alone unless this workflow's `inputs:`
 are not `task` + `request` — then rewrite usage, the args block, and step 3
@@ -135,9 +137,13 @@ The script:
 1. Creates `.worktrees/<task>` on `<prefix>/<task>` cut from the current
    branch (`HEAD`), or reuses that tree if it already exists (resume) — path
    comparison is physical (`pwd -P`), so a `/tmp` vs `/private/tmp` spelling
-   still resumes.
+   still resumes. Reuse is a resume only when the tree has `<prefix>/<task>`
+   checked out; a different branch or a detached HEAD is a clear error — on a
+   case-insensitive volume, a task id differing only by case resolves to the
+   same directory and lands here.
 2. Refuses to create the tree unless `workflows/<name>/<name>.yaml` is on
-   `HEAD`. `<task>` must be kebab-case. A branch already checked out in
+   `HEAD`. `<task>` must be an id of letters, digits, hyphens, or
+   underscores. A branch already checked out in
    another worktree is a clear error, not a raw `git worktree add` failure.
 3. `cd`s into the tree and starts the host with the same four launcher steps,
    args filled. Interactive TUI — `claude "$PROMPT"`, `codex "$PROMPT"`,

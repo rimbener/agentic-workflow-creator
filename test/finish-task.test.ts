@@ -143,13 +143,24 @@ describe('finish-task.sh', () => {
 
   // The task id names a directory; anything else would move a tree outside
   // the trail entirely.
-  test('rejects a task id that is not kebab-case', () => {
+  test('rejects a task id that is not an id of letters, digits, hyphens, or underscores', () => {
     const repo = scratch()
-    for (const bad of ['../foo', 'foo/../../bar', 'My-Task', '']) {
+    for (const bad of ['../foo', 'foo/../../bar', 'my task', 'my.task', '']) {
       const result = run(repo, [bad])
       expect(result.code).not.toBe(0)
     }
     expect(run(repo, [])).toMatchObject({ code: 1 })
+  })
+
+  test('accepts a task id in any case', () => {
+    for (const task of ['My-Task', 'My_Task']) {
+      const repo = scratch()
+      trail(repo, task)
+      expect(run(repo, [task]).code).toBe(0)
+      expect(
+        existsSync(path.join(repo, '.awc', 'tasks', 'done', task, 'spec.md')),
+      ).toBe(true)
+    }
   })
 
   // Committing the move belongs to the workflow's committer agent. A script

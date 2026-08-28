@@ -271,7 +271,8 @@ the package's `scripts/`, `chmod +x`. Moving
 `.awc/tasks/in-progress/<task>/` — `tmp/` and all — to
 `.awc/tasks/done/<task>/` is the whole of it: it never touches git, and
 re-running it on a resumed run is a no-op, so the node needs no `when:`. It
-rejects a `<task>` that is not kebab-case, and halts when there is no trail to
+rejects a `<task>` that is not an id of letters, digits, hyphens, or
+underscores, and halts when there is no trail to
 archive — so a workflow whose agents write somewhere else entirely ships no
 `finish` node.
 

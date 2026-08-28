@@ -27,10 +27,12 @@ node. But relentless means thorough, not repetitive:
 
 **1. Goal and shape.** What does one run produce, end to end? What is a
 "task" here — a feature, a bug fix, a document, a refactor? What's the
-workflow's kebab-case name? What does "done" look like, observably?
+workflow's name (an id of letters, digits, hyphens, or underscores)? What
+does "done" look like, observably?
 
 **2. Inputs.** What must the human supply at launch? Default: one `task`
-input — a kebab id that names `.awc/tasks/in-progress/<task>/` and the branch.
+input — an id of letters, digits, hyphens, or underscores, in any case, that
+names `.awc/tasks/in-progress/<task>/` and the branch.
 Freeform prose (the request itself) can ride along as a second input. Anything
 else a node needs (ticket URL, target dir) is another input or a var.
 

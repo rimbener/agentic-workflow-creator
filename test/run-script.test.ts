@@ -267,14 +267,41 @@ describe('assets/run.sh', () => {
     )
   })
 
-  test('rejects a task id that is not kebab-case', () => {
-    const repo = scratch('awc-runsh-kebab-')
+  test('rejects a task id that is not an id of letters, digits, hyphens, or underscores', () => {
+    const repo = scratch('awc-runsh-taskid-')
     const dest = writeScript(repo)
-    for (const task of ['foo/bar', 'Foo', 'foo_bar', '..', '.']) {
+    for (const task of ['foo/bar', 'foo bar', 'foo.bar', '..', '.']) {
       const result = runSh(dest, [task, 'claude', 'x'], { cwd: repo })
       expect(result.exitCode).toBe(2)
-      expect(result.stderr.toString()).toContain('kebab-case')
+      expect(result.stderr.toString()).toContain('task must be an id')
     }
+  })
+
+  test('accepts a task id in any case', () => {
+    const repo = scratch('awc-runsh-anycase-')
+    const bin = scratch('awc-runsh-bin-anycase-')
+    git(repo, ['init', '-b', 'main'])
+    mkdirSync(path.join(repo, 'workflows', 'demo'), { recursive: true })
+    writeFileSync(
+      path.join(repo, 'workflows', 'demo', 'demo.yaml'),
+      'name: demo\n',
+    )
+    git(repo, ['add', '.'])
+    git(repo, ['commit', '-m', 'package'])
+
+    const dest = writeScript(repo)
+    writeFileSync(path.join(bin, 'claude'), '#!/usr/bin/env bash\nexit 0\n')
+    chmodSync(path.join(bin, 'claude'), 0o755)
+
+    const result = runSh(dest, ['Fix_Auth2', 'claude', 'x'], {
+      cwd: repo,
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    })
+    expect(result.exitCode).toBe(0)
+    expect(existsSync(path.join(repo, '.worktrees', 'Fix_Auth2'))).toBe(true)
+    expect(git(repo, ['branch', '--list', 'task/Fix_Auth2']).trim()).toContain(
+      'task/Fix_Auth2',
+    )
   })
 
   test('refuses to start without a sibling agents-cli.conf', () => {
@@ -410,22 +437,108 @@ describe('assets/run.sh', () => {
     )
   })
 
-  test('rejects a workflow name that is not kebab-case', () => {
+  test('rejects a workflow name that is not an id of letters, digits, hyphens, or underscores', () => {
     const repo = scratch('awc-runsh-name-')
     const bin = scratch('awc-runsh-bin-name-')
     const dest = writeScript(repo)
     writeFileSync(path.join(bin, 'claude'), '#!/usr/bin/env bash\nexit 0\n')
     chmodSync(path.join(bin, 'claude'), 0o755)
+    for (const name of ['Not Good', 'no.good']) {
+      const result = runSh(dest, ['my-feat', 'claude', 'x'], {
+        cwd: repo,
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          AWC_NAME: name,
+        },
+      })
+      expect(result.exitCode).toBe(2)
+      expect(result.stderr.toString()).toContain('workflow name must be')
+    }
+  })
+
+  test('rejects a branch prefix that is not an id of letters, digits, hyphens, or underscores', () => {
+    const repo = scratch('awc-runsh-prefix-')
+    const bin = scratch('awc-runsh-bin-prefix-')
+    const dest = writeScript(repo)
+    writeFileSync(path.join(bin, 'claude'), '#!/usr/bin/env bash\nexit 0\n')
+    chmodSync(path.join(bin, 'claude'), 0o755)
+    for (const prefix of ['-feat', '--', '-', 'Not Good', 'no.good']) {
+      const result = runSh(dest, ['my-feat', 'claude', 'x'], {
+        cwd: repo,
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          AWC_BRANCH_PREFIX: prefix,
+        },
+      })
+      expect(result.exitCode).toBe(2)
+      expect(result.stderr.toString()).toContain('branch prefix must be')
+    }
+  })
+
+  test('errors when a reused worktree is on a different branch', () => {
+    const repo = scratch('awc-runsh-branchguard-')
+    git(repo, ['init', '-b', 'main'])
+    mkdirSync(path.join(repo, 'workflows', 'demo'), { recursive: true })
+    writeFileSync(
+      path.join(repo, 'workflows', 'demo', 'demo.yaml'),
+      'name: demo\n',
+    )
+    git(repo, ['add', '.'])
+    git(repo, ['commit', '-m', 'package'])
+    git(repo, [
+      'worktree',
+      'add',
+      '-b',
+      'task/other',
+      path.join(repo, '.worktrees', 'my-feat'),
+    ])
+    const dest = writeScript(repo)
+    const bin = scratch('awc-runsh-bin-branchguard-')
+    writeFileSync(path.join(bin, 'claude'), '#!/usr/bin/env bash\nexit 0\n')
+    chmodSync(path.join(bin, 'claude'), 0o755)
+
+    const result = runSh(dest, ['my-feat', 'claude', 'x'], {
+      cwd: repo,
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+    })
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr.toString()).toContain(
+      'has task/other checked out, expected task/my-feat',
+    )
+  })
+
+  test('accepts a workflow name and branch prefix in any case', () => {
+    const repo = scratch('awc-runsh-anycase-name-')
+    const bin = scratch('awc-runsh-bin-anycase-name-')
+    git(repo, ['init', '-b', 'main'])
+    mkdirSync(path.join(repo, 'workflows', 'Fix_Bug2'), { recursive: true })
+    writeFileSync(
+      path.join(repo, 'workflows', 'Fix_Bug2', 'Fix_Bug2.yaml'),
+      'name: Fix_Bug2\n',
+    )
+    git(repo, ['add', '.'])
+    git(repo, ['commit', '-m', 'package'])
+
+    const dest = writeScript(repo)
+    writeFileSync(path.join(bin, 'claude'), '#!/usr/bin/env bash\nexit 0\n')
+    chmodSync(path.join(bin, 'claude'), 0o755)
+
     const result = runSh(dest, ['my-feat', 'claude', 'x'], {
       cwd: repo,
       env: {
         ...process.env,
         PATH: `${bin}:${process.env.PATH}`,
-        AWC_NAME: 'NotGood',
+        AWC_NAME: 'Fix_Bug2',
+        AWC_BRANCH_PREFIX: 'Task_Run',
       },
     })
-    expect(result.exitCode).toBe(2)
-    expect(result.stderr.toString()).toContain('workflow name must be')
+    expect(result.exitCode).toBe(0)
+    expect(existsSync(path.join(repo, '.worktrees', 'my-feat'))).toBe(true)
+    expect(
+      git(repo, ['branch', '--list', 'Task_Run/my-feat']).trim(),
+    ).toContain('Task_Run/my-feat')
   })
 
   test('leaves stdin for the host', () => {

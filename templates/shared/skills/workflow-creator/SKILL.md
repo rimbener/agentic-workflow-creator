@@ -176,7 +176,7 @@ name: fix-bug
 description: One bug report → a reviewed, committed fix
 
 inputs:
-  - name: task            # kebab id; names the task directory and the branch
+  - name: task            # id of letters, digits, hyphens, underscores; names the task directory and the branch
   - name: request         # the bug report, in the reporter's own words
 
 vars:
