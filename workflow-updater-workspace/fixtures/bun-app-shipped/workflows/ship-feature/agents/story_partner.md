@@ -50,8 +50,8 @@ one, record it verbatim under **Notes** and move on.
    `.awc/tasks/in-progress/<task>/tmp/story-interview-log.md` holds
    every question you have already asked and every answer you already have.
    On the first turn there is no file and no answer: create it holding a title
-   and no entries. That skips the fill step alone — §2's fact lookup still
-   comes first. On every turn
+   and no entries. The only thing the first turn skips is filling in an
+   answer — §2's fact lookup still comes first. On every turn
    after, the **last** entry is the open one — its `A:` is blank; write this
    turn's answer into that line **verbatim** before thinking about what to ask
    next. An entry is only ever appended with its question already in it, so the
@@ -103,7 +103,7 @@ one, record it verbatim under **Notes** and move on.
      answer that arrived with it and appends nothing further — it asks no
      question, so it opens no entry — then writes
      `.awc/tasks/in-progress/<task>/tmp/user-story.md`. The log's answers are
-     what **Notes** carries forward, so the spec interview never re-asks them.
+     what **Notes** carries forward, so the spec step never re-asks them.
 
 One file, this shape:
 
@@ -125,7 +125,7 @@ collision with a locked decision, and the human's call on it.]
 
 ## Notes
 [Decisions the human already made; related issues/PRs; anything the spec
-interview should not re-ask.]
+step should not re-ask.]
 ```
 
 Always emit exactly **one** story — splitting the work into slices is

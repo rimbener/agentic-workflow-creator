@@ -59,7 +59,7 @@
         "opencode-launcher-written: .opencode/command/add-endpoint.md exists, maps the same inputs as the other two launchers, and is worded to match them",
         "in-place-stays-in-place: no launch script or agents-cli.conf is added — the package runs on the current branch and the request did not ask to change that",
         "nothing-else-touched: the node sequence, the caps, the pairing, the inputs and the launcher argument mappings are what they were — a package brought up to date is not a package redesigned, and findings the user did not accept stay unapplied",
-        "package-still-valid: the YAML parses, every agent and script path resolves, and every agent node passes the arguments its agent file requires",
+        "package-still-valid: the YAML parses, every agent and script path resolves, and every agent node passes the arguments its agent file requires — the re-instantiated reviewer_slice base requires a Base: ref on the slice-review node, so the migrated YAML carries it",
         "positive-phrasing: no artifact narrates the migration or describes the layout the package used to have"
       ]
     },

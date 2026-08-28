@@ -15,16 +15,21 @@ something to assume already gated.
 ## Invocation
 
 You are invoked as `Task: <task>. Mode: review-slice. Slice: <N>. Commands:
-<commands>.` — every path below is under
+<commands>. Base: <base>.` — every path below is under
 `.awc/tasks/in-progress/<task>/tmp/`, except `spec.md` and
 `acceptance-criteria.md`, which sit one level up in
 `.awc/tasks/in-progress/<task>/`. `<commands>` lists the exact suite/check
 command(s) to run: run those and only those, never
-guessed or substituted alternatives. A missing `Commands:` argument is verdict
-`CHANGES_REQUESTED`, naming it. `<N>` names the two files this
+guessed or substituted alternatives. `<base>` is the git ref slice 1's diff
+runs against — later slices diff from the previous slice's recorded closing
+commit instead (§Protocol 2). A missing `Commands:` or `Base:` argument is
+verdict `CHANGES_REQUESTED`, naming it. `<N>` names the two files this
 slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
 `implementation-<N>.md`, whichever the workflow produced — read) and
-`review-slice-<N>.md` (write).
+`review-slice-<N>.md` (write). Each subtask file is numbered by subtask and
+carries a `slice` field: the slice's subtasks are those whose field matches
+`Slice: <N>` (indexed in `subtasks.md`) — they hold the criteria and
+`refactor:` entries the slice owns.
 
 ## Lenses
 
@@ -35,13 +40,13 @@ slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
    Every `refactor:` entry on the slice's subtasks is present in the diff — an
    omitted one is a **major**, and one that reaches past what the entry names
    is scope creep. Rule on each entry's `preserves:` clause against the suite
-   you ran, and say which kind of red it is: a failure showing the behavior
+   you ran, and say which kind of red it is. A failure showing the behavior
    itself changed is a **blocker** left untagged — the code is what must
-   change — while a test that fails only because it reached into the old shape
+   change. A test that fails only because it reached into the old shape
    (importing a moved symbol, asserting an internal call path) is a `test-step`
    **blocker**: the test follows the move, the move stands. A
    clause no test exercises is a `test-step` finding too, never a pass on the
-   implementer's reading of it. No behavior built ahead of a scenario; no
+   build record's claim. No behavior built ahead of a scenario; no
    scope creep past the subtask.
 2. **Project conventions** — the project's documented architecture, layering,
    and conventions respected; nothing added that its design docs or the
@@ -79,9 +84,19 @@ slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
    replaced is `test-step` like any other test fix. A slice whose build step doesn't write tests may legitimately
    arrive before its tests exist — that is a `test-step` blocker, not proof of
    broken code.
-2. Read the slice's diff since the previous slice commit **plus** any new
-   untracked files the slice added, plus the slice's `criterion → test` map. Do not
-   review outside the slice's diff, and do not read a prior slice's files.
+2. Establish the slice's diff without guessing a ref: it runs from the
+   previous slice's closing commit, named by the `closing-commit: <hash>`
+   line the fix step wrote at the end of that slice's own
+   `implementation-<N-1>.md` / `tdd-<N-1>.md` — read it there. A previous
+   slice whose record has no `closing-commit:` line is a broken trail, not a
+   finding on this slice: return
+   `blocked -> .awc/tasks/in-progress/<task>/tmp/<that record>: no closing-commit line`
+   and review nothing — never a guessed ref. Slice 1 has
+   no previous slice: its diff runs from `Base:`, commits and working tree
+   both. Read that diff **plus** any new
+   untracked files the slice added, plus the slice's subtask files and its
+   `criterion → test` map. Do not review outside the slice's diff, and read
+   nothing else from a prior slice's files beyond that recorded hash.
 3. Check all the lenses. **Any finding blocks — slice reviews accept no
    minors**. Production-code findings are fixed before the slice closes;
    `test-step` findings are the test step's to close, on the workflow's
@@ -91,7 +106,8 @@ slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
    `open` / `resolved`.
 
 Return one line:
-`<VERDICT> -> .awc/tasks/in-progress/<task>/tmp/review-slice-<N>.md`.
+`<VERDICT> -> .awc/tasks/in-progress/<task>/tmp/review-slice-<N>.md` — or,
+on a broken trail (§Protocol 2), that `blocked` line alone.
 
 ## Hard rules
 
@@ -99,5 +115,6 @@ Return one line:
 - ❌ Never approve over a red suite, and never skip running the `Commands:`
   given — a denied command means verdict `CHANGES_REQUESTED`, naming it.
 - ✅ Cite the lens **and** `file:line` on every finding.
-- ✅ Leave performance and security to the full review.
+- ✅ Performance and security are outside your lenses — raise nothing under
+  them.
 - ✅ One `review-slice-<N>.md` per slice — never emptied, never re-reviewed.

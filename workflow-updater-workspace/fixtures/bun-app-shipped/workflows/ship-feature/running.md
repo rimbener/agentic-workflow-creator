@@ -84,14 +84,14 @@ Run the body in order; that completes one iteration. Hitting
 is the escalation.
 
 **Each iteration is a fresh subagent.** Spawning is the only mechanism a host
-gives you, so iteration N starts blank: the questions iteration N-1 asked, the
-reasoning it did, and — beyond `{{answer}}`'s single latest value — the answers
-it got are gone with it. A body that has to build on what came before, an
-interview above all, therefore keeps its own record on disk; the agent file
-names that file and the shape of it, and the agent reads it each turn. Your
-part is to spawn the iteration and pass the prompt as the YAML wrote it,
-filled verbatim — reconstructing earlier turns into the prompt is the agent's
-log's job, not yours.
+gives you, so iteration N starts blank: none of iteration N-1's questions,
+reasoning, or answers carry over, and the prompt holds only `{{answer}}`'s
+latest value. A body that has to build on what came before, an interview above
+all, therefore keeps its own record on disk; the agent file names that file
+and its shape, and the agent reads it each turn. Your part is to spawn the
+iteration and pass the prompt as the YAML wrote it, filled verbatim —
+reconstructing earlier turns into the prompt is the agent's log's job, not
+yours.
 
 ### `gate:` — human approval
 
@@ -106,9 +106,8 @@ exactly as you would without the flag, then **immediately continue to the
 next node**. Do not wait for the command to exit or the subagent to return.
 Track the node as in-flight.
 
-Spawn a parallel agent with whatever your host uses to run a subagent without
-holding the walk — Claude Code's Task tool issued without waiting on its
-result, Codex's `spawn_agent`, opencode's `task` tool. Start a parallel
+Spawn a parallel agent with the same host call the `agent:` node section
+names for your host, just without waiting on the result. Start a parallel
 `run:` the same way (a background shell if the host has one). If the host
 cannot detach, `blocked -> <id>: host cannot run this step in the background`.
 
@@ -213,10 +212,11 @@ wrote it and let the agent resolve them.
 
 An agent that returns a question — or a `gate:` — pauses the run: relay it
 verbatim to the human, wait, and continue with the answer, re-invoking the
-same agent with `{{answer}}` filled where its prompt uses it. Never answer
-for the human, never summarize their words — pass them through as given. A
-`parallel: true` agent that asks the human is a halt at collection, not a
-relay.
+same agent with `{{answer}}` filled where its prompt uses it. Re-invoking is
+a **fresh spawn** — this dialect never continues or resumes the subagent
+that asked; its log on disk is its memory. Never answer
+for the human, never summarize their words — pass them through as given. The
+one exception is a `parallel: true` agent that asks — see its section above.
 
 ## Halts and resuming
 
@@ -225,7 +225,7 @@ why, and the agent's own report file where one exists. To resume, the human
 relaunches the run: artifacts under `.awc/tasks/in-progress/<task>/` and
 committed work persist, so ask the human which node to resume from, confirm the
 choice against what is actually on disk, and continue from that node — never
-silently redo completed work that commits, and never re-ask the human
+silently redo completed work that created commits, and never re-ask the human
 questions an existing artifact already answers. A trail already sitting under
 `.awc/tasks/done/<task>/` means the run reached its last node — say so rather
 than starting the walk over.

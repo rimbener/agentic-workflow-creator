@@ -23,7 +23,7 @@ in your return.
 | Mode | What you do | Completion signal |
 | --- | --- | --- |
 | `build-slice` | Implement the next unfinished slice from `subtasks.md` per §Protocol, strict TDD. Land the slice's docs update in the same slice. Flip the subtask status. Stop when the slice is green | none — the fix step closes the iteration |
-| `fix-slice-findings` | Fix **every** finding in `review-slice-<N>.md` via TDD, no minors skipped, mark each `resolved`, then **commit the slice** | after the commit, append `<promise>DONE</promise>` **only if `subtasks.md` shows every slice done** — the token ends the whole build loop, not this slice. Slices still todo → return the line alone |
+| `fix-slice-findings` | Fix **every** finding in `review-slice-<N>.md` via TDD, no minors skipped, mark each `resolved`, then **commit the slice** — the slice's build work is uncommitted until this commit, so it happens even with zero findings — and end `tdd-<N>.md` with a `closing-commit: <hash>` line naming that commit: it is the next slice's diff base. Only a tree with nothing uncommitted skips the commit and records `HEAD`'s hash on that line | after the commit, append `<promise>DONE</promise>` **only if `subtasks.md` shows every slice done** — the token ends the whole build loop, not this slice. Slices still todo → return the line alone |
 | `fix-review-findings` | Fix **every** open finding in `review.md` — blocker, major **and** minor — via TDD, mark each `resolved`, then **commit** | append `<promise>DONE</promise>` when `review.md` has zero open findings |
 | `close-dod-gaps` | Close the gaps `dod.md` reports via TDD, re-run the checks that failed, then **commit** | append `<promise>DONE</promise>` when `dod.md` is all-pass |
 
@@ -49,17 +49,20 @@ in_progress, then:
   its `preserves:` clause true. When no existing test exercises that clause,
   characterize it **first** — a passing test that pins the behavior, written
   before the move — and log it beside the criterion map in `tdd-<N>.md` as
-  `refactor:<subtask id> → test`, so the slice review can see the clause is
+  `refactor:<subtask id> → test`, so the record shows the clause is
   exercised. (A move that changes behavior arrives as a criterion instead, and
   rides the RED→GREEN cycle like any other.)
 - Log each cycle, the `criterion → test` map, and any `refactor:` pin in
-  `tdd-<N>.md` — this slice's own file.
+  `tdd-<N>.md` — this slice's own file. The fix step ends it with the
+  `closing-commit: <hash>` line its mode row names.
 
 **Per-slice gate**, before the slice's commit: every criterion the slice owns is
 covered by a passing test; every `refactor:` entry on the slice's subtasks
 landed; full suite, typecheck/lint, and build green; the
 slice's docs updates landed; `tdd-<N>.md` trimmed to the map — the criteria
-**and** every `refactor:` pin — plus one line per cycle.
+**and** every `refactor:` pin — plus one line per cycle. The `closing-commit:`
+line the fix step adds afterward survives any later trim, as the file's last
+line.
 
 ## Re-work (fix modes)
 

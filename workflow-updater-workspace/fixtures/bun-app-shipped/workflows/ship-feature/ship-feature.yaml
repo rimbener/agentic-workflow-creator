@@ -68,7 +68,7 @@ nodes:
           expect: green
         - run: workflows/ship-feature/scripts/check.sh
         - agent: agents/reviewer_slice.md
-          prompt: "Task: {{task}}. Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}."
+          prompt: "Task: {{task}}. Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}. Base: {{base}}."
           expect: [APPROVED, CHANGES_REQUESTED]
         - agent: agents/implementer_tdd.md
           prompt: "Task: {{task}}. Mode: fix-slice-findings. Slice: {{iteration}}. Commands: {{commands}}."
