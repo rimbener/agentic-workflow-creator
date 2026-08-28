@@ -70,7 +70,7 @@ A path-shaped or URL-shaped `Source:` that will not open is a halt: return
 upstream dump node that never ran, is exactly that — never prose to structure.
 Inline text is never a halt: it is already the material.
 
-Take from it only what it supports. Where the two modes part is what happens to
+Take from it only what it supports. The two modes differ in what happens to
 the rest — the areas §3 lists that the source leaves undecided:
 
 - **`capture`** has no turn in which to ask, so it writes them into the story
@@ -91,10 +91,8 @@ the rest — the areas §3 lists that the source leaves undecided:
   ```
 
   Both lists are read by every later turn, exactly as the `Q:`/`A:` entries
-  are. **Settled** stands in for the entries those areas never needed, so it
-  is permanent — a line leaves it only by being wrong. **Open** is the queue:
-  a turn takes the next line from it, and the answer becomes an entry like any
-  other, which is what strikes that one line (§Protocol 1). The story itself
+  are — §Protocol 1 has how they are kept: a **Settled** line stands until it
+  proves wrong, **Open** is the queue a turn draws from and strikes. The story itself
   is written once, on the closing turn, with no `## Open questions` heading at
   all.
 
@@ -112,8 +110,8 @@ one, record it verbatim under **Notes** and move on.
    `.awc/tasks/in-progress/<task>/tmp/story-interview-log.md` holds
    every question you have already asked and every answer you already have.
    On the first turn there is no file and no answer: create it holding a title
-   and no entries. That skips the fill step alone — §2's fact lookup still
-   comes first. On every turn
+   and no entries. The only thing the first turn skips is filling in an
+   answer — §2's fact lookup still comes first. On every turn
    after, the **last** entry is the open one — its `A:` is blank; write this
    turn's answer into that line **verbatim** before thinking about what to ask
    next. An entry is only ever appended with its question already in it, so the
@@ -138,13 +136,15 @@ one, record it verbatim under **Notes** and move on.
    - In `capture-and-confirm`, the log opens with one record more. The first
      turn writes its `## From the source` section (§The source) — **after**
      §2, never before: an area the README or the code already answers is settled by
-     the repo, not an open line to queue, and **Settled** is permanent, so a
-     line classified before the lookup cannot be taken back. That record counts
-     exactly as the entries do: an area **Settled** lists is settled with no
-     entry of its own, and is never asked. When an answer settles an area
-     **Open** lists, strike that one line as you fill the entry — the entry is
-     now that area's record. Only the **Open** list ever loses a line; striking
-     in **Settled** would put a settled area back in the queue.
+     the repo, not an open line to queue, and a **Settled** line stands until
+     it proves wrong, so classify after the lookup, not before. That record counts
+     exactly as the entries do: an area listed under **Settled** is settled
+     with no entry of its own, and is never asked. When an answer settles an
+     area listed under **Open**, strike that one line as you fill the entry — the entry is
+     now that area's record. Only the **Open** list ever loses a line to an
+     answer; a **Settled** line is struck only when it proves wrong — a stale
+     source, a misread — and striking it puts that area back in the queue,
+     which is where a wrongly settled area belongs.
 2. **Look facts up yourself.** Read the project's documentation if it exists
    (README, design docs, a `docs/` folder, contributor guides) and the relevant
    code before you ask anything or classify anything. Existing behavior is a
@@ -184,7 +184,7 @@ one, record it verbatim under **Notes** and move on.
      answer that arrived with it and appends nothing further — it asks no
      question, so it opens no entry — then writes
      `.awc/tasks/in-progress/<task>/tmp/user-story.md`. The log's answers are
-     what **Notes** carries forward, so the spec interview never re-asks them.
+     what **Notes** carries forward, so the spec step never re-asks them.
    - In `capture-and-confirm`, a source that settles every area makes
      **turn 1** that closing turn: it records `## From the source`, writes the
      story, and returns the token, having asked nothing.
@@ -218,7 +218,7 @@ collision with a locked decision, and the human's call on it.]
 
 ## Notes
 [Decisions the human already made; related issues/PRs; anything the spec
-interview should not re-ask.]
+step should not re-ask.]
 ```
 
 Always emit exactly **one** story — splitting the work into slices is

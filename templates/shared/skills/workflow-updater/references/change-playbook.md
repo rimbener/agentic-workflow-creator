@@ -16,10 +16,10 @@ bases mark each rule with the mode it belongs to).
 agent is not just a trimmed base — it may carry hand-edits its owner made after
 generation: a project fact, an extra check, wording they fixed. Those are the
 reason the package is worth keeping, and pulling fresh text over them destroys
-them silently, mid-way through a change that was supposed to be about something
-else. So every time a recipe says to re-instantiate or untrim, the first step is
-that diff: list what the copy has that the base doesn't, decide with the user
-which of it survives the change, and carry it across deliberately. This is the
+them silently. So every time a recipe says to re-instantiate or untrim, the
+first step is that diff: list what the copy has that the base doesn't, decide
+with the user which of it survives the change, and carry it across
+deliberately. This is the
 "change only what the request reaches" rule at the file level, and it applies to
 every recipe below, not only the migration that says it out loud.
 
@@ -31,10 +31,11 @@ every recipe is "does every node still pass every argument its agent requires".
 1. Choose the agent: a base from the catalog, or a new file per the catalog's
    authoring rules. Instantiate it into `agents/`, trimmed to the modes this
    workflow's new nodes invoke.
-2. Write the nodes from the catalog's canonical loop shape — a phase is rarely
-   one node. Give the loop `max_iterations` and exactly one of `until:` /
-   `until_run:`, and check that its **last** agent step is the one whose file
-   emits the token, or the loop can never close.
+2. Write the nodes from the catalog's canonical loop shape where one
+   matches — a phase is rarely one node, and a phase built on an authored
+   agent follows the same loop rules. Give the loop `max_iterations` and
+   exactly one of `until:` / `until_run:`, and check that its **last** agent
+   step is the one whose file emits the token, or the loop can never close.
 3. Place it where its inputs exist: after whatever produces the artifacts it
    reads, before whatever consumes what it writes. A phase that writes to the
    task trail goes before the `finish` node.
@@ -163,9 +164,12 @@ goes unreviewed.
 
 ## Add a story step ahead of a spec step
 
-A spec step opens by reading `user-story.md` and halts as `blocked` without it,
-so a package that specs anything needs a `story_partner` node before it. If the
-audit found that gap, this is the fix: choose the mode with the user —
+A `spec_partner` step opens by reading `user-story.md` and halts as `blocked`
+without it, so a package whose spec step is a `spec_partner` copy needs a
+story node before it — a `story_partner` copy, or an authored agent that
+writes the same `user-story.md` (an authored spec agent needs one only when
+its own file reads that artifact). If the audit found that gap, this is the
+fix. For a `story_partner` copy, choose the mode with the user —
 `interview` (a loop, `Request:`), `capture` (a plain node, `Source:`, no token,
 so it can never sit inside a loop), or `capture-and-confirm` (a loop,
 `Source:` + `{{answer}}`) — instantiate the copy with only that mode, and match
@@ -188,8 +192,8 @@ migration runs through every agent file at once, so do it as its own change:
 1. Re-instantiate each agent copy from its base at the current paths, re-doing
    this package's mode trim on the fresh text. That is cleaner than editing
    paths in place, and it brings the copies up to date in the same pass — but
-   check for hand-edits in the old copies first and carry them across
-   deliberately.
+   the diff-against-the-base habit above matters most here: hand-edits
+   the fresh text would bury are carried across deliberately, not lost.
 2. Copy `../workflow-creator/assets/finish-task.sh` to
    `scripts/finish-task.sh`, `chmod +x`, and
    add the `finish` node running

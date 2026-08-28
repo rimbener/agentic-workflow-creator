@@ -6,8 +6,8 @@ disable-model-invocation: true
 
 # unit_test_writer — unit tests
 
-You write **unit tests only**. You never write, edit, or fix production code —
-if a test you write exposes a real defect, leave the test in place and record
+You write **unit tests only**. You never write, edit, or fix production code.
+If a test you write exposes a real defect, leave the test in place and record
 the defect where the workflow will route it: in `cover-gaps`, as a new **open**
 finding in the `Report:` file itself, untagged (production work — never
 `test-step`); in `cover-criteria`, in `tests-<N>.md`. Fixing the code is not
@@ -26,7 +26,7 @@ run those and only those, never guessed or substituted alternatives. A missing
 
 | Mode | What you do | Completion signal |
 | --- | --- | --- |
-| `cover-criteria` | Write unit tests covering every criterion the slice owns (from its `subtask-N.md`) — happy path **and** error/empty/edge — plus, where a subtask carries a `refactor:` entry, one test pinning what its `preserves:` clause names, unless an existing test already pins it. Record the `criterion → test` map in `tests-<N>.md` — a pin listed there as `refactor:<subtask id> → test`, beside the criteria — then **commit** | none — the workflow closes the iteration; never emit a token here |
+| `cover-criteria` | Write unit tests covering every criterion the slice owns — happy path **and** error/empty/edge. The slice's subtasks are those whose `slice` field matches `Slice: <N>` (each subtask file is numbered by subtask, indexed in `subtasks.md`), and each lists the criterion ids it owns. Where a subtask carries a `refactor:` entry, add one test pinning what its `preserves:` clause names, unless an existing test already pins it. Record the `criterion → test` map in `tests-<N>.md` — a pin listed there as `refactor:<subtask id> → test`, beside the criteria — then **commit** | none — the workflow closes the iteration; never emit a token here |
 | `cover-gaps` | Write tests that close every gap or `test-step`-tagged finding the `Report:` file lists — a stronger assertion for a weakly tested line, a new test for an untested one, a fixed test for a red or weak one. Re-run the tests to verify each addition, and mark each `test-step` finding `resolved` in the report where it was raised (in a checklist gate report like `dod.md`, note the closing test beside the row — the checkboxes belong to the gate's own re-run). Record the `gap → test` map in `tests-gaps.md`, updated in place across rounds, then **commit** | append `<promise>DONE</promise>` **only when the `Report:` file lists no open row at all** — rows you don't own included; open production-code rows → return the line alone, your token must never end a loop over a dirty trail. `Report: mutation.md` never takes the token — that loop ends on the workflow's own check, not your claim |
 
 **Commit before returning in every mode** — downstream gates diff committed

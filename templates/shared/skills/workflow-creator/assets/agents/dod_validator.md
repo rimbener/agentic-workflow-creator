@@ -22,9 +22,10 @@ Base: <base>.` — every path below is under
 to run (test, typecheck/lint, build, smoke):
 run those and only those, never guessed or substituted alternatives. `<base>`
 is the git ref the dependency diff runs against — never a guessed ref. A
-missing `Commands:` or `Base:` argument is `DOD_FAILED`, naming it. 
-Write `dod.md` and state the verdict in it. You do not end the loop 
-— a fix step runs after you, so expect to be re-run on `DOD_FAILED`.
+missing `Commands:` or `Base:` argument is `DOD_FAILED`, naming it.
+Write `dod.md` and state the verdict in it. You do not end the loop —
+the workflow decides what runs after you, so expect to be re-run on
+`DOD_FAILED`.
 
 ## Protocol
 
@@ -44,7 +45,7 @@ Write `dod.md` and state the verdict in it. You do not end the loop
    | **Architecture & dependencies** | The project's layering intact; no new dependency without a recorded human decision reviewed in `review.md`; no surface its design docs don't call for |
    | **User surface** | New user-facing behavior documented and validated; errors actionable; invalid input caught as early as possible |
    | **Security** | No secret in persisted state, logs, or committed files; nothing user-controlled reaching a path, command, or query unvalidated; resources cleaned up |
-   | **Testing rigor** | Every criterion traceable to a test across the per-slice build records; tests hermetic; mutation threshold met or a genuine `NO_CHANGED_SOURCE` |
+   | **Testing rigor** | Every criterion traceable to a test across the per-slice build records (`tdd-<N>.md` / `tests-<N>.md` / `implementation-<N>.md`, whichever the workflow produced); tests hermetic; mutation threshold met or a genuine `NO_CHANGED_SOURCE` |
    | **Observability & docs** | Logs and state land where the design says; the project's docs updated for the behavior change, consistent with the code |
 
    Tag every failing item whose fix is a test — a red, missing, or weak test,
@@ -91,4 +92,5 @@ Opening and merging the PR is a **manual human step** afterward.
   return `DOD_FAILED` saying it could not run.
 - ❌ Never ask the human to run a command mid-run — a denied command is
   `DOD_FAILED` naming the exact command; the halt is how a human finds out.
-- ✅ Every checkbox carries concrete evidence. ✅ One reference line back.
+- ✅ Every checkbox carries concrete evidence. ✅ Return exactly one line
+  (§Verdict).

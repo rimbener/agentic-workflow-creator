@@ -75,6 +75,15 @@ describe('stageClaude', () => {
     expect(
       existsSync(path.join(plugin, 'skills', 'workflow-creator', 'SKILL.md')),
     ).toBe(true)
+    // With both loaded, the creator hands an update request to the updater in
+    // place — never by bouncing the user out to a fresh `awc --update`.
+    const creator = readFileSync(
+      path.join(plugin, 'skills', 'workflow-creator', 'SKILL.md'),
+      'utf8',
+    ).replace(/\s+/g, ' ')
+    expect(creator).toContain(
+      'give it the request rather than sending the user anywhere',
+    )
     cleanup(tmp)
   })
 
@@ -501,6 +510,11 @@ describe('the shared payload', () => {
     )
     expect(running).toContain('Each iteration is a fresh subagent')
     // The log is the memory; the lead never rebuilds history into the prompt.
+    // running.md ships into every package, so the lead-facing wording has to
+    // carry the same rule the catalog states — not a vaguer paraphrase.
+    expect(running).toContain(
+      "reconstructing earlier turns into the prompt is the agent's log's job",
+    )
     expect(catalog).toContain('Pass `{{answer}}` and nothing more')
   })
 
@@ -532,7 +546,9 @@ describe('the shared payload', () => {
 
     // The pairing rule, the question that settles it, and the package check.
     const pairing = read('references', 'agent-catalog.md')
-    expect(pairing).toContain('A spec step always has a story step')
+    expect(pairing).toContain(
+      'A spec step that reads `user-story.md` has a story step',
+    )
     // Only `capture` leaves the heading behind — the pairing rule says which.
     expect(pairing).toContain('Whatever `capture` leaves undecided')
     // The description names the modes too, so the trim reaches frontmatter.
@@ -542,6 +558,50 @@ describe('the shared payload', () => {
     )
     expect(read('SKILL.md')).toContain(
       'A workflow that specs anything writes `user-story.md` before it',
+    )
+  })
+
+  // The slice review diffs without guessing a ref: slice 1 from the Base:
+  // argument, later slices from the closing-commit line the previous slice's
+  // fix step wrote into its build record. The three sides of that handoff —
+  // the reviewer that reads it, the builders that write it, and the catalog
+  // pairing that makes an authored builder write it too — must all name the
+  // same field, or a generated package's reviewer has nothing to read.
+  test('the slice-diff base is a named handoff, never a guessed ref', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const read = (...parts: string[]) =>
+      readFileSync(path.join(skillDir, ...parts), 'utf8').replace(/\s+/g, ' ')
+
+    const reviewer = read('assets', 'agents', 'reviewer_slice.md')
+    expect(reviewer).toContain('Base: <base>')
+    expect(reviewer).toContain('`closing-commit: <hash>`')
+    // A record without the line is a broken trail: the reviewer blocks the
+    // run rather than filing a finding the current builder cannot own —
+    // CHANGES_REQUESTED sits in the loop's expect: and would spin to the cap.
+    expect(reviewer).toContain('no `closing-commit:` line is a broken trail')
+    expect(reviewer).toContain('no closing-commit line')
+
+    // Both committing builders end their record with the same named line.
+    for (const builder of ['implementer.md', 'implementer_tdd.md']) {
+      expect(read('assets', 'agents', builder)).toContain(
+        '`closing-commit: <hash>` line',
+      )
+    }
+
+    // The catalog states the pairing, so an authored builder in a slice loop
+    // inherits the obligation, and the canonical shape passes the slice
+    // review its Base:.
+    const catalog = read('references', 'agent-catalog.md')
+    expect(catalog).toContain(
+      'pairs its reviewer with a hash-recording fix step',
+    )
+    expect(catalog).toContain(
+      'Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}. Base: {{base}}.',
+    )
+    // The interview names Base: where slice reviews are chosen, so a
+    // slice-only workflow still declares the ref slice 1 diffs against.
+    expect(read('references', 'interview.md')).toContain(
+      'its node passes `Base:`',
     )
   })
 
@@ -574,11 +634,13 @@ describe('the shared payload', () => {
     // would send a later turn back over what the source already settled.
     expect(story).toContain('That record counts exactly as the entries do')
     expect(story).toContain('strike that one line')
-    // The captured record is two lists, and only the queue half loses lines —
-    // striking a settled area would put it back in the queue to be re-asked.
+    // The captured record is two lists: the queue loses a line to each answer,
+    // and a settled line is struck only when it proves wrong — the strike
+    // requeues the area rather than silently rewriting the record.
     expect(story).toContain('### Settled')
     expect(story).toContain('### Open')
     expect(story).toContain('Only the **Open** list')
+    expect(story).toContain('struck only when it proves wrong')
     // Every block an interviewing mode owns carries the word, so a capture-only
     // copy can drop them by name instead of by judgement.
     expect(story).toContain("This step is an interviewing mode's alone")

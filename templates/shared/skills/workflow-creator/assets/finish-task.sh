@@ -7,8 +7,9 @@ set -euo pipefail
 #
 #   finish-task.sh <task>
 #
-# Moving the files is all it does — committing the move belongs to the
-# workflow. Silent on success; every failure prints and exits non-zero.
+# Moving the files (and tidying the then-empty in-progress/ container) is all
+# it does — committing the move belongs to the workflow. Silent on success;
+# every failure prints and exits non-zero.
 
 if [[ $# -lt 1 || -z "${1:-}" ]]; then
   echo "usage: $(basename "$0") <task>" >&2

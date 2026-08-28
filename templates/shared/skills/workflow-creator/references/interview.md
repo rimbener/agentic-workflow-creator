@@ -16,6 +16,10 @@ node. But relentless means thorough, not repetitive:
 - **Skip areas the goal makes irrelevant** (a docs-writing workflow needs no
   mutation testing), but say what you skipped and why when presenting the
   plan, so a wrong skip gets caught.
+- **The bundled agents are defaults, not the menu.** Any agent slot below can
+  instead be filled by an agent authored for this workflow (the catalog's
+  authoring rules) — offer that when no base fits or the user prefers their
+  own.
 - Answers create follow-ups — chase them until the area is settled. Don't
   move on with an ambiguity you'd have to guess at while writing the YAML.
 
@@ -33,9 +37,10 @@ else a node needs (ticket URL, target dir) is another input or a var.
 **3. Isolation.** *Do you want the workflow to work in a worktree or on the
 current branch?* Worktree → the worktree path (`.worktrees/<task>` default)
 goes into the launch script FILL (`assets/run.sh` → `./<name>.sh`). Branch
-naming (`task/<task>` default) and the workflow name are asked on a terminal
-at launch, not baked in (headless uses the script basename and `task`). The script cuts the tree from the current branch, or reuses it, and
-starts the host inside it — not a YAML node. The package must already be
+naming (`task/<task>` default) and the workflow name are asked at launch,
+never baked in — mechanics in `references/hosts.md`. The script cuts the tree
+from the current branch, or reuses it, and starts the host inside it — not a
+YAML node. The package must already be
 committed on the current branch before the first run. The worktree stays
 after the agent exits; do not generate a remove node. In-place →
 slash-command / skill launch from the current checkout; no launch script.
@@ -46,13 +51,12 @@ someone proposes a `bootstrap.sh` that installs deps *and* seeds folders
 *and* commits, that's three nodes.
 
 **5. Story and spec.** Should a spec interview produce the bundle
-(`spec_partner`)? The dependency runs one way — a spec step needs a story, a
-story step stands alone happily — so a workflow whose output *is* the user
-story just takes the story half of this area and skips the rest. If a spec
-phase is in, the workflow needs a `user-story.md` for it to open with, and the
-question becomes *how that file gets written*, never whether: **ask where the
-problem statement comes from.** All three shapes are `story_partner` and all
-three write the same file —
+(`spec_partner`)? A workflow whose output *is* the user story just takes the
+story half of this area and skips the rest (the catalog's pairing rule runs
+one way). With a `spec_partner` step in, the workflow needs a `user-story.md`
+for it to open with, and the question becomes *how that file gets written*:
+**ask where the problem statement comes from.** The bundled agent for this
+slot is `story_partner`, in three shapes, all writing the same file —
 
 - `interview` — it grills the user one question per turn, log-backed, working
   from the raw request (`Request:`). Recommend this when the work starts from a
@@ -66,12 +70,11 @@ three write the same file —
 
 `capture` is the mode that hands work on: what it could not settle it writes
 under `## Open questions`, and the spec interview settles those first. The
-other two ask until nothing is open, so their story ships with no such
-heading — and neither does a `capture` whose source settled every area. The
 dial is really how much of the problem the human answers here versus in the
-spec interview. If the source lives in a tracker only an authenticated tool
-can reach, a `run:` node dumps it to a file first and `Source:` names that
-file. Then: *Do you want Gherkin or plain acceptance
+spec interview. A source living in a tracker only an authenticated tool can
+reach is dumped to a file by a `run:` node first, and `Source:` names that
+file — the capture modes read files and inline text, never a tracker.
+Then: *Do you want Gherkin or plain acceptance
 criteria?* (the `Format:` argument). Automated review before the human sees it
 (`spec_reviewer` + a fix step)? Where is the human sign-off — the single
 approval loop? Commit the approved spec as its own node?
@@ -80,7 +83,10 @@ approval loop? Commit the approved spec as its own node?
 Then: TDD (`implementer_tdd`, self-contained) or the split pairing
 (`implementer` + `unit_test_writer`, independent)? *Should each slice be
 reviewed — and is that review quick or exhaustive?* Quick = `reviewer_slice`
-in the loop; exhaustive-per-slice is usually overkill — recommend quick per
+in the loop — its node passes `Base:` (the task's base ref, usually a
+`base` var), which slice 1 diffs against, and its pairing needs the fix step
+to record the `closing-commit:` line (the catalog's slice-loop pairing
+rule). Exhaustive-per-slice is usually overkill — recommend quick per
 slice plus one exhaustive review at the end. Iteration cap for the loop
 (cap hit = halt = escalation, so a tight cap is a feature).
 
@@ -91,10 +97,8 @@ fix steps, and an `until_run:` gate script that reads the tool's log). E2e as
 its own `run:` node or agent step. Collect the **exact commands** for each
 layer.
 
-**8. Command hygiene.** For every command collected: recommend the variant
-that **prints output only on failure** — `bun test --only-failures`, quiet
-reporters, `--silent` installs. Why: every line a command prints lands in the
-lead's or an agent's context; a green run should cost near-zero tokens.
+**8. Command hygiene.** For every command collected: recommend the
+failure-only variant, per SKILL.md's "Commands print only on failure" rule.
 Verify each command does **one thing** — a `check` script that chains
 typecheck + lint + test is fine to *call* as one gate, but if a phase needs
 the parts separately, they're separate nodes.
@@ -110,24 +114,20 @@ approve — pre-merge `gate:`, a mid-run checkpoint? Every gate is a `gate:`
 node or an interactive loop, never an agent's own judgment.
 
 **11. Finalize.** Commit-message convention? Should the `.awc/tasks/` trail be
-committed with the work (recommend yes — reviewers and the DoD diff committed
-history)? A workflow whose agents write a task trail ends with a `finish` node
-running `workflows/<name>/scripts/finish-task.sh` (copied from
-`assets/finish-task.sh`), which moves
-`.awc/tasks/in-progress/<task>/` to `.awc/tasks/done/<task>/` and nothing more;
-a committed trail needs a committer-agent node after it to commit that move.
-Push / open a draft PR (its own node), or stop at "branch ready"? The worktree
-is left in place for a manual PR — not removed.
+committed with the work (recommend yes — review and DoD steps diff against
+committed history, so an uncommitted trail is invisible to them)? A workflow
+whose agents write a task trail ends with a `finish` node archiving it — the
+catalog's "Finishing a run" has the shape — and a committed trail needs a
+committer-agent node after it to commit that move. Push / open a draft PR
+(its own node), or stop at "branch ready"? The worktree is left in place for
+a manual PR — not removed.
 
 **12. Tool scope.** Once the node list is settled: *should any step be
-scoped down to the tools it actually needs?* `allowed_tools:` on an agent
-node grants capabilities — `read`, `search`, `edit`, `shell`, `web`, `spawn`.
-The natural candidates are the steps that read and report without running
-anything (an exhaustive review, a mutation report): `[read, search, edit,
-web]` — every scope keeps `web`, since any agent may need to look something
-up. Recommend leaving the rest at the host default — a scope that misses
-something the agent's file tells it to do halts the run. Cross-check each
-scope against that agent's invocation arguments before writing it.
+scoped down to the tools it actually needs?* The natural candidates are the
+steps that read and report without running anything (an exhaustive review, a
+mutation report). Recommend leaving the rest at the host default, and draw
+any scope by the grant rules in SKILL.md's "Tool scope is per node" and the
+catalog's Tool scopes table.
 
 ## From answers to nodes
 
@@ -147,10 +147,9 @@ Map each settled area to nodes using the canonical shapes in
 - independent checks or agents on disjoint paths may be `parallel: true`
   with a later `wait:`; interviews, gates, and anything that edits the same
   files stay sequential;
-- every `allowed_tools:` covers what its agent's file says it does — an agent
-  passed `Commands:` gets `shell`, one that writes a report gets `edit`;
+- every `allowed_tools:` covers what its agent's file says it does;
 - nothing runs after an edit without a verification step, and no review
   round ends on an unverified tree.
 
-Present the resulting node list to the user as a compact table (id, type,
-what it does, exits) and get an explicit yes before writing any file.
+Then hand back to SKILL.md's Design step: the node table and the explicit
+yes live there.

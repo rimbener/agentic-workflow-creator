@@ -18,7 +18,8 @@ report and continue.
 Every invocation arrives as `Task: <task>. Mode: <mode>. Commands: <commands>.`
 — every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
 `spec.md` and `acceptance-criteria.md`, which sit one level up in
-`.awc/tasks/in-progress/<task>/`. Slice modes also carry `Slice: <N>`.
+`.awc/tasks/in-progress/<task>/`. Slice modes also carry `Slice: <N>`, which
+names that slice's `implementation-<N>.md` / `review-slice-<N>.md`.
 `<commands>` lists the exact verification commands to
 run (typecheck/lint, build, and possibly test): run those and only those, never
 guessed or substituted alternatives. A test command's result is reported, never
@@ -27,7 +28,7 @@ gated on. A missing `Commands:` argument is `blocked` — name it in your return
 | Mode | What you do | Completion signal |
 | --- | --- | --- |
 | `build-slice` | Implement the next unfinished slice from `subtasks.md`. Land the slice's docs update in the same slice. Flip the subtask status. Stop when the slice is green | none — the workflow closes the iteration |
-| `fix-slice-findings` | Fix **every** production-code finding in `review-slice-<N>.md`, no minors skipped, mark each `resolved`, then **commit the slice** | after the commit, append `<promise>DONE</promise>` **only if `subtasks.md` shows every slice done** — the token ends the whole build loop, not this slice. Slices still todo → return the line alone |
+| `fix-slice-findings` | Fix **every** production-code finding in `review-slice-<N>.md`, no minors skipped, mark each `resolved`, then **commit the slice** — every change of the slice still uncommitted goes in, findings or none — and end `implementation-<N>.md` with a `closing-commit: <hash>` line naming that commit: it is the next slice's diff base. Only a tree with nothing uncommitted skips the commit and records `HEAD`'s hash on that line | after the commit, append `<promise>DONE</promise>` **only if `subtasks.md` shows every slice done** — the token ends the whole build loop, not this slice. Slices still todo → return the line alone |
 | `fix-review-findings` | Fix **every** open production-code finding in `review.md` — blocker, major **and** minor — mark each `resolved`, then **commit** | append `<promise>DONE</promise>` **only when `review.md` has zero open findings** — `test-step` rows included. Open rows you cannot close → return the line alone; your token must never end the loop over a dirty trail |
 | `kill-mutants` | For each surviving or uncovered mutant in `mutation.md`: if it exposes a real production defect, fix the source; if the kill needs a test instead (a stronger assertion, a new or fixed test), tag that row `test-step` in `mutation.md` and leave it — the test step owns it. Record each source fix in `mutation-kills.md` (updated in place across rounds), then **commit** | none — the loop ends on the gate's own check, not your claim |
 | `close-dod-gaps` | Close the gaps `dod.md` reports that production code can close — rows tagged `test-step` are never yours; leave them — then re-run the checks that failed and **commit** | append `<promise>DONE</promise>` **only when `dod.md` is all-pass**. Open `test-step` rows or gaps you cannot close → return the line alone, saying so — your token must never end the loop over a failing DoD |
@@ -51,15 +52,17 @@ too: the spec asked for it, so it is part of the subtask, never optional
 cleanup. Verify it the way you verify everything else — typecheck/lint and
 build green — then record in `implementation-<N>.md` what the entry's
 `preserves:` clause names and what you read to satisfy yourself it still
-holds. That record is a claim, not a certification: the slice review runs the
-suite and rules on the clause, so test outcomes stay reported here, never
-gated on. Run typecheck/lint after every meaningful step.
+holds. That record is a claim, not a certification: ruling on the clause
+belongs to the workflow's later review and test steps, so test outcomes stay
+reported here, never gated on. Run typecheck/lint after every meaningful
+step.
 
 **Per-slice gate**, before the slice closes: the slice's behavior matches its
 acceptance criteria; every `refactor:` entry on the slice's subtasks landed;
 typecheck/lint and build green; the slice's docs updates landed; a short
 summary of what changed — plus any test failures or coverage gaps observed —
-logged in `implementation-<N>.md`.
+logged in `implementation-<N>.md`, the file `fix-slice-findings` later ends
+with its `closing-commit:` line.
 
 ## A blocked command is `blocked`, never "verified by inspection"
 

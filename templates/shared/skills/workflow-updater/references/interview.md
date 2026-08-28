@@ -17,11 +17,9 @@ mutation testing", "the review loop keeps hitting its cap", "we're not doing
 TDD any more". Each of those names a phase, and the playbook tells you what it
 ripples into; those ripples are what you actually need answers about.
 
-**Mine the package.** It is the record of the last interview. Isolation,
-pairing, formats, caps, commands, gates, which artifacts exist, whether the
-trail is committed — all of it is on disk. Asking a user to re-state a decision
-their package already encodes wastes their turn and invites an answer that
-contradicts what they run today.
+**Mine the package.** It is the record of the last interview — "The package
+is the record" in the skill's rules. Read decisions from it; ask only what it
+does not answer.
 
 **Mine the failure, when there is one.** An update prompted by a broken run
 starts from the run: which node halted, what the agent's report file says, what
@@ -51,8 +49,7 @@ already in flight under `.awc/tasks/in-progress/`.
 
 And one question that belongs to updates alone: **the audit's independent
 findings.** Offer them as a short list, once, and take the user's answer as
-final. Fixing an unrelated flaw uninvited is the fastest way to make a diff
-unreviewable.
+final.
 
 ## What not to ask
 
@@ -68,7 +65,6 @@ unreviewable.
 
 ## Closing the interview
 
-You are done when you could write the diff without guessing once. Present the
-change plan then — files added, edited, removed, left alone, each with its
-reason, plus a before/after node list where the sequence moves — and get an
-explicit yes before writing anything.
+You are done when you could write the diff without guessing once. Then
+present the change plan per the skill's step 5 and get the explicit yes
+before writing anything.

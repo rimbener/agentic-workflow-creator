@@ -19,15 +19,17 @@ package's owner left it.
 
 ## Where your reference material lives
 
-The dialect is not defined here. The **workflow-creator skill**, loaded in this
-session alongside you, holds all of it, and this session stages the two skills
-as siblings — so from this skill's own folder, the one your host named when it
-loaded this file, `../workflow-creator/` is that skill's folder.
+The dialect is not defined here: the **workflow-creator skill**, loaded in
+this session alongside you, holds all of it. The two skills are staged as
+sibling folders, so `../workflow-creator/` is that skill's folder when
+resolved from this skill's own folder — the one your host named when it
+loaded this file.
 
 **Resolve the paths below against this skill's folder, exactly as you resolve
 `references/inventory.md` — never against the repository you are working in.**
 A `../workflow-creator/` under the user's repo is a different directory
-entirely, and reading nothing there looks the same as reading an empty file. If
+entirely, and a read from the wrong one fails silently — it returns nothing
+and looks like an empty file. If
 a path does not open, find the workflow-creator skill's folder the way your host
 exposes its loaded skills and read it from there; only if that skill is genuinely
 not loaded is anything below unavailable.
@@ -79,8 +81,7 @@ both skills, rather than quietly running an audit that cannot see its own spec.
 3. **Audit** the package against the creator's validation checklist plus the
    update-only checks in `references/inventory.md`. Report findings in two
    groups: what stands in the way of the requested change, and what is
-   independent of it. **The user decides which of the second group to fix** —
-   an update that quietly drags a refactor along is one the user cannot review.
+   independent of it. **The user decides which of the second group to fix.**
 4. **Interview** per `references/interview.md` — scoped to what the change
    touches, one question per turn with your recommendation. The package already
    answers most of the creator's areas; mine it before asking anything.
@@ -111,28 +112,24 @@ generated package is worth keeping, and a drive-by rewrite destroys them while
 burying the real change in an unreviewable diff. Improvements you spot go in
 the audit report, for the user to accept or decline.
 
-**A change ends where its ripples end.** Almost nothing here is a local edit: a
-new phase needs its agent copy, its scripts and the gaps it opens in the agents
-that report on the run; a new input needs all three launchers and, on a
-worktree workflow, the launch script; a removed node leaves orphans behind.
+**A change ends where its ripples end.** Almost nothing here is a local edit.
 Work the ripple list in `references/change-playbook.md` before declaring the
-change applied.
+change applied; "What a change touches" below is the in-file orientation map.
 
-**Untrimming is instantiation, not invention.** Each packaged agent is a
-tailored copy of a base, with modes and checks the workflow doesn't use trimmed
-away. When your change needs one of those back — mutation testing returning
-means `dod_validator` must know `mutation.md` again — take the text from
-`../workflow-creator/assets/agents/<agent>.md` and trim it to the workflow's
-new shape, following the catalog's trimming rules in both directions. Writing
-fresh prose instead leaves every package's agents slowly diverging from the
-bases, which is what makes the next update harder than this one.
+**Untrimming is instantiation, not invention.** A packaged agent instantiated
+from a base is a tailored copy, with modes and checks the workflow doesn't use
+trimmed away (an authored agent has no base to untrim from). When your change
+needs a trimmed mode or check back — mutation testing returning means
+`dod_validator` must know `mutation.md` again — take the text from
+`../workflow-creator/assets/agents/<agent>.md` per the playbook's opening
+habits, never fresh prose, which leaves the copies slowly diverging from the
+bases.
 
-**Removal is not deletion.** Dropping a node leaves behind: an agent copy
-carrying a mode nothing invokes (and a `description:` advertising it), a script
-nothing runs, an input or var nothing fills, a `wait:` naming a node that no
-longer exists, a README row, a launcher argument mapping, and sometimes a whole
-agent file. Sweep all of it, and check the agents that validate the run — a DoD
-validator still demanding a report no node produces now fails every run.
+**Removal is not deletion.** Dropping a node leaves orphans behind — from a
+stale mode in an agent copy to a launcher argument mapping. Sweep them per the
+playbook's "Remove a phase" recipe, and check the agents that validate the
+run especially — a DoD validator still demanding a report no node produces
+now fails every run.
 
 **The launchers move as one.** The three in-session launchers and the launch
 script say the same thing in four wrappers. Any change to the workflow's name

@@ -8,8 +8,8 @@ disable-model-invocation: true
 
 You turn an ambiguous request into an unambiguous, testable spec **and** its
 acceptance criteria. You ask the human questions, then write the artifacts.
-There is exactly **one** content sign-off in the pipeline: the human approves
-the spec + criteria after an automated review has vetted them.
+There is exactly **one** content sign-off: the human approves the spec +
+criteria after the workflow has vetted them.
 
 ## Modes
 
@@ -50,8 +50,9 @@ an interview slot.
    `.awc/tasks/in-progress/<task>/tmp/spec-interview-log.md`: every question
    you have already asked and every answer you already have. On the first turn
    of an interview there is no file and no answer: create it holding a title
-   and no entries. That skips the fill step alone — the documentation and code
-   read at the end of this step still comes before your first question. On
+   and no entries. The only thing the first turn skips is filling in an
+   answer — the documentation-and-code read at the end of this step still
+   comes before your first question. On
    every turn after, the **last** entry is the open one — its `A:` is blank;
    write this turn's answer into that line **verbatim** before thinking about
    what to ask next. An entry is only ever appended with its question already
@@ -74,8 +75,7 @@ an interview slot.
    entry you just filled. A decided log is what ends the interview, never the
    absence of a blank `A:`. An escalation and the human's call on it are an
    entry like any other — that record is what §3's "the human's call settles the
-   approach" writes into `spec.md` from. The other modes skip this log entirely
-   and read the spec files instead.
+   approach" writes into `spec.md` from.
 
    Then read the project's documentation if it exists (README, design docs, a
    `docs/` folder, contributor guides) and the relevant code. Look facts up

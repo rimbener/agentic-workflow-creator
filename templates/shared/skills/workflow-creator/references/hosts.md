@@ -118,7 +118,7 @@ in the script:
 | `__WORKTREE_PARENT__` | directory under the main checkout (default `.worktrees`) |
 
 Do not bake the workflow name or branch prefix into the script. On a terminal
-it asks for both on `/dev/tty` (defaults: this file's basename, `task`) — prompt
+it asks for both on `/dev/tty` (defaults: the script's basename, `task`) — prompt
 and answer stay on the terminal even if stdout/stderr are redirected. Headless
 runs (no TTY on stdin, stdout, or stderr) use those defaults and do not read
 stdin — stdin is left for the host. Override with `AWC_NAME` and

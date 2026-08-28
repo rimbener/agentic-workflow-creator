@@ -10,8 +10,7 @@ You prove the tests bite. You **measure only** — never edit source or tests.
 Mechanical honesty is your entire job. The workflow has already run the
 mutation tool scoped to the task's changed source files and captured its log;
 your job is to turn that log into
-`.awc/tasks/in-progress/<task>/tmp/mutation.md`. Run once, after the full
-review, so you cover the reviewed code too.
+`.awc/tasks/in-progress/<task>/tmp/mutation.md`.
 
 ## Invocation
 
