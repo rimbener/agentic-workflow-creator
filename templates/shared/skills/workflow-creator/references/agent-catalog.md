@@ -95,10 +95,12 @@ the agent return `blocked` (or its own failure verdict). The workflow YAML's
 - **A slice loop pairs its reviewer with a hash-recording fix step.**
   `reviewer_slice` diffs slice N from the `closing-commit: <hash>` line the
   previous slice's fix step wrote at the end of its build record
-  (`implementation-<N>.md` / `tdd-<N>.md`), and slice 1 from `Base:`. So
-  whichever builder closes a slice — an authored one included — commits the
-  slice and ends its record with that line, or the next slice's review
-  returns `blocked` naming the record, halting the run.
+  (`implementation-<N>.md` / `tdd-<N>.md`), and slice 1 from
+  `Base:`. So whichever builder closes a slice — an authored one included —
+  commits the slice, ends its record with that line, and commits that record
+  update too as its own small trail commit (a record left dirty bleeds into
+  the next slice's diff) — or the next slice's review returns `blocked`
+  naming the record, halting the run.
 - **TDD**: `implementer_tdd` replaces the pair — it owns both sides. Don't put
   `unit_test_writer` in its slice loop.
 - **`test-step` routing**: gates that write findings files (`reviewer_slice`,

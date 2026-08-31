@@ -689,10 +689,32 @@ describe('the shared payload', () => {
     expect(reviewer).toContain('no `closing-commit:` line is a broken trail')
     expect(reviewer).toContain('no closing-commit line')
 
-    // Both committing builders end their record with the same named line.
+    // The closing-commit home is the closer's record only. `tests-<N>.md` is
+    // the test writer's criterion map — unit_test_writer never writes the
+    // line — so listing it as a spelling here would send the reviewer to a
+    // record with no hash and block a healthy split-pairing run.
+    expect(reviewer).toContain(
+      "that slice's own closer record — `tdd-<N-1>.md` / `implementation-<N-1>.md`",
+    )
+    expect(reviewer).not.toContain('tests-<N-1>')
+    // The reviewer expects exactly one bookkeeping change in the diff — the
+    // previous slice's record, nothing broader (every map and review file
+    // lives under tmp/ too), and none on slice 1, which has no trail yet.
+    expect(reviewer).toContain('After slice 1, the diff also carries')
+    expect(reviewer).toContain(
+      'that one file, the record you read the hash from, is trail bookkeeping: raise no finding on it',
+    )
+
+    // Both committing builders end their record with the same named line,
+    // commit that record update as its own trail commit (a dirty record
+    // bleeds into the next slice's diff), and hold the loop-ending token
+    // until after it — on the last slice nothing runs after the token.
     for (const builder of ['implementer.md', 'implementer_tdd.md']) {
-      expect(read('assets', 'agents', builder)).toContain(
-        '`closing-commit: <hash>` line',
+      const text = read('assets', 'agents', builder)
+      expect(text).toContain('`closing-commit: <hash>` line')
+      expect(text).toContain('as its own small trail commit')
+      expect(text).toContain(
+        'after the trail commit, append `<promise>DONE</promise>`',
       )
     }
 
@@ -702,6 +724,14 @@ describe('the shared payload', () => {
     const catalog = read('references', 'agent-catalog.md')
     expect(catalog).toContain(
       'pairs its reviewer with a hash-recording fix step',
+    )
+    // The catalog's closer-record list stays exactly these two spellings,
+    // and it passes the trail-commit obligation on to authored builders.
+    expect(catalog).toContain(
+      '(`implementation-<N>.md` / `tdd-<N>.md`), and slice 1 from `Base:`',
+    )
+    expect(catalog).toContain(
+      'commits that record update too as its own small trail commit',
     )
     expect(catalog).toContain(
       'Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}. Base: {{base}}.',
