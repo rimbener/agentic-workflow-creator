@@ -58,6 +58,9 @@ Agents:
 Options:
   --upgrade       Open the session on workflow-upgrader, to change a workflow
                   package the repo already has (default: create a new one)
+  --edit          Open the session on workflow-runner, to make a change to
+                  the repo by running a workflow package it already has
+                  (mutually exclusive with --upgrade)
   --keep          Do not delete .awc-tmp/ on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
   -h, --help      Show help
@@ -79,11 +82,15 @@ Exit code: `awc` exits with the agent process's exit code (`143` on SIGTERM).
    - Place the shared payload (`templates/shared/skills/`, `templates/shared/commands/`)
      under the names the target agent looks for — see the host table below.
    - The session's mode decides two of those inputs (`src/mode.ts`): a default
-     session leaves out `skills/workflow-upgrader/`, while `--upgrade` stages it
-     alongside `workflow-creator` — the upgrader reads the dialect and the agent
-     bases from `../workflow-creator/`, so the creator ships either way.
-   - Read the initial prompt from `templates/hosts/<agent>/prompt.md`, or
-     `prompt-upgrade.md` under `--upgrade`. Each host ships both.
+     session stages the creator alone; `--upgrade` adds `skills/workflow-upgrader/`
+     beside it — the upgrader reads the dialect and the agent bases from
+     `../workflow-creator/`, so that pair only ships together; `--edit` stages
+     `skills/workflow-runner/` alone — at run time the package's own `running.md`
+     and `workflow_lead.md` are the contract, so the runner needs neither
+     authoring skill, and an unused skill is only a competing trigger.
+   - Read the initial prompt from `templates/hosts/<agent>/prompt.md` —
+     `prompt-upgrade.md` under `--upgrade`, `prompt-edit.md` under `--edit`.
+     Each host ships all three.
 3. **Launch**
    - Spawn the agent with `stdio: "inherit"` so the interactive TUI owns the terminal,
      plus any passthrough args.
@@ -128,12 +135,12 @@ Consequences, and why this is the chosen design:
 - Staging never writes into the real config dir; deleting `.awc-tmp/` removes only links.
   This needs care on name collisions: if the user already has a skill or command of
   their own by one of the payload's names — `workflow-creator`, `workflow-upgrader`,
-  `awc-status` — the shadow's link for that name is the copy destination, and `cpSync`
-  follows a symlinked destination. `copyPayload` therefore unlinks each target name
-  before copying, so the session gets a real file in the temp dir and the user's
-  original is left alone. It also means "the payload is not staged" has to be tested as
-  *no real file of ours*, never as *no entry*: a user's own `workflow-upgrader` is
-  shadowed in as a link in every session, `--upgrade` or not.
+  `workflow-runner`, `awc-status` — the shadow's link for that name is the copy destination, 
+  and `cpSync` follows a symlinked destination. `copyPayload` therefore unlinks 
+  each target name before copying, so the session gets a real file in the temp dir
+  and the user's original is left alone. It also means "the payload is not staged" 
+  has to be tested as *no real file of ours*, never as *no entry*: a user's 
+  own `workflow-upgrader` is shadowed in as a link in every session, `--upgrade` or not.
 
 ## Bundled workflow template
 
@@ -152,15 +159,18 @@ templates/
 │   ├── skills/workflow-upgrader/     # `--upgrade` sessions only
 │   │   ├── SKILL.md                 # locate → inventory → audit → scoped plan → apply → validate
 │   │   └── references/              # package inventory + audit, change playbook, scoped interview
+│   ├── skills/workflow-runner/       # `--edit` sessions only (staged without the authoring skills)
+│   │   └── SKILL.md                 # locate → read the package's contract → fill inputs → lead the run
 │   └── commands/
 │       └── awc-status.md            # /awc-status — summarize session progress
 └── hosts/
     ├── claude/
     │   ├── prompt.md                # initial user message — create session
     │   ├── prompt-upgrade.md        # initial user message — `--upgrade` session
+    │   ├── prompt-edit.md           # initial user message — `--edit` session
     │   └── plugin/.claude-plugin/plugin.json
-    ├── codex/{prompt.md, prompt-upgrade.md}
-    └── opencode/{prompt.md, prompt-upgrade.md}
+    ├── codex/{prompt.md, prompt-upgrade.md, prompt-edit.md}
+    └── opencode/{prompt.md, prompt-upgrade.md, prompt-edit.md}
 ```
 
 The template content is a starting point; iterating on it does not require code changes.
@@ -178,7 +188,7 @@ The template content is a starting point; iterating on it does not require code 
 │   │   ├── claude.ts   # stage via --plugin-dir
 │   │   ├── codex.ts    # stage via CODEX_HOME shadow
 │   │   └── opencode.ts # stage via OPENCODE_CONFIG_DIR shadow
-│   ├── mode.ts         # what --upgrade changes: skills skipped, prompt file read
+│   ├── mode.ts         # what --upgrade / --edit change: skills skipped, prompt file read
 │   ├── staging.ts      # temp folder reset/copy/shadow/remove
 │   └── paths.ts        # resolve packaged templates/ relative to dist/cli.js
 ├── templates/…         # (above)
@@ -195,11 +205,13 @@ The template content is a starting point; iterating on it does not require code 
   `--version` run exercising the full stage/spawn/cleanup cycle (which also pins the
   assumption that each CLI short-circuits on `--version` with the initial prompt already
   in argv), a second under `--keep` asserting the payload landed as real files under
-  that host's directory names, and a third under `--upgrade --keep` for the same in that
-  mode, plus the assertion that a default session stages no `workflow-upgrader`. Each
+  that host's directory names, and one more per non-default mode (`--upgrade --keep`,
+  `--edit --keep`) for the same in each, plus the assertions that a default session
+  stages neither `workflow-upgrader` nor `workflow-runner` and an `--edit` session
+  stages neither authoring skill. Each
   staged mode is then checked against the host's own offline listing, so the test sees
   what the model would load rather than what is on disk. `--version` never reads the
-  initial prompt, so which of the two prompts a host puts on argv is a unit test
+  initial prompt, so which of the three prompts a host puts on argv is a unit test
   (`the launch command each host builds`), not a smoke check.
 - `templates/` is resolved relative to the compiled entry file
   (`new URL("../templates", import.meta.url)`), never relative to `process.cwd()`,

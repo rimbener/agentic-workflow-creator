@@ -30,6 +30,14 @@ opens a session on the existing package.
 Iterating on a package **this session** just designed
 stays here: the decisions behind it are still in the conversation.
 
+**Using a package is a run, not a creation.** If the ask is to land a change
+in the *project* through a workflow the repo already has — "use my `<name>`
+workflow to build X", a task id plus a request — nothing needs designing:
+point the user at the package's own in-session launcher
+(`.claude/commands/<name>.md` and its siblings), or at `awc <agent> --edit`,
+which opens a session on the workflow-runner skill — it finds the package,
+fills its inputs from their words, and leads the run.
+
 ## Process
 
 1. **Recon.** Inspect the repo: toolchain, test runner, lint/typecheck/build

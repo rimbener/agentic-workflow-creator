@@ -24,8 +24,8 @@ export function readPrompt(hostDir: string, mode: Mode = 'create'): string {
   return readFileSync(path.join(hostDir, promptFile(mode)), 'utf8').trim()
 }
 
-// `skip` leaves out skill directories this session does not open in — see
-// src/mode.ts for which, and why the creator is never one of them.
+// `skip` leaves out skill directories this session cannot use — see
+// src/mode.ts for which mode skips what, and why.
 export function copySkills(
   sharedDir: string,
   dest: string,

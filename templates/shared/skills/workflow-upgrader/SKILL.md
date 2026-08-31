@@ -17,6 +17,13 @@ from runs that may still be in flight. So the work is surgical — read what is
 there, change what the request reaches, and leave the rest exactly as the
 package's owner left it.
 
+It is also a different job from **running** one. A request to land a change
+in the *project* through the package — a task id plus a request, "use
+`<name>` to build X" — changes nothing about the package: point the user at
+its own in-session launcher (`.claude/commands/<name>.md` and its siblings),
+or at `awc <agent> --edit`, which opens a session on the workflow-runner
+skill and leads the run. This session changes the package; it never runs it.
+
 ## Where your reference material lives
 
 The dialect is not defined here: the **workflow-creator skill**, loaded in

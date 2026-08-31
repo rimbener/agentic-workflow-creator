@@ -16,7 +16,9 @@ interviews a user and generates a "lead-run agentic workflow package" — a
 YAML of tiny nodes executed step by step by a `workflow_lead` subagent, plus
 the agent files and scripts those nodes invoke. Its counterpart is
 **workflow-upgrader**, which changes a package that already exists in the
-user's repo; `awc <agent> --upgrade` opens the session on it.
+user's repo; `awc <agent> --upgrade` opens the session on it. A third skill,
+**workflow-runner**, runs an existing package to land a change in the user's
+project — `awc <agent> --edit` opens the session on it, alone.
 
 There are two largely independent things to reason about:
 
@@ -60,12 +62,13 @@ Small, linear pipeline, one file per concern:
 - `agents/{claude,codex,opencode}.ts` — one file per host: a `stage*` function
   (exported, so tests can drive it without spawning) and a `run*` that stages
   then calls `launch`.
-- `mode.ts` — the one place that knows what `--upgrade` changes: which skill
-  directories the payload leaves out, and which initial prompt each host
-  reads. The creator ships in **both** modes (the upgrader reads the dialect
-  and the agent bases from `../workflow-creator/`); the upgrader ships only
-  under `--upgrade`, so a create session has nothing extra competing for
-  triggering.
+- `mode.ts` — the one place that knows what `--upgrade` and `--edit` change:
+  which skill directories the payload leaves out, and which initial prompt
+  each host reads. Create stages the creator alone; `--upgrade` adds the
+  upgrader beside it (the upgrader reads the dialect and the agent bases from
+  `../workflow-creator/`, so that pair only ships together); `--edit` stages
+  the runner alone — the package being run carries its own contract, and an
+  unused skill is only an extra trigger competing for the model's attention.
 - `staging.ts` — `resetTmp`/`copyPayload`/`shadow`/`cleanup`/`readPrompt`.
   `resetTmp` always deletes a stale `tmpDir` first (self-heals after a
   `kill -9`, which cannot be intercepted by handlers). `shadow` is the piece
@@ -77,8 +80,8 @@ Small, linear pipeline, one file per concern:
   `node dist/cli.js` run locally.
 
 Adding another agent means a row in `assets/agents-cli.conf`, a file under
-`src/agents/`, and both `templates/hosts/<name>/prompt.md` and
-`prompt-upgrade.md`.
+`src/agents/`, and `templates/hosts/<name>/prompt.md`, `prompt-upgrade.md`
+and `prompt-edit.md`.
 
 Codex is the odd one out for the payload's *command* half: it has no
 slash-command slot (it dropped `$CODEX_HOME/prompts` in 0.117.0), so
@@ -117,16 +120,18 @@ templates/
 │   │       ├── finish-task.sh       # archives .awc/tasks/in-progress/<task>/ → done/; copied verbatim into a package
 │   │       ├── agents-cli.conf      # host roster — add/remove a host only here
 │   │       └── agents/*.md          # base agent templates instantiated (tailored) per generated workflow
-│   └── skills/workflow-upgrader/     # staged only under --upgrade
-│       ├── SKILL.md                 # locate → inventory → audit → scoped interview → diff plan → apply → validate
-│       └── references/
-│           ├── inventory.md         # reading a package into a map, and the audit
-│           ├── change-playbook.md   # what each kind of change ripples into
-│           └── interview.md         # the scoped interview
+│   ├── skills/workflow-upgrader/     # staged only under --upgrade
+│   │   ├── SKILL.md                 # locate → inventory → audit → scoped interview → diff plan → apply → validate
+│   │   └── references/
+│   │       ├── inventory.md         # reading a package into a map, and the audit
+│   │       ├── change-playbook.md   # what each kind of change ripples into
+│   │       └── interview.md         # the scoped interview
+│   └── skills/workflow-runner/       # staged only under --edit, without the authoring skills
+│       └── SKILL.md                 # locate the package → read its own contract → fill inputs → lead the run
 └── hosts/
-    ├── claude/{prompt.md, prompt-upgrade.md, plugin/.claude-plugin/plugin.json}
-    ├── codex/{prompt.md, prompt-upgrade.md}
-    └── opencode/{prompt.md, prompt-upgrade.md}
+    ├── claude/{prompt.md, prompt-upgrade.md, prompt-edit.md, plugin/.claude-plugin/plugin.json}
+    ├── codex/{prompt.md, prompt-upgrade.md, prompt-edit.md}
+    └── opencode/{prompt.md, prompt-upgrade.md, prompt-edit.md}
 ```
 
 Key things to know before touching this content:
@@ -138,6 +143,13 @@ Key things to know before touching this content:
   upgrader's audit compares a package against, which is why "bring an old
   package up to date" needs no version list and cannot rot. `test/staging.test.ts`
   checks every `../workflow-creator/<path>` the upgrader cites still resolves.
+- **workflow-runner cites nothing outside itself and the package.** It is
+  staged *without* the creator and the upgrader, so a `../workflow-creator/`
+  reference in it would dangle in every `--edit` session; at run time the
+  package's own `running.md` and `agents/workflow_lead.md` are the contract —
+  the YAML was written against the copies beside it. `test/staging.test.ts`
+  pins both: no creator citation in the runner, and edit-mode staging leaves
+  the authoring skills out.
 - The bundled agents in `assets/agents/` are **base templates, never final
   artifacts**. The skill copies and tailors one per workflow into the
   generated package's `agents/`, trimming modes/checks the workflow doesn't
@@ -173,8 +185,8 @@ Key things to know before touching this content:
 
 ## Eval material
 
-One workspace per skill, neither part of the shipped package (neither is in
-`package.json`'s `files`). Both follow the same rule: a script extracts
+One workspace per skill, none part of the shipped package (none is in
+`package.json`'s `files`). All follow the same rule: a script extracts
 **objective facts** and never judges pass/fail — graders combine those facts
 with their own reading.
 
@@ -208,6 +220,23 @@ already hold a package and its evals run under `awc <agent> --upgrade`:
   compares two directories rather than reading git, so it works whether or not
   the run committed. Package validity is `check_package.ts`'s job — one script,
   one thing.
+
+`workflow-runner-workspace/` — grading a *run's conduct*, so its evals run
+under `awc <agent> --edit` and every package-holding eval carries
+`package-untouched` (the run reads the package, never writes it):
+- `fixtures/bun-app-bare` — the tiny bun app with no package at all, for the
+  "nothing to run → point at `awc <agent>`" redirect. The evals that need a
+  package reuse `../workflow-upgrader-workspace/fixtures/bun-app-shipped`
+  rather than carrying a copy to rot — its worktree isolation is load-bearing:
+  it exercises both the hand-off to `./ship-feature.sh` and the
+  explicit-consent path for running in place.
+- `evals/evals.json` — four prompts (run in place with consent, worktree
+  hand-off, no-package redirect to the creator, package-change redirect to the
+  upgrader). A full run pauses at its first human gate by design, so the run
+  evals grade up to and including that pause. `test/staging.test.ts` pins the
+  fixtures and the run-only keys.
+- No script of its own: the touched/untouched reading comes from the
+  upgrader workspace's `check_upgrade.ts` directory diff.
 
 `workflows-examples/` holds example generated workflow output, for reference.
 

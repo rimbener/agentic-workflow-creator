@@ -11,7 +11,8 @@
 #      files, under the names that host looks for. --version never loads them,
 #      so the lifecycle check alone cannot see a payload in the wrong place.
 #      Then the same again under --upgrade, which adds the workflow-upgrader
-#      skill — and only that flag may add it.
+#      skill — and only that flag may add it — and under --edit, which swaps
+#      the payload to the workflow-runner skill alone.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -70,6 +71,7 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
   want_skill=''
   want_status=''
   want_upgrader=''
+  want_runner=''
   case "$agent" in
     codex)
       # Both ship as skills here, and prompt-input is what the model actually
@@ -78,6 +80,7 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
       want_skill='- workflow-creator:'
       want_status='- awc-status:'
       want_upgrader='- workflow-upgrader:'
+      want_runner='- workflow-runner:'
       ;;
     opencode)
       # The skill and the command live in different registries, so check both:
@@ -86,6 +89,7 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
       want_skill='"name": "workflow-creator"'
       want_status='"awc-status": {'
       want_upgrader='"name": "workflow-upgrader"'
+      want_runner='"name": "workflow-runner"'
       ;;
   esac
 
@@ -140,11 +144,18 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
   # user who owns a workflow-upgrader skill has it shadowed in as a symlink, and
   # that link is theirs, not our payload landing where it should not.
   upgraderpath="${skillpath/workflow-creator/workflow-upgrader}"
+  runnerpath="${skillpath/workflow-creator/workflow-runner}"
   if [ -f "$TMP/$staged/$upgraderpath" ] && [ ! -L "$TMP/$staged/$upgraderpath" ]; then
     echo "   FAIL: $upgraderpath staged without --upgrade"
     fail=1
   else
     echo "   ok: no $upgraderpath without --upgrade"
+  fi
+  if [ -f "$TMP/$staged/$runnerpath" ] && [ ! -L "$TMP/$staged/$runnerpath" ]; then
+    echo "   FAIL: $runnerpath staged without --edit"
+    fail=1
+  else
+    echo "   ok: no $runnerpath without --edit"
   fi
 
   rm -rf "$TMP"
@@ -157,7 +168,39 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
       fail=1
     fi
   done
+  # The runner is --edit's alone; on the upgrade tree it must be absent as a
+  # real file (a symlinked one is the user's own, shadowed in as it should be).
+  if [ -f "$TMP/$staged/$runnerpath" ] && [ ! -L "$TMP/$staged/$runnerpath" ]; then
+    echo "   FAIL: $runnerpath staged under --upgrade"
+    fail=1
+  else
+    echo "   ok: no $runnerpath under --upgrade"
+  fi
   check_loaded upgrade "$want_upgrader" "$want_skill" "$want_status"
+
+  # 5. --edit stages the runner alone: the package being run carries its own
+  # contract (running.md, workflow_lead.md), so neither authoring skill ships —
+  # a real-file creator or upgrader here is the payload landing in the wrong
+  # mode, while a symlinked one is the user's own, shadowed in as it should be.
+  rm -rf "$TMP"
+  node dist/cli.js "$agent" --edit --keep --tmp-dir "$TMP" -- --version >/dev/null || true
+  for want in "$staged/$runnerpath" "$staged/$statuspath"; do
+    if [ -f "$TMP/$want" ] && [ ! -L "$TMP/$want" ]; then
+      echo "   ok: $want (--edit)"
+    else
+      echo "   FAIL: missing or symlinked under --edit — $want"
+      fail=1
+    fi
+  done
+  for absent in "$staged/$skillpath" "$staged/$upgraderpath"; do
+    if [ -f "$TMP/$absent" ] && [ ! -L "$TMP/$absent" ]; then
+      echo "   FAIL: $absent staged under --edit"
+      fail=1
+    else
+      echo "   ok: no $absent under --edit"
+    fi
+  done
+  check_loaded edit "$want_runner" "$want_status"
 
   rm -rf "$TMP"
 done 3< <(bun -e 'import { loadHosts } from "./src/hosts.ts"
