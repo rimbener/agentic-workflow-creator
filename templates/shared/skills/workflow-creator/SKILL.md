@@ -23,10 +23,12 @@ Read these before starting (silently — they are your working knowledge):
 already holds a `workflows/<name>/` package and the ask is to change it — add a
 phase, swap the pairing, change the inputs, bring it up to date — a full
 interview and a regenerated package would overwrite decisions and hand-edits
-that are already in there. Say so, then hand it over: if the **workflow-upgrader
-skill is loaded in this session**, give it the request rather than sending the
-user anywhere. If it is not, point the user at `awc <agent> --upgrade`, which
-opens a session on the existing package.
+that are already in there. Say so, then hand it over: when a change skill is
+loaded in this session — the **workflow-upgrader** (an `--upgrade` session) or
+the **workflow-editor** (an `--edit` session) — give it the request rather
+than sending the user anywhere. Only when neither is loaded, point the user
+at the flag: `awc <agent> --upgrade` to have the package inventoried and
+audited first, or `awc <agent> --edit` when the changes are already decided.
 Iterating on a package **this session** just designed
 stays here: the decisions behind it are still in the conversation.
 
@@ -34,9 +36,8 @@ stays here: the decisions behind it are still in the conversation.
 in the *project* through a workflow the repo already has — "use my `<name>`
 workflow to build X", a task id plus a request — nothing needs designing:
 point the user at the package's own in-session launcher
-(`.claude/commands/<name>.md` and its siblings), or at `awc <agent> --edit`,
-which opens a session on the workflow-runner skill — it finds the package,
-fills its inputs from their words, and leads the run.
+(`.claude/commands/<name>.md` and its siblings), or at `./<name>.sh` where
+the workflow runs in a worktree.
 
 ## Process
 

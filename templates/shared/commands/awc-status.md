@@ -1,17 +1,15 @@
 ---
-description: Summarize progress of the current awc session — creating a workflow package, upgrading one, or running one. Use when the user asks for awc status, how the workflow build or run is going, or where things got to.
+description: Summarize progress of the current awc session — creating a workflow package, or changing one (upgrade or edit). Use when the user asks for awc status, how the workflow build is going, or where things got to.
 ---
 
 Summarize the current awc session:
 
-1. Which workflow is in hand, and the goal — the new workflow being built,
-   the existing package being changed and what should change about it, or the
-   package being run and the change the run should land.
-2. Which steps are done. Creating: recon, interview, design + plan approval,
-   package written, validation. Upgrading: package located, inventory, audit,
-   interview, change plan approved, changes applied, validation. Running:
-   package located, inputs filled, then one line per completed node and the
-   node in hand.
+1. Which workflow is in hand, and the goal — the new workflow being built, or
+   the existing package being changed and what should change about it.
+2. Which steps are done, against the process of the skill leading this
+   session — the workflow-creator when building a new package, the
+   workflow-upgrader or workflow-editor when changing one. Name each
+   completed step and the one in hand, in that skill's own terms.
 3. Files created or modified so far, as a list of paths.
 4. The immediate next step.
 

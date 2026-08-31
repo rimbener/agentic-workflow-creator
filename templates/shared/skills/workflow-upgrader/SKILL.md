@@ -21,8 +21,12 @@ It is also a different job from **running** one. A request to land a change
 in the *project* through the package — a task id plus a request, "use
 `<name>` to build X" — changes nothing about the package: point the user at
 its own in-session launcher (`.claude/commands/<name>.md` and its siblings),
-or at `awc <agent> --edit`, which opens a session on the workflow-runner
-skill and leads the run. This session changes the package; it never runs it.
+or at `./<name>.sh` where the workflow runs in a worktree. This session
+changes the package; it never runs it. And when the changes arrive already
+decided — a named package, spelled-out edits, no appetite for an audit —
+offer `awc <agent> --edit`, which opens a session on a skill that applies
+exactly those; this session is for the user who wants the package walked and
+audited first.
 
 ## Where your reference material lives
 
