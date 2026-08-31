@@ -29,8 +29,8 @@ export function parseCli(argv: string[]): ParsedCli {
     allowPositionals: true,
   })
 
-  // Each flag names the one skill the session opens on, so together they
-  // name nothing.
+  // Each flag names the one change skill its session stages and opens on
+  // (workflow-upgrader / workflow-editor), so together they name nothing.
   if (values.upgrade && values.edit) {
     throw new Error('--upgrade and --edit cannot be combined')
   }

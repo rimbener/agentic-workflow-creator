@@ -52,14 +52,13 @@ describe('stageClaude', () => {
     expect(existsSync(path.join(plugin, 'commands', 'awc-status.md'))).toBe(
       true,
     )
-    // A create session gets no upgrader and no runner: nothing extra competes
-    // for triggering.
-    expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-upgrader', 'SKILL.md')),
-    ).toBe(false)
-    expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-runner', 'SKILL.md')),
-    ).toBe(false)
+    // A create session gets neither change skill: nothing extra competes for
+    // triggering when nothing exists to change.
+    for (const skill of ['workflow-upgrader', 'workflow-editor']) {
+      expect(existsSync(path.join(plugin, 'skills', skill, 'SKILL.md'))).toBe(
+        false,
+      )
+    }
     expect(
       existsSync(
         path.join(plugin, 'skills', 'workflow-creator', 'assets', 'running.md'),
@@ -68,51 +67,36 @@ describe('stageClaude', () => {
     cleanup(tmp)
   })
 
-  test('adds the upgrader in upgrade mode, keeping the creator beside it', () => {
-    const tmp = freshTmp()
-    const plugin = stageClaude(tmp, 'upgrade')
-    expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-upgrader', 'SKILL.md')),
-    ).toBe(true)
-    // The upgrader reads the dialect and the agent bases out of the creator's
-    // folder, so the pair is staged together or those paths dangle.
-    expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-creator', 'SKILL.md')),
-    ).toBe(true)
-    // ...and nothing more: the runner is --edit's alone.
-    expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-runner', 'SKILL.md')),
-    ).toBe(false)
-    // With both loaded, the creator hands an upgrade request to the upgrader in
-    // place — never by bouncing the user out to a fresh `awc --upgrade`.
-    const creator = readFileSync(
-      path.join(plugin, 'skills', 'workflow-creator', 'SKILL.md'),
-      'utf8',
-    ).replace(/\s+/g, ' ')
-    expect(creator).toContain(
-      'give it the request rather than sending the user anywhere',
-    )
-    cleanup(tmp)
-  })
-
-  test('stages the runner alone in edit mode', () => {
-    const tmp = freshTmp()
-    const plugin = stageClaude(tmp, 'edit')
-    expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-runner', 'SKILL.md')),
-    ).toBe(true)
-    // A run session authors nothing: the package's own running.md and
-    // workflow_lead.md are its contract, so neither authoring skill ships —
-    // an extra skill is only an extra trigger competing for attention.
-    for (const authoring of ['workflow-creator', 'workflow-upgrader']) {
-      expect(
-        existsSync(path.join(plugin, 'skills', authoring, 'SKILL.md')),
-      ).toBe(false)
+  // Each change mode stages its own skill beside the creator — both read the
+  // dialect and the agent bases out of the creator's folder, so that pair is
+  // staged together or those paths dangle — and never the other change skill:
+  // the upgrader and the editor are deliberately separate.
+  test('each change mode stages its own skill beside the creator', () => {
+    for (const { mode, stages, spares } of [
+      {
+        mode: 'upgrade',
+        stages: 'workflow-upgrader',
+        spares: 'workflow-editor',
+      },
+      { mode: 'edit', stages: 'workflow-editor', spares: 'workflow-upgrader' },
+    ] as const) {
+      const tmp = freshTmp()
+      const plugin = stageClaude(tmp, mode)
+      for (const skill of [stages, 'workflow-creator']) {
+        expect({
+          mode,
+          skill,
+          staged: existsSync(path.join(plugin, 'skills', skill, 'SKILL.md')),
+        }).toEqual({ mode, skill, staged: true })
+      }
+      expect(existsSync(path.join(plugin, 'skills', spares, 'SKILL.md'))).toBe(
+        false,
+      )
+      expect(existsSync(path.join(plugin, 'commands', 'awc-status.md'))).toBe(
+        true,
+      )
+      cleanup(tmp)
     }
-    expect(existsSync(path.join(plugin, 'commands', 'awc-status.md'))).toBe(
-      true,
-    )
-    cleanup(tmp)
   })
 
   test('replaces a stale temp folder from a previous hard kill', () => {
@@ -153,7 +137,7 @@ function seedColliding(skillsDir: string, statusPath: string) {
     for (const name of [
       'workflow-creator',
       'workflow-upgrader',
-      'workflow-runner',
+      'workflow-editor',
     ]) {
       mkdirSync(path.join(dir, skillsDir, name), { recursive: true })
       writeFileSync(
@@ -220,100 +204,67 @@ for (const host of HOSTS) {
       rmSync(real, { recursive: true, force: true })
     })
 
-    test('stages the upgrader only for an upgrade session', () => {
+    test('stages each change skill only for its own mode', () => {
       const real = fakeHost(host.envVar)
       const tmp = freshTmp()
       const upgrader = path.join(host.skills, 'workflow-upgrader', 'SKILL.md')
+      const editor = path.join(host.skills, 'workflow-editor', 'SKILL.md')
 
-      expect(existsSync(path.join(host.stage(tmp), upgrader))).toBe(false)
+      const created = host.stage(tmp)
+      expect(existsSync(path.join(created, upgrader))).toBe(false)
+      expect(existsSync(path.join(created, editor))).toBe(false)
       cleanup(tmp)
 
-      const staged = host.stage(tmp, 'upgrade')
-      expect(existsSync(path.join(staged, upgrader))).toBe(true)
-      expect(existsSync(path.join(staged, skillMd))).toBe(true)
-      // ...and no runner: dropping it from SKIP.upgrade would ship a third
-      // skill beside the pair without failing any edit-mode test.
-      expect(
-        existsSync(path.join(staged, host.skills, 'workflow-runner')),
-      ).toBe(false)
-      cleanup(tmp)
+      // Each mode brings its own skill beside the creator and spares the
+      // other's — the upgrader and the editor never ship together.
+      for (const [mode, stages, spares] of [
+        ['upgrade', upgrader, editor],
+        ['edit', editor, upgrader],
+      ] as const) {
+        const staged = host.stage(tmp, mode)
+        expect({ mode, staged: existsSync(path.join(staged, stages)) }).toEqual(
+          { mode, staged: true },
+        )
+        expect(existsSync(path.join(staged, skillMd))).toBe(true)
+        expect(existsSync(path.join(staged, spares))).toBe(false)
+        cleanup(tmp)
+      }
       rmSync(real, { recursive: true, force: true })
     })
 
-    // A user with their own workflow-upgrader skill has it shadowed in as a
-    // symlink, so "is it absent" has to mean "no real file of ours", not "no
-    // entry" — and the upgrade-mode copy still has to unlink that link rather
-    // than write through it into their skill.
-    test('leaves a same-named user upgrader alone until --upgrade', () => {
+    // A user with their own workflow-upgrader or workflow-editor skill has it
+    // shadowed in as a symlink, so "is it absent" has to mean "no real file
+    // of ours", not "no entry" — and the mode that stages the real copy still
+    // has to unlink that link rather than write through it into their skill.
+    // Both change skills get the same treatment: each is the payload of its
+    // own mode, and each is a name a user may own.
+    test('leaves a same-named user change skill alone until its mode', () => {
       const real = fakeHost(host.envVar, seedColliding(host.skills, statusMd))
       const tmp = freshTmp()
-      const upgrader = path.join(host.skills, 'workflow-upgrader', 'SKILL.md')
+      for (const [mode, name, title] of [
+        ['upgrade', 'workflow-upgrader', 'Workflow Upgrader'],
+        ['edit', 'workflow-editor', 'Workflow Editor'],
+      ] as const) {
+        const skill = path.join(host.skills, name, 'SKILL.md')
 
-      const created = host.stage(tmp)
-      expect(readFileSync(path.join(created, upgrader), 'utf8')).toBe(
-        'USER ORIGINAL',
-      )
-      expect(
-        lstatSync(
-          path.join(created, host.skills, 'workflow-upgrader'),
-        ).isSymbolicLink(),
-      ).toBe(true)
-      cleanup(tmp)
+        const created = host.stage(tmp)
+        expect(readFileSync(path.join(created, skill), 'utf8')).toBe(
+          'USER ORIGINAL',
+        )
+        expect(
+          lstatSync(path.join(created, host.skills, name)).isSymbolicLink(),
+        ).toBe(true)
+        cleanup(tmp)
 
-      const staged = host.stage(tmp, 'upgrade')
-      expect(readFileSync(path.join(staged, upgrader), 'utf8')).toContain(
-        'Workflow Upgrader',
-      )
-      expect(lstatSync(path.join(staged, upgrader)).isSymbolicLink()).toBe(
-        false,
-      )
-      cleanup(tmp)
+        const staged = host.stage(tmp, mode)
+        expect(readFileSync(path.join(staged, skill), 'utf8')).toContain(title)
+        expect(lstatSync(path.join(staged, skill)).isSymbolicLink()).toBe(false)
+        cleanup(tmp)
 
-      expect(readFileSync(path.join(real, upgrader), 'utf8')).toBe(
-        'USER ORIGINAL',
-      )
-      rmSync(real, { recursive: true, force: true })
-    })
-
-    // The edit-mode mirror of the two upgrader tests above: the runner ships
-    // only under --edit, the copy replaces a same-named user link rather than
-    // writing through it, and an edit session drops the authoring skills.
-    test('stages the runner only for an edit session, sparing a user copy', () => {
-      const real = fakeHost(host.envVar, seedColliding(host.skills, statusMd))
-      const tmp = freshTmp()
-      const runner = path.join(host.skills, 'workflow-runner', 'SKILL.md')
-
-      const created = host.stage(tmp)
-      expect(readFileSync(path.join(created, runner), 'utf8')).toBe(
-        'USER ORIGINAL',
-      )
-      expect(
-        lstatSync(
-          path.join(created, host.skills, 'workflow-runner'),
-        ).isSymbolicLink(),
-      ).toBe(true)
-      cleanup(tmp)
-
-      const staged = host.stage(tmp, 'edit')
-      expect(readFileSync(path.join(staged, runner), 'utf8')).toContain(
-        'Workflow Runner',
-      )
-      expect(lstatSync(path.join(staged, runner)).isSymbolicLink()).toBe(false)
-      // The creator's slot holds the user's own copy again — shadowed in as a
-      // link, never our payload: a run session stages no authoring skill.
-      expect(readFileSync(path.join(staged, skillMd), 'utf8')).toBe(
-        'USER ORIGINAL',
-      )
-      expect(
-        lstatSync(
-          path.join(staged, host.skills, 'workflow-creator'),
-        ).isSymbolicLink(),
-      ).toBe(true)
-      cleanup(tmp)
-
-      expect(readFileSync(path.join(real, runner), 'utf8')).toBe(
-        'USER ORIGINAL',
-      )
+        expect(readFileSync(path.join(real, skill), 'utf8')).toBe(
+          'USER ORIGINAL',
+        )
+      }
       rmSync(real, { recursive: true, force: true })
     })
 
@@ -419,85 +370,130 @@ describe('shadow', () => {
 })
 
 describe('the shared payload', () => {
-  test('ships grill-me, grilling, upgrader and runner beside the creator', () => {
+  test('ships the grill aids and both change skills beside the creator', () => {
     const skills = path.join(sharedDir(), 'skills')
     for (const name of [
       'grill-me',
       'grilling',
       'workflow-creator',
       'workflow-upgrader',
-      'workflow-runner',
+      'workflow-editor',
     ]) {
       expect(existsSync(path.join(skills, name, 'SKILL.md'))).toBe(true)
     }
   })
 
-  // A run request landing in an authoring session must bounce to the session
-  // that owns it. The runner is never staged beside the creator or the
-  // upgrader, so the pointer has to be the CLI flag — a skill name alone
-  // would strand the user in a session where nothing by that name is loaded.
-  test('both authoring skills hand a run request to --edit', () => {
-    for (const name of ['workflow-creator', 'workflow-upgrader']) {
-      const body = readFileSync(
-        path.join(sharedDir(), 'skills', name, 'SKILL.md'),
-        'utf8',
-      ).replace(/\s+/g, ' ')
-      expect(body).toContain('awc <agent> --edit')
-      expect(body).toContain('workflow-runner')
+  // The SKILL.md bodies are fixtures for the tests below; read each once.
+  const skillBody = (name: string) =>
+    readFileSync(
+      path.join(sharedDir(), 'skills', name, 'SKILL.md'),
+      'utf8',
+    ).replace(/\s+/g, ' ')
+  const creatorBody = skillBody('workflow-creator')
+  const upgraderBody = skillBody('workflow-upgrader')
+  const editorBody = skillBody('workflow-editor')
+
+  // No mode stages a skill that runs a package — running is the package's own
+  // launchers' job — so a "use my workflow to build X" ask landing in an
+  // authoring session must bounce to those launchers, never be improvised.
+  test('the authoring skills hand a run request to the launchers', () => {
+    for (const body of [creatorBody, upgraderBody, editorBody]) {
+      expect(body).toContain('`.claude/commands/<name>.md` and its siblings')
     }
   })
 
-  // The runner is staged WITHOUT the creator (src/mode.ts), so a
-  // `../workflow-creator/` citation in it would dangle in every edit session.
-  // Its contract lives in the package it runs — the package's own running.md
-  // and workflow_lead.md — never in the authoring skill's folder.
-  test('the runner cites nothing from the creator', () => {
-    const runner = path.join(sharedDir(), 'skills', 'workflow-runner')
-    for (const file of walk(runner)) {
-      expect(readFileSync(file, 'utf8')).not.toContain('../workflow-creator/')
-    }
-    // And it sends the user to the package's own files by their shipped names.
-    const skill = readFileSync(path.join(runner, 'SKILL.md'), 'utf8')
-    expect(skill).toContain('running.md')
-    expect(skill).toContain('workflow_lead.md')
+  // A change request landing on the creator hands over to whichever change
+  // skill is loaded — the creator ships in every mode, so it has to know both
+  // by name; bouncing the user out to another flag while the right skill sits
+  // loaded is the failure this pin exists to prevent.
+  test('the creator hands a change request to the loaded change skill', () => {
+    expect(creatorBody).toContain(
+      'give it the request rather than sending the user anywhere',
+    )
+    expect(creatorBody).toContain('workflow-upgrader')
+    expect(creatorBody).toContain('workflow-editor')
   })
 
-  // The upgrader borrows the dialect, the validation checklist and the agent
-  // bases from `../workflow-creator/` rather than forking them, which only
-  // works because every host stages skills as flat siblings. A path that has
-  // moved fails silently at run time — the model just reads nothing — so it is
-  // checked here against the real files.
-  test('every ../workflow-creator/ path the upgrader cites resolves', () => {
+  // The editor and the upgrader are deliberately separate skills — the
+  // upgrader grows its own functionality — so the editor repeats what it
+  // needs instead of citing the upgrader (whose folder is never staged in an
+  // --edit session), hands audit-shaped work to `--upgrade`, and keeps the
+  // two promises that make an ungated apply safe.
+  test('the editor stands alone and keeps its write-gate promises', () => {
+    expect(editorBody).not.toContain('../workflow-upgrader/')
+    expect(editorBody).toContain('awc <agent> --upgrade')
+    expect(editorBody).toContain(
+      'Anything beyond their words still needs a yes',
+    )
+    expect(editorBody).toContain('never compressed')
+    // With no plan gate, the end-to-end diff read is the one mechanism that
+    // catches a drive-by, and the launch-path check must fit an in-place
+    // package (three launchers, no script).
+    expect(editorBody).toContain('the diff is the change')
+    expect(editorBody).toContain('read `git diff`')
+    expect(editorBody).toContain('where it exists')
+    // A silent ../workflow-creator/ read failure has a recovery and, failing
+    // that, a disclosure — quietly applying unvalidated changes is the one
+    // degraded behavior this skill cannot afford.
+    expect(editorBody).toContain('the way your host exposes its loaded skills')
+    expect(editorBody).toContain('working degraded')
+    // The ripple and untrim knowledge the editor repeats instead of citing —
+    // the sentences an ungated apply leans on hardest, so the ones that must
+    // not rot: the rename row, the when:-sweep on removal, the diff-first
+    // untrim habit that spares hand-edits, and the strict package shape.
+    expect(editorBody).toContain('Renaming the workflow')
+    expect(editorBody).toContain(
+      'the `when:` predicate and the script only that node ran',
+    )
+    expect(editorBody).toContain('diff the packaged copy against')
+    expect(editorBody).toContain('never by regenerating the file from the base')
+    expect(editorBody).toContain('`<name>.yaml`')
+    // The run hand-off gives a paste-ready command, not a bare path.
+    expect(editorBody).toContain('inputs already filled')
+    // The upgrader, in turn, never leans on the editor (the flag it may
+    // offer, `awc <agent> --edit`, names no skill directory).
+    expect(upgraderBody).not.toContain('workflow-editor')
+    expect(upgraderBody).not.toContain('../workflow-editor/')
+  })
+
+  // Both change skills borrow the dialect, the validation checklist and the
+  // agent bases from `../workflow-creator/` rather than forking them, which
+  // only works because every host stages skills as flat siblings. A path that
+  // has moved fails silently at run time — the model just reads nothing — so
+  // every citation is checked here against the real files.
+  test('every ../workflow-creator/ path a change skill cites resolves', () => {
     const skills = path.join(sharedDir(), 'skills')
-    const upgrader = path.join(skills, 'workflow-upgrader')
-    const cited = new Set<string>()
-    for (const file of walk(upgrader)) {
-      const text = readFileSync(file, 'utf8')
-      for (const m of text.matchAll(
-        /\.\.\/workflow-creator\/([\w./-]*[\w/])/g,
-      )) {
-        const ref = m[1]
-        if (ref) cited.add(ref)
+    for (const name of ['workflow-upgrader', 'workflow-editor']) {
+      const cited = new Set<string>()
+      for (const file of walk(path.join(skills, name))) {
+        const text = readFileSync(file, 'utf8')
+        for (const m of text.matchAll(
+          /\.\.\/workflow-creator\/([\w./-]*[\w/])/g,
+        )) {
+          const ref = m[1]
+          if (ref) cited.add(ref)
+        }
       }
-    }
-    expect(cited.size).toBeGreaterThan(0)
-    for (const ref of cited) {
-      const target = path.join(skills, 'workflow-creator', ref)
-      // A citation ending in `/` names a directory of bases; one with an
-      // extension names a file. Checking the kind keeps a file that became a
-      // directory (or the reverse) from passing on existence alone. A citation
-      // written with a `<placeholder>` filename resolves only to its directory,
-      // so a renamed agent template is caught by the catalog cross-check below,
-      // not here.
-      const kind = existsSync(target)
-        ? statSync(target).isDirectory()
-          ? 'dir'
-          : 'file'
-        : 'missing'
-      expect({ ref, kind }).toEqual({
-        ref,
-        kind: ref.endsWith('/') ? 'dir' : 'file',
-      })
+      expect(cited.size).toBeGreaterThan(0)
+      for (const ref of cited) {
+        const target = path.join(skills, 'workflow-creator', ref)
+        // A citation ending in `/` names a directory of bases; one with an
+        // extension names a file. Checking the kind keeps a file that became a
+        // directory (or the reverse) from passing on existence alone. A
+        // citation written with a `<placeholder>` filename resolves only to
+        // its directory, so a renamed agent template is caught by the catalog
+        // cross-check below, not here.
+        const kind = existsSync(target)
+          ? statSync(target).isDirectory()
+            ? 'dir'
+            : 'file'
+          : 'missing'
+        expect({ skill: name, ref, kind }).toEqual({
+          skill: name,
+          ref,
+          kind: ref.endsWith('/') ? 'dir' : 'file',
+        })
+      }
     }
   })
 
@@ -1119,15 +1115,16 @@ describe('the upgrader eval material', () => {
   })
 })
 
-// The runner's evals grade a session's conduct around a package it must not
-// write: fixtures with a package are borrowed from the upgrader workspace (one
-// canonical shipped package, no second copy to rot), so the relative paths and
-// the keys that make a run a run are pinned here against silent renames.
-describe('the runner eval material', () => {
+// The editor's evals grade a diff plus the session's conduct: the stated
+// changes land ungated, everything beyond them stays gated, validation never
+// shrinks. Its fixture is borrowed from the upgrader workspace (one canonical
+// shipped package, no second copy to rot), so the relative path and the
+// edit-only keys are pinned against silent renames.
+describe('the editor eval material', () => {
   const workspace = path.join(
     import.meta.dir,
     '..',
-    'workflow-runner-workspace',
+    'workflow-editor-workspace',
   )
   const evals = JSON.parse(
     readFileSync(path.join(workspace, 'evals', 'evals.json'), 'utf8'),
@@ -1139,42 +1136,51 @@ describe('the runner eval material', () => {
       expect(e.files.length).toBeGreaterThan(0)
       for (const f of e.files) {
         const fixture = path.join(workspace, f)
-        const hasWorkflows = existsSync(path.join(fixture, 'workflows'))
         expect({
           eval: e.name,
           exists: existsSync(fixture),
-          hasWorkflows,
+          hasWorkflows: existsSync(path.join(fixture, 'workflows')),
         }).toEqual({
           eval: e.name,
           exists: true,
-          // The redirect eval is the one session with nothing to run.
+          // The hand-to-creator eval is the one session with nothing to edit.
           hasWorkflows: !f.includes('bun-app-bare'),
         })
       }
     }
   })
 
-  test('the keys that grade run-only behavior are all present', () => {
+  test('the keys that grade edit-only behavior are all present', () => {
     const names: string[] = evals.evals.flatMap(
       (e: { expectations: string[] }) =>
         e.expectations.map((x) => x.split(':')[0]),
     )
     for (const key of [
-      // The lead delegates; its own tools never touch the project.
-      'lead-never-edits',
-      // The contract is the package's own copy, not a remembered dialect.
-      'contract-read-from-package',
-      // A worktree workflow runs via its script, or in place only by choice.
-      'script-command-offered',
-      'in-place-consent-acknowledged',
-      // Misdirected requests go to the session that owns them.
+      // The stated changes are the approval: no plan gate on them...
+      'stated-changes-no-plan-gate',
+      // ...while everything beyond them stays gated...
+      'beyond-request-still-gated',
+      // ...and the validation never shrinks.
+      'validation-still-full',
+      // Requests that are not edits go to the session or launcher that owns
+      // them — the run hand-off matters most, since --edit previously RAN a
+      // package and a "use my workflow to build X" ask is the likeliest
+      // misclassification.
       'redirected-to-create',
+      'nothing-written',
       'redirected-to-upgrade',
+      'run-handed-to-launchers',
+      'no-run-improvised',
+      // A node-list change is where a missed ripple actually breaks a run —
+      // and where an over-eager sweep deletes what surviving nodes share.
+      'node-list-orphans-swept',
+      'shared-artifacts-survive',
     ]) {
       expect(names).toContain(key)
     }
-    // Every eval that starts from a package carries the rule that makes a run
-    // a run: the package is read, never written.
+    // Every package-holding eval carries the two that make a change safe;
+    // the bare fixture has no package to keep valid, so it carries
+    // nothing-written instead.
     for (const e of evals.evals as {
       name: string
       files: string[]
@@ -1182,9 +1188,32 @@ describe('the runner eval material', () => {
     }[]) {
       if (e.files.some((f) => f.includes('bun-app-bare'))) continue
       const keys = e.expectations.map((x) => x.split(':')[0])
-      expect({ eval: e.name, has: keys.includes('package-untouched') }).toEqual(
-        { eval: e.name, has: true },
-      )
+      for (const required of ['nothing-else-touched', 'package-still-valid']) {
+        expect({ eval: e.name, has: keys.includes(required) }).toEqual({
+          eval: e.name,
+          has: true,
+        })
+      }
+    }
+  })
+})
+
+// The flag descriptions exist in three hand-synced copies — the --help text
+// and the fenced Options blocks in README and SPEC. Nothing else relates
+// them, so the one distinctive line per flag is pinned in all three; a
+// rewording that reaches only some copies fails here instead of shipping a
+// stale doc.
+describe('the docs carry the help text', () => {
+  const files = ['src/cli.ts', 'README.md', 'SPEC.md']
+  test('each flag description names its skill in every copy', () => {
+    for (const file of files) {
+      const text = readFileSync(path.join(import.meta.dir, '..', file), 'utf8')
+      for (const line of [
+        'Open the session on workflow-upgrader, to change a workflow',
+        'Open the session on workflow-editor, to apply the changes',
+      ]) {
+        expect({ file, has: text.includes(line) }).toEqual({ file, has: true })
+      }
     }
   })
 })
@@ -1319,19 +1348,11 @@ describe('the launch command each host builds', () => {
       const upgrade = build(opts('upgrade'))
       const edit = build(opts('edit'))
 
+      // Wiring only: each mode's own prompt file lands on argv verbatim.
+      // What the prompts say is `readPrompt`'s test below — one place.
       expect(create.args).toContain(readPrompt(hostDir(host)))
       expect(upgrade.args).toContain(readPrompt(hostDir(host), 'upgrade'))
       expect(edit.args).toContain(readPrompt(hostDir(host), 'edit'))
-      expect(upgrade.args.join(' ')).toContain('workflow-upgrader')
-      expect(edit.args.join(' ')).toContain('workflow-runner')
-      // A prompt naming a skill its own session did not stage strands the
-      // model on the greeting: neither of the others may name these two.
-      for (const other of [create, upgrade]) {
-        expect(other.args.join(' ')).not.toContain('workflow-runner')
-      }
-      for (const other of [create, edit]) {
-        expect(other.args.join(' ')).not.toContain('workflow-upgrader')
-      }
       // Passthrough still rides last, in every mode.
       expect(create.args.at(-1)).toBe('--flag')
       expect(upgrade.args.at(-1)).toBe('--flag')
@@ -1356,18 +1377,15 @@ describe('readPrompt', () => {
       expect(edit).not.toBe(create)
       expect(edit).not.toBe(upgrade)
       expect(upgrade).toContain('workflow-upgrader')
-      expect(edit).toContain('workflow-runner')
-      // And no prompt may name a skill its session did not stage: pointing a
-      // user at an unloaded skill strands them. Catches a mode's prompt file
-      // copied over another's, which the inequalities above would not.
+      expect(edit).toContain('workflow-editor')
+      // And no prompt may name a change skill its session did not stage:
+      // pointing a user at an unloaded skill strands them. Catches a mode's
+      // prompt file copied over another's, which the inequalities above
+      // would not.
       expect(create).not.toContain('workflow-upgrader')
-      expect(create).not.toContain('workflow-runner')
-      expect(upgrade).not.toContain('workflow-runner')
+      expect(create).not.toContain('workflow-editor')
+      expect(upgrade).not.toContain('workflow-editor')
       expect(edit).not.toContain('workflow-upgrader')
-      // Bare "workflow-creator" appears inside the package name every prompt
-      // opens with ("awc (agentic-workflow-creator)"), so the skill mention
-      // is checked in the backticked form the prompts use for skill names.
-      expect(edit).not.toContain('`workflow-creator`')
     }
   })
 })
