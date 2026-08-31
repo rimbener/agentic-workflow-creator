@@ -159,3 +159,11 @@ Added a third session mode: `awc <agent> --edit` opens on the workflow-runner sk
 ## 2026-08-31 — `84832b3` — refactor(cli): rename workflow-runner to workflow-editor
 
 Renamed the --edit mode's skill from workflow-runner to workflow-editor. Edit sessions now stage the workflow-creator skill alongside the editor (previously, --edit staged only the runner and excluded the creator). The creator is there because the editor reads the dialect and agent bases from ../workflow-creator/, and as a fallback if the request turns out to be a creation job. New test/mode.test.ts covers flag-to-mode wiring end to end; staging.test.ts refactored so each change mode tests its own skill staging. Eval workspace renamed from workflow-runner-workspace to workflow-editor-workspace with edit-conduct grading (stated changes land ungated, everything beyond stays gated, validation never shrinks). Docs and smoke test updated.
+
+## 2026-08-31 — `1d4f4b1` — fix(agents): trail-commit the closing-commit line and fix its record home
+
+Two base defects in the slice-loop pairing. The fix step wrote `closing-commit: <hash>` after the commit it names, leaving the build record dirty for the next slice's diff — the record update now lands in its own small trail commit, the loop-ending token waits for it, and `reviewer_slice` ignores exactly that one bookkeeping change (the previous slice's record, slices after 1 only). And Protocol 2 now names the closing-commit home precisely: the closer records `tdd-<N-1>.md` / `implementation-<N-1>.md`; `tests-<N>.md` stays in §Invocation as the criterion map only, since `unit_test_writer` never writes the line. The catalog pairing rule passes the trail-commit obligation to authored builders; `staging.test.ts` pins the carrier list, the scoped ignore, and the token ordering.
+
+## 2026-08-31 — `f88adea` — chore(evals): sync bun-app-shipped agents with the trail-commit dialect
+
+`bun-app-shipped` stays a current-dialect baseline: its instantiated `implementer_tdd` and `reviewer_slice` copies pick up the trail-commit close, the token ordering, and the closer-record spellings. `bun-app-drifted` is untouched — the base change is the kind of drift it exists to carry.
