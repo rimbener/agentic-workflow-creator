@@ -143,3 +143,7 @@ The kebab-case guard becomes a charset rule — letters, digits, hyphens, or und
 ## 2026-08-28 — `ccae331` — chore(evals): sync the update fixtures with the any-case id rule
 
 `bun-app-shipped` mirrors the reworked templates — both scripts, the three launchers, the YAML input comment, the README input row — keeping the baseline a current-dialect package. `bun-app-drifted` keeps every graded drift (flat trail, no finish node, stale `running.md`, missing opencode launcher, the two hand-edits) but loses its period kebab wording, so what is stale is only what the validation checklist catches.
+
+## 2026-08-31 — `35b9ce4` — refactor!: rename update mode and workflow-updater to upgrade
+
+The change-the-package half of awc is a rename, not an edit: the CLI flag `--update` becomes `--upgrade`, the skill `workflow-updater` becomes `workflow-upgrader`, the host prompts `prompt-update.md` become `prompt-upgrade.md`, and the eval workspace, its fixtures and the `check_update.ts` script follow the same naming. The user-facing flag is breaking: `--upgrade` and the `workflow-upgrader` skill replace the short-lived `--update`/`workflow-updater`.
