@@ -7,9 +7,7 @@
       "name": "add-mutation-untrims-the-validator",
       "prompt": "This repo has a ship-feature workflow I run for every feature. I want mutation testing added to it — StrykerJS, scoped to the files the task changed, capped at 3 rounds, and I don't want an agent able to end that loop by claiming it passed. Everything else about the workflow stays as it is. I'm away from the keyboard after this — make your recommended calls and apply the change.",
       "expected_output": "The mutation phase added to workflows/ship-feature/ship-feature.yaml: a run: step running Stryker scoped to the changed files with its log captured, a mutation_tester node reading that log, fix steps, a check step closing the round, and a loop ending on until_run: with a gate script that reads Stryker's own log — plus the ripples: a mutation_tester agent copy instantiated from the base, kill-mutants restored to the implementer_tdd copy, the mutation checks restored to the dod_validator copy, a log-path var, the README's node table updated. Nothing else in the package changed.",
-      "files": [
-        "fixtures/bun-app-shipped"
-      ],
+      "files": ["fixtures/bun-app-shipped"],
       "expectations": [
         "mutation-loop-ends-on-until-run: the mutation loop declares max_iterations 3 and until_run: pointing at a script that reads Stryker's own log — never an until: token, which would let an agent end the loop by asserting, and the round ends with a check step — mutation tools refuse to start on a red suite, so an iteration that ends on an unverified tree strands the next one",
         "mutation-tester-instantiated: workflows/ship-feature/agents/mutation_tester.md exists, matches the bundled base's structure and arguments (Task, Mode: report, Log:), and the node invoking it passes a Log: path that some earlier run: step actually writes",
@@ -27,9 +25,7 @@
       "name": "swap-pairing-and-add-an-input",
       "prompt": "Two changes to the ship-feature workflow. First: we're dropping strict TDD — I want the production code and the unit tests owned by two separate agents, so an implementer that only touches production code plus a test writer that only touches tests. Second: the workflow should take a ticket URL as a third input, and the spec step should get it. Go ahead and apply both; use your recommended defaults for anything I haven't pinned down.",
       "expected_output": "The slice loop rewritten to the split pairing (implementer + unit_test_writer instantiated from their bases, cover-criteria and cover-gaps steps, the implementer's fix step last so its DONE still closes the loop), implementer_tdd deleted, the later findings loops carrying both fix steps — and a third input threaded through the YAML placeholders, all three in-session launchers, ship-feature.sh's usage/args/step-3, and the README.",
-      "files": [
-        "fixtures/bun-app-shipped"
-      ],
+      "files": ["fixtures/bun-app-shipped"],
       "expectations": [
         "split-pairing-applied: the slice loop uses an implementer (production code only) and a separate unit_test_writer (tests only), both instantiated from their bundled bases and trimmed to the modes the nodes invoke",
         "tdd-agent-removed: agents/implementer_tdd.md is gone and no node references it",
@@ -47,9 +43,7 @@
       "name": "bring-a-stale-package-up-to-date",
       "prompt": "The add-endpoint workflow in here was generated a good while back and I haven't touched it since. Can you bring it in line with how these packages are supposed to look now? Keep what we changed in it ourselves — there's stuff in those agent files we added on purpose.",
       "expected_output": "An audit against the current dialect, then the migration: the task trail moved to .awc/tasks/in-progress/<task>/ with tmp/, scripts/finish-task.sh copied verbatim from the base plus a finish node placed after everything that touches the trail (and before the trail commit), running.md re-copied verbatim, the missing opencode launcher written — with the owner's hand-edits (the route-registration lens in reviewer_slice, the route-coverage row in dod_validator) carried across, and the independent findings offered rather than silently applied.",
-      "files": [
-        "fixtures/bun-app-drifted"
-      ],
+      "files": ["fixtures/bun-app-drifted"],
       "expectations": [
         "audit-reported-before-changing: the session reports what drifted (flat .awc/tasks/<task>/ trail, no finish node or finish-task.sh, stale running.md, missing .opencode launcher) before applying anything, and separates findings the request depends on from ones the user could decline",
         "hand-edits-preserved: the route-registration lens in reviewer_slice.md and the route-coverage row in dod_validator.md survive the migration verbatim — re-instantiating those agents from their bases without carrying these across is the failure this eval exists to catch",
@@ -68,9 +62,7 @@
       "name": "drop-a-phase-and-sweep-the-orphans",
       "prompt": "The exhaustive engineering review at the end of ship-feature is costing us more than it catches — the per-slice reviews already find most of it. Take it out. Leave everything else alone.",
       "expected_output": "The review-round loop removed, and the orphans it leaves swept: the reviewer_engineering agent file deleted, the implementer_tdd copy's fix-review-findings mode trimmed (description line included), the base var dropped if nothing else uses it, the README's walkthrough row removed — and the DoD validator checked for anything it validates that no node now produces.",
-      "files": [
-        "fixtures/bun-app-shipped"
-      ],
+      "files": ["fixtures/bun-app-shipped"],
       "expectations": [
         "phase-removed: the review-round loop is gone from the YAML",
         "agent-file-deleted: agents/reviewer_engineering.md is removed, since no node invokes it any more",

@@ -41,11 +41,19 @@ const workflows: { file: string; doc: any; parseError?: string }[] = []
 for (const f of yamlFiles) {
   try {
     const doc = Bun.YAML.parse(readFileSync(f, 'utf8')) as any
-    if (doc && typeof doc === 'object' && (doc.nodes || doc.steps || doc.jobs || doc.stages || doc.phases)) {
+    if (
+      doc &&
+      typeof doc === 'object' &&
+      (doc.nodes || doc.steps || doc.jobs || doc.stages || doc.phases)
+    ) {
       workflows.push({ file: rel(f), doc })
     }
   } catch (e: any) {
-    workflows.push({ file: rel(f), doc: null, parseError: String(e?.message ?? e) })
+    workflows.push({
+      file: rel(f),
+      doc: null,
+      parseError: String(e?.message ?? e),
+    })
   }
 }
 
@@ -68,11 +76,16 @@ function nodeFacts(node: any, idx: number) {
   const keys = Object.keys(node)
   const behaviors = keys.filter((k) => BEHAVIOR_KEYS.includes(k))
   // agent+prompt is one behavior; prompt alone counts as one
-  const normalized = new Set(behaviors.map((b) => (b === 'prompt' && behaviors.includes('agent') ? 'agent' : b)))
+  const normalized = new Set(
+    behaviors.map((b) =>
+      b === 'prompt' && behaviors.includes('agent') ? 'agent' : b,
+    ),
+  )
   const cmdKeys = ['run', 'bash', 'command', 'cmd', 'shell', 'script']
   const multilineCmds: string[] = []
   for (const k of cmdKeys) {
-    if (typeof node[k] === 'string' && node[k].trim().includes('\n')) multilineCmds.push(k)
+    if (typeof node[k] === 'string' && node[k].trim().includes('\n'))
+      multilineCmds.push(k)
   }
   const facts: any = {
     idx,
@@ -87,13 +100,29 @@ function nodeFacts(node: any, idx: number) {
       max_iterations: loop.max_iterations ?? loop.maxIterations ?? null,
       until: loop.until ?? null,
       until_run: loop.until_run ?? loop.untilRun ?? loop.until_bash ?? null,
-      stepCount: Array.isArray(loop.steps) ? loop.steps.length : loop.prompt || loop.agent ? 1 : 0,
-      steps: Array.isArray(loop.steps) ? loop.steps.map((s: any, i: number) => nodeFacts(s, i)) : undefined,
+      stepCount: Array.isArray(loop.steps)
+        ? loop.steps.length
+        : loop.prompt || loop.agent
+          ? 1
+          : 0,
+      steps: Array.isArray(loop.steps)
+        ? loop.steps.map((s: any, i: number) => nodeFacts(s, i))
+        : undefined,
     }
     for (const k of ['prompt', 'agent', 'expect', 'allowed_tools'])
       if (loop[k] !== undefined) (facts.loop as any)[k] = loop[k]
   }
-  for (const k of ['agent', 'expect', 'when', 'when_bash', 'dir', 'gate', 'prompt', 'wait', 'allowed_tools']) {
+  for (const k of [
+    'agent',
+    'expect',
+    'when',
+    'when_bash',
+    'dir',
+    'gate',
+    'prompt',
+    'wait',
+    'allowed_tools',
+  ]) {
     if (node[k] !== undefined) facts[k] = node[k]
   }
   if (typeof node.run === 'string') facts.run = node.run
@@ -158,7 +187,8 @@ function storySteps(nodes: StoryNode[]) {
 
 // A flat trail path: `.awc/tasks/` continuing into a segment that is neither
 // tier. A closing delimiter right after `tasks/` is prose naming the root.
-const TRAIL_FLAT = /\.awc\/tasks\/(?!in-progress[/\s`"']|done[/\s`"'])[\w<>{}.-]+/g
+const TRAIL_FLAT =
+  /\.awc\/tasks\/(?!in-progress[/\s`"']|done[/\s`"'])[\w<>{}.-]+/g
 
 function collectRefs(doc: any): { agents: string[]; scripts: string[] } {
   const agents = new Set<string>()
@@ -167,7 +197,17 @@ function collectRefs(doc: any): { agents: string[]; scripts: string[] } {
     if (Array.isArray(v)) return v.forEach(visit)
     if (v && typeof v === 'object') {
       if (typeof v.agent === 'string') agents.add(v.agent)
-      for (const k of ['run', 'bash', 'command', 'cmd', 'script', 'until_run', 'until_bash', 'when', 'when_bash']) {
+      for (const k of [
+        'run',
+        'bash',
+        'command',
+        'cmd',
+        'script',
+        'until_run',
+        'until_bash',
+        'when',
+        'when_bash',
+      ]) {
         if (typeof v[k] === 'string') {
           const m = v[k].match(/[\w./-]+\.(?:sh|mjs|ts|js|py)\b/g)
           if (m) m.forEach((s: string) => scripts.add(s))
@@ -249,7 +289,9 @@ for (const wf of workflows) {
 }
 
 const workflowNames = new Set(
-  workflows.map((w) => path.basename(path.dirname(w.file))).filter((n) => n && n !== '.'),
+  workflows
+    .map((w) => path.basename(path.dirname(w.file)))
+    .filter((n) => n && n !== '.'),
 )
 
 const skillRoster = loadHosts()
@@ -257,22 +299,35 @@ const skillRoster = loadHosts()
   .join()
 
 // Package-level facts
-const skillRunning = runningMdRef && existsSync(runningMdRef) ? readFileSync(runningMdRef, 'utf8') : null
+const skillRunning =
+  runningMdRef && existsSync(runningMdRef)
+    ? readFileSync(runningMdRef, 'utf8')
+    : null
 const runningCandidates = files.filter((f) => /running\.md$/i.test(f))
 report.package = {
   // One launcher per supported host; graders check all three are present and agree.
   launchers: {
-    claude: files.filter((f) => rel(f).startsWith('.claude/commands/')).map(rel),
+    claude: files
+      .filter((f) => rel(f).startsWith('.claude/commands/'))
+      .map(rel),
     codex: files.filter((f) => rel(f).startsWith('.codex/skills/')).map(rel),
-    opencode: files.filter((f) => /^\.opencode\/commands?\//.test(rel(f))).map(rel),
+    opencode: files
+      .filter((f) => /^\.opencode\/commands?\//.test(rel(f)))
+      .map(rel),
   },
   agentFiles: files.filter((f) => /agents\/[^/]+\.md$/.test(rel(f))).map(rel),
   // A finish node names this path from the launch directory, so graders can
   // compare `finish_task_ref` above against where the file really is.
-  finishTaskScripts: files.filter((f) => /finish-task\.sh$/.test(rel(f))).map(rel),
+  finishTaskScripts: files
+    .filter((f) => /finish-task\.sh$/.test(rel(f)))
+    .map(rel),
   scriptFiles: files
     .filter((f) => /scripts\/[^/]+\.(sh|mjs|ts|js|py)$/.test(rel(f)))
-    .map((f) => ({ file: rel(f), executable: isExec(f), lines: readFileSync(f, 'utf8').split('\n').length })),
+    .map((f) => ({
+      file: rel(f),
+      executable: isExec(f),
+      lines: readFileSync(f, 'utf8').split('\n').length,
+    })),
   launchScripts: files
     .filter((f) => {
       const r = rel(f)
@@ -296,7 +351,8 @@ report.package = {
   workflowLeadPresent: files.some((f) => /workflow_lead\.md$/.test(f)),
   runningMd: runningCandidates.map((f) => ({
     file: rel(f),
-    verbatimCopyOfSkill: skillRunning !== null ? readFileSync(f, 'utf8') === skillRunning : null,
+    verbatimCopyOfSkill:
+      skillRunning !== null ? readFileSync(f, 'utf8') === skillRunning : null,
   })),
   allFiles: files.map(rel).sort(),
 }

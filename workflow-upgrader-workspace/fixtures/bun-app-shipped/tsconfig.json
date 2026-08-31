@@ -1,1 +1,10 @@
-{ "compilerOptions": { "strict": true, "module": "esnext", "target": "es2022", "moduleResolution": "bundler", "types": ["bun-types"] }, "include": ["src"] }
+{
+  "compilerOptions": {
+    "strict": true,
+    "module": "esnext",
+    "target": "es2022",
+    "moduleResolution": "bundler",
+    "types": ["bun-types"]
+  },
+  "include": ["src"]
+}
