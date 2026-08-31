@@ -52,9 +52,9 @@ describe('stageClaude', () => {
     expect(existsSync(path.join(plugin, 'commands', 'awc-status.md'))).toBe(
       true,
     )
-    // A create session gets no updater: nothing extra competes for triggering.
+    // A create session gets no upgrader: nothing extra competes for triggering.
     expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-updater', 'SKILL.md')),
+      existsSync(path.join(plugin, 'skills', 'workflow-upgrader', 'SKILL.md')),
     ).toBe(false)
     expect(
       existsSync(
@@ -64,19 +64,19 @@ describe('stageClaude', () => {
     cleanup(tmp)
   })
 
-  test('adds the updater in update mode, keeping the creator beside it', () => {
+  test('adds the upgrader in upgrade mode, keeping the creator beside it', () => {
     const tmp = freshTmp()
-    const plugin = stageClaude(tmp, 'update')
+    const plugin = stageClaude(tmp, 'upgrade')
     expect(
-      existsSync(path.join(plugin, 'skills', 'workflow-updater', 'SKILL.md')),
+      existsSync(path.join(plugin, 'skills', 'workflow-upgrader', 'SKILL.md')),
     ).toBe(true)
-    // The updater reads the dialect and the agent bases out of the creator's
+    // The upgrader reads the dialect and the agent bases out of the creator's
     // folder, so the pair is staged together or those paths dangle.
     expect(
       existsSync(path.join(plugin, 'skills', 'workflow-creator', 'SKILL.md')),
     ).toBe(true)
-    // With both loaded, the creator hands an update request to the updater in
-    // place — never by bouncing the user out to a fresh `awc --update`.
+    // With both loaded, the creator hands an upgrade request to the upgrader in
+    // place — never by bouncing the user out to a fresh `awc --upgrade`.
     const creator = readFileSync(
       path.join(plugin, 'skills', 'workflow-creator', 'SKILL.md'),
       'utf8',
@@ -122,7 +122,7 @@ afterAll(() => {
 // A user who already has a skill and command of the same name as the payload.
 function seedColliding(skillsDir: string, statusPath: string) {
   return (dir: string) => {
-    for (const name of ['workflow-creator', 'workflow-updater']) {
+    for (const name of ['workflow-creator', 'workflow-upgrader']) {
       mkdirSync(path.join(dir, skillsDir, name), { recursive: true })
       writeFileSync(
         path.join(dir, skillsDir, name, 'SKILL.md'),
@@ -188,49 +188,51 @@ for (const host of HOSTS) {
       rmSync(real, { recursive: true, force: true })
     })
 
-    test('stages the updater only for an update session', () => {
+    test('stages the upgrader only for an upgrade session', () => {
       const real = fakeHost(host.envVar)
       const tmp = freshTmp()
-      const updater = path.join(host.skills, 'workflow-updater', 'SKILL.md')
+      const upgrader = path.join(host.skills, 'workflow-upgrader', 'SKILL.md')
 
-      expect(existsSync(path.join(host.stage(tmp), updater))).toBe(false)
+      expect(existsSync(path.join(host.stage(tmp), upgrader))).toBe(false)
       cleanup(tmp)
 
-      const staged = host.stage(tmp, 'update')
-      expect(existsSync(path.join(staged, updater))).toBe(true)
+      const staged = host.stage(tmp, 'upgrade')
+      expect(existsSync(path.join(staged, upgrader))).toBe(true)
       expect(existsSync(path.join(staged, skillMd))).toBe(true)
       cleanup(tmp)
       rmSync(real, { recursive: true, force: true })
     })
 
-    // A user with their own workflow-updater skill has it shadowed in as a
+    // A user with their own workflow-upgrader skill has it shadowed in as a
     // symlink, so "is it absent" has to mean "no real file of ours", not "no
-    // entry" — and the update-mode copy still has to unlink that link rather
+    // entry" — and the upgrade-mode copy still has to unlink that link rather
     // than write through it into their skill.
-    test('leaves a same-named user updater alone until --update', () => {
+    test('leaves a same-named user upgrader alone until --upgrade', () => {
       const real = fakeHost(host.envVar, seedColliding(host.skills, statusMd))
       const tmp = freshTmp()
-      const updater = path.join(host.skills, 'workflow-updater', 'SKILL.md')
+      const upgrader = path.join(host.skills, 'workflow-upgrader', 'SKILL.md')
 
       const created = host.stage(tmp)
-      expect(readFileSync(path.join(created, updater), 'utf8')).toBe(
+      expect(readFileSync(path.join(created, upgrader), 'utf8')).toBe(
         'USER ORIGINAL',
       )
       expect(
         lstatSync(
-          path.join(created, host.skills, 'workflow-updater'),
+          path.join(created, host.skills, 'workflow-upgrader'),
         ).isSymbolicLink(),
       ).toBe(true)
       cleanup(tmp)
 
-      const staged = host.stage(tmp, 'update')
-      expect(readFileSync(path.join(staged, updater), 'utf8')).toContain(
-        'Workflow Updater',
+      const staged = host.stage(tmp, 'upgrade')
+      expect(readFileSync(path.join(staged, upgrader), 'utf8')).toContain(
+        'Workflow Upgrader',
       )
-      expect(lstatSync(path.join(staged, updater)).isSymbolicLink()).toBe(false)
+      expect(lstatSync(path.join(staged, upgrader)).isSymbolicLink()).toBe(
+        false,
+      )
       cleanup(tmp)
 
-      expect(readFileSync(path.join(real, updater), 'utf8')).toBe(
+      expect(readFileSync(path.join(real, upgrader), 'utf8')).toBe(
         'USER ORIGINAL',
       )
       rmSync(real, { recursive: true, force: true })
@@ -338,28 +340,28 @@ describe('shadow', () => {
 })
 
 describe('the shared payload', () => {
-  test('ships grill-me, grilling and workflow-updater beside the creator', () => {
+  test('ships grill-me, grilling and workflow-upgrader beside the creator', () => {
     const skills = path.join(sharedDir(), 'skills')
     for (const name of [
       'grill-me',
       'grilling',
       'workflow-creator',
-      'workflow-updater',
+      'workflow-upgrader',
     ]) {
       expect(existsSync(path.join(skills, name, 'SKILL.md'))).toBe(true)
     }
   })
 
-  // The updater borrows the dialect, the validation checklist and the agent
+  // The upgrader borrows the dialect, the validation checklist and the agent
   // bases from `../workflow-creator/` rather than forking them, which only
   // works because every host stages skills as flat siblings. A path that has
   // moved fails silently at run time — the model just reads nothing — so it is
   // checked here against the real files.
-  test('every ../workflow-creator/ path the updater cites resolves', () => {
+  test('every ../workflow-creator/ path the upgrader cites resolves', () => {
     const skills = path.join(sharedDir(), 'skills')
-    const updater = path.join(skills, 'workflow-updater')
+    const upgrader = path.join(skills, 'workflow-upgrader')
     const cited = new Set<string>()
-    for (const file of walk(updater)) {
+    for (const file of walk(upgrader)) {
       const text = readFileSync(file, 'utf8')
       for (const m of text.matchAll(
         /\.\.\/workflow-creator\/([\w./-]*[\w/])/g,
@@ -907,15 +909,15 @@ describe('trimming story_partner by mark', () => {
   })
 })
 
-// The updater's evals grade a diff, so their fixtures are packages rather than
+// The upgrader's evals grade a diff, so their fixtures are packages rather than
 // bare repos, and each eval names the one behavior it exists to catch. Both are
 // silent failures otherwise: a renamed fixture or a dropped expectation key
 // surfaces only when someone next runs an eval.
-describe('the updater eval material', () => {
+describe('the upgrader eval material', () => {
   const workspace = path.join(
     import.meta.dir,
     '..',
-    'workflow-updater-workspace',
+    'workflow-upgrader-workspace',
   )
   const evals = JSON.parse(
     readFileSync(path.join(workspace, 'evals', 'evals.json'), 'utf8'),
@@ -927,7 +929,7 @@ describe('the updater eval material', () => {
       expect(e.files.length).toBeGreaterThan(0)
       for (const f of e.files) {
         const fixture = path.join(workspace, f)
-        // A fixture with no package is a creation prompt wearing an update's
+        // A fixture with no package is a creation prompt wearing an upgrade's
         // clothes — the whole skill starts by locating one.
         const workflows = path.join(fixture, 'workflows')
         expect({ eval: e.name, hasWorkflows: existsSync(workflows) }).toEqual({
@@ -940,7 +942,7 @@ describe('the updater eval material', () => {
     }
   })
 
-  test('the keys that grade update-only behavior are all present', () => {
+  test('the keys that grade upgrade-only behavior are all present', () => {
     const names: string[] = evals.evals.flatMap(
       (e: { expectations: string[] }) =>
         e.expectations.map((x) => x.split(':')[0]),
@@ -960,7 +962,7 @@ describe('the updater eval material', () => {
     ]) {
       expect(names).toContain(key)
     }
-    // Every eval carries the two that make an update an update.
+    // Every eval carries the two that make an upgrade an upgrade.
     for (const e of evals.evals as {
       name: string
       expectations: string[]
@@ -975,9 +977,9 @@ describe('the updater eval material', () => {
     }
   })
 
-  test('the diff extractor reports what an update touched', () => {
+  test('the diff extractor reports what an upgrade touched', () => {
     const baseline = path.join(workspace, 'fixtures', 'bun-app-shipped')
-    const result = path.join(mkdtempSync(path.join(tmpdir(), 'awc-upd-')), 'r')
+    const result = path.join(mkdtempSync(path.join(tmpdir(), 'awc-upg-')), 'r')
     cpSync(baseline, result, { recursive: true })
     const agent = path.join(
       result,
@@ -989,7 +991,7 @@ describe('the updater eval material', () => {
     writeFileSync(agent, `${readFileSync(agent, 'utf8')}\n`)
     writeFileSync(path.join(result, 'workflows', 'ship-feature', 'new.sh'), 'x')
 
-    const script = path.join(workspace, 'scripts', 'check_update.ts')
+    const script = path.join(workspace, 'scripts', 'check_upgrade.ts')
     const run = Bun.spawnSync(['bun', script, baseline, result])
     expect(run.exitCode).toBe(0)
     const facts = JSON.parse(run.stdout.toString())
@@ -1112,7 +1114,7 @@ describe('cleanup', () => {
 })
 
 // The staged payload and the initial prompt are chosen in different places, so
-// a host could stage the updater and still greet with the create prompt. Smoke
+// a host could stage the upgrader and still greet with the create prompt. Smoke
 // cannot see this: it launches with `--version`, which never reads the prompt.
 describe('the launch command each host builds', () => {
   const HOST_COMMANDS = [
@@ -1134,15 +1136,15 @@ describe('the launch command each host builds', () => {
   for (const { host, build } of HOST_COMMANDS) {
     test(`${host} puts this session's own prompt on argv`, () => {
       const create = build(opts('create'))
-      const update = build(opts('update'))
+      const upgrade = build(opts('upgrade'))
 
       expect(create.args).toContain(readPrompt(hostDir(host)))
-      expect(update.args).toContain(readPrompt(hostDir(host), 'update'))
-      expect(update.args.join(' ')).toContain('workflow-updater')
-      expect(create.args.join(' ')).not.toContain('workflow-updater')
+      expect(upgrade.args).toContain(readPrompt(hostDir(host), 'upgrade'))
+      expect(upgrade.args.join(' ')).toContain('workflow-upgrader')
+      expect(create.args.join(' ')).not.toContain('workflow-upgrader')
       // Passthrough still rides last, in both modes.
       expect(create.args.at(-1)).toBe('--flag')
-      expect(update.args.at(-1)).toBe('--flag')
+      expect(upgrade.args.at(-1)).toBe('--flag')
     })
   }
 })
@@ -1151,20 +1153,20 @@ describe('readPrompt', () => {
   test('every host ships a trimmed initial prompt for both modes', () => {
     for (const host of hostNames()) {
       const create = readPrompt(hostDir(host))
-      const update = readPrompt(hostDir(host), 'update')
-      for (const prompt of [create, update]) {
+      const upgrade = readPrompt(hostDir(host), 'upgrade')
+      for (const prompt of [create, upgrade]) {
         expect(prompt.length).toBeGreaterThan(0)
         expect(prompt).toBe(prompt.trim())
       }
-      // The flag has to change what the session opens on, or --update is
+      // The flag has to change what the session opens on, or --upgrade is
       // staging alone and the model still starts by offering to build one.
-      expect(update).not.toBe(create)
-      expect(update).toContain('workflow-updater')
-      // And the create prompt must never name the updater: it is not staged
+      expect(upgrade).not.toBe(create)
+      expect(upgrade).toContain('workflow-upgrader')
+      // And the create prompt must never name the upgrader: it is not staged
       // for that session, so pointing a user at it strands them. Catches a
-      // prompt-update.md copied over prompt.md, which the inequality above
+      // prompt-upgrade.md copied over prompt.md, which the inequality above
       // would not.
-      expect(create).not.toContain('workflow-updater')
+      expect(create).not.toContain('workflow-upgrader')
     }
   })
 })

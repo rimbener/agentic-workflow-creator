@@ -15,8 +15,8 @@ The bundled payload's centerpiece is the **workflow-creator** skill: it
 interviews a user and generates a "lead-run agentic workflow package" — a
 YAML of tiny nodes executed step by step by a `workflow_lead` subagent, plus
 the agent files and scripts those nodes invoke. Its counterpart is
-**workflow-updater**, which changes a package that already exists in the
-user's repo; `awc <agent> --update` opens the session on it.
+**workflow-upgrader**, which changes a package that already exists in the
+user's repo; `awc <agent> --upgrade` opens the session on it.
 
 There are two largely independent things to reason about:
 
@@ -60,11 +60,11 @@ Small, linear pipeline, one file per concern:
 - `agents/{claude,codex,opencode}.ts` — one file per host: a `stage*` function
   (exported, so tests can drive it without spawning) and a `run*` that stages
   then calls `launch`.
-- `mode.ts` — the one place that knows what `--update` changes: which skill
+- `mode.ts` — the one place that knows what `--upgrade` changes: which skill
   directories the payload leaves out, and which initial prompt each host
-  reads. The creator ships in **both** modes (the updater reads the dialect
-  and the agent bases from `../workflow-creator/`); the updater ships only
-  under `--update`, so a create session has nothing extra competing for
+  reads. The creator ships in **both** modes (the upgrader reads the dialect
+  and the agent bases from `../workflow-creator/`); the upgrader ships only
+  under `--upgrade`, so a create session has nothing extra competing for
   triggering.
 - `staging.ts` — `resetTmp`/`copyPayload`/`shadow`/`cleanup`/`readPrompt`.
   `resetTmp` always deletes a stale `tmpDir` first (self-heals after a
@@ -78,7 +78,7 @@ Small, linear pipeline, one file per concern:
 
 Adding another agent means a row in `assets/agents-cli.conf`, a file under
 `src/agents/`, and both `templates/hosts/<name>/prompt.md` and
-`prompt-update.md`.
+`prompt-upgrade.md`.
 
 Codex is the odd one out for the payload's *command* half: it has no
 slash-command slot (it dropped `$CODEX_HOME/prompts` in 0.117.0), so
@@ -117,27 +117,27 @@ templates/
 │   │       ├── finish-task.sh       # archives .awc/tasks/in-progress/<task>/ → done/; copied verbatim into a package
 │   │       ├── agents-cli.conf      # host roster — add/remove a host only here
 │   │       └── agents/*.md          # base agent templates instantiated (tailored) per generated workflow
-│   └── skills/workflow-updater/     # staged only under --update
+│   └── skills/workflow-upgrader/     # staged only under --upgrade
 │       ├── SKILL.md                 # locate → inventory → audit → scoped interview → diff plan → apply → validate
 │       └── references/
 │           ├── inventory.md         # reading a package into a map, and the audit
 │           ├── change-playbook.md   # what each kind of change ripples into
 │           └── interview.md         # the scoped interview
 └── hosts/
-    ├── claude/{prompt.md, prompt-update.md, plugin/.claude-plugin/plugin.json}
-    ├── codex/{prompt.md, prompt-update.md}
-    └── opencode/{prompt.md, prompt-update.md}
+    ├── claude/{prompt.md, prompt-upgrade.md, plugin/.claude-plugin/plugin.json}
+    ├── codex/{prompt.md, prompt-upgrade.md}
+    └── opencode/{prompt.md, prompt-upgrade.md}
 ```
 
 Key things to know before touching this content:
 
-- **workflow-updater owns no dialect of its own.** It reads
+- **workflow-upgrader owns no dialect of its own.** It reads
   `../workflow-creator/`'s `assets/running.md`, `references/*`, `SKILL.md` and
   `assets/agents/*.md` — every host stages skills as flat siblings, so that
   path resolves everywhere. The creator's validation checklist is what the
-  updater's audit compares a package against, which is why "bring an old
+  upgrader's audit compares a package against, which is why "bring an old
   package up to date" needs no version list and cannot rot. `test/staging.test.ts`
-  checks every `../workflow-creator/<path>` the updater cites still resolves.
+  checks every `../workflow-creator/<path>` the upgrader cites still resolves.
 - The bundled agents in `assets/agents/` are **base templates, never final
   artifacts**. The skill copies and tailors one per workflow into the
   generated package's `agents/`, trimming modes/checks the workflow doesn't
@@ -188,8 +188,8 @@ with their own reading.
   extracts JSON facts about a generated package (node shapes, ref resolution,
   grep flags).
 
-`workflow-updater-workspace/` — grading a *diff*, so its fixtures are repos that
-already hold a package and its evals run under `awc <agent> --update`:
+`workflow-upgrader-workspace/` — grading a *diff*, so its fixtures are repos that
+already hold a package and its evals run under `awc <agent> --upgrade`:
 - `fixtures/bun-app-shipped` — a current-dialect package; the baseline the
   change evals start from.
 - `fixtures/bun-app-drifted` — the same repo with a package generated before
@@ -200,9 +200,9 @@ already hold a package and its evals run under `awc <agent> --update`:
   pairing plus a new input, bring a stale package up to date, drop a phase and
   sweep the orphans). Every one carries `nothing-else-touched` and
   `package-still-valid`; `test/staging.test.ts` pins those two, the fixtures,
-  and the keys that grade update-only behavior.
-- `scripts/check_update.ts` — run via
-  `bun workflow-updater-workspace/scripts/check_update.ts <baseline-dir> <result-dir>`;
+  and the keys that grade upgrade-only behavior.
+- `scripts/check_upgrade.ts` — run via
+  `bun workflow-upgrader-workspace/scripts/check_upgrade.ts <baseline-dir> <result-dir>`;
   reports which files the session added, removed and changed, which is what
   both "did the ripples land" and "was anything else touched" are read from. It
   compares two directories rather than reading git, so it works whether or not

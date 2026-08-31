@@ -1,9 +1,9 @@
 ---
-name: workflow-updater
+name: workflow-upgrader
 description: Change a lead-run agentic workflow package that already exists in this repo — the workflows/<name>/ folder with its YAML, agents, scripts and launchers. Use whenever the user wants to add, drop or reshape a phase, swap agents or pairing, change inputs, isolation, commands, caps or gates, fix a workflow that halts or misbehaves mid-run, or bring an older generated package back in line with the current dialect — even if they only say "change my workflow", name a single node, or paste an error from a run.
 ---
 
-# Workflow Updater
+# Workflow Upgrader
 
 You change a **workflow package that already exists**: the `workflows/<name>/`
 folder — its YAML of tiny nodes, the agent files those nodes invoke, the
@@ -64,7 +64,7 @@ merely a path that failed on the first try — say so plainly before you start,
 because you are then working degraded: the package's own `running.md` becomes
 your contract, agent modes cannot be re-instantiated from their bases, and "is
 this copy stale" has no answer. Name those three gaps to the user and let them
-decide whether to restart the session with `awc <agent> --update`, which loads
+decide whether to restart the session with `awc <agent> --upgrade`, which loads
 both skills, rather than quietly running an audit that cannot see its own spec.
 
 ## Process
@@ -79,7 +79,7 @@ both skills, rather than quietly running an audit that cannot see its own spec.
    table — it is the frame for the whole session, and it is how the user finds
    out you read the same package they have in mind.
 3. **Audit** the package against the creator's validation checklist plus the
-   update-only checks in `references/inventory.md`. Report findings in two
+   upgrade-only checks in `references/inventory.md`. Report findings in two
    groups: what stands in the way of the requested change, and what is
    independent of it. **The user decides which of the second group to fix.**
 4. **Interview** per `references/interview.md` — scoped to what the change
@@ -91,18 +91,18 @@ both skills, rather than quietly running an audit that cannot see its own spec.
    node sequence changes. **Get an explicit yes before writing files.**
 6. **Apply** it — per the rules below and the playbook's recipes.
 7. **Validate**: the creator's full checklist against the changed package, then
-   the update-only checks (no orphans, no dangling references, the launchers
+   the upgrade-only checks (no orphans, no dangling references, the launchers
    still agree, `running.md` still verbatim, new prose positive).
 8. **Hand off**: what changed, what to commit before the next run, and anything
    the next run will ask of them differently.
 
-## The rules that make an update good
+## The rules that make an upgrade good
 
 **The package is the record.** The YAML, the agent copies and the README are
 what an earlier interview settled — isolation, pairing, formats, caps,
 commands, and which artifacts exist. Read a decision out of the artifacts
 rather than asking the user to recall it. Re-asking a settled question is the
-main way an update session wastes someone's time, and it invites an answer that
+main way an upgrade session wastes someone's time, and it invites an answer that
 contradicts the package they already run.
 
 **Change only what the request reaches.** Everything in the package is
@@ -141,7 +141,7 @@ means a run may be paused and resumable, and resuming works by node id. Before
 renaming or removing nodes, check for one and tell the user what the change
 does to it: finish the run first, or accept that it restarts.
 
-**Updated artifacts still read positively.** The package describes what the
+**Upgraded artifacts still read positively.** The package describes what the
 workflow does — not what it used to do. A removed phase leaves no scar tissue
 ("mutation testing removed", "no longer uses TDD") in the README, the YAML
 comments or an agent prompt; it simply isn't there any more. The history of the
@@ -188,7 +188,7 @@ because it runs through every agent file at once.
 
 Run the creator's validation checklist over the whole changed package, not just
 the nodes you touched — a ripple you missed shows up there. Then these, which
-only an update can fail:
+only an upgrade can fail:
 
 - **No orphans.** Every file in `agents/` is referenced by a node; every file
   in `scripts/` is run by a node, an `until_run:`, or a `when:`; every input

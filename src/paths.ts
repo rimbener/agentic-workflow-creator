@@ -11,7 +11,7 @@ export function templatesDir(): string {
 // The host-neutral payload: the bundled skills and the awc-status command.
 // Each host module places these where it looks for them. Which skills a given
 // session gets is src/mode.ts's call — workflow-creator and awc-status ship in
-// every session, workflow-updater only under `--update`.
+// every session, workflow-upgrader only under `--upgrade`.
 export function sharedDir(): string {
   return path.join(templatesDir(), 'shared')
 }

@@ -29,7 +29,7 @@ Agents:
 ${agents}
 
 Options:
-  --update        Open the session on workflow-updater, to change a workflow
+  --upgrade       Open the session on workflow-upgrader, to change a workflow
                   package this repo already has (default: create a new one)
   --keep          Do not delete the temp folder on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
@@ -86,7 +86,7 @@ function main(): void {
   run({
     tmpDir: cli.tmpDir,
     keep: cli.keep,
-    mode: mode(cli.update),
+    mode: mode(cli.upgrade),
     passthrough: cli.passthrough,
   })
 }

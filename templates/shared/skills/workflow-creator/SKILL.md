@@ -19,13 +19,13 @@ Read these before starting (silently — they are your working knowledge):
 - `references/hosts.md` — the three in-session launcher files every package
   ships, plus the launch script a worktree workflow copies from `assets/run.sh`.
 
-**A package that already exists is an update, not a creation.** If the repo
+**A package that already exists is an upgrade, not a creation.** If the repo
 already holds a `workflows/<name>/` package and the ask is to change it — add a
 phase, swap the pairing, change the inputs, bring it up to date — a full
 interview and a regenerated package would overwrite decisions and hand-edits
-that are already in there. Say so, then hand it over: if the **workflow-updater
+that are already in there. Say so, then hand it over: if the **workflow-upgrader
 skill is loaded in this session**, give it the request rather than sending the
-user anywhere. If it is not, point the user at `awc <agent> --update`, which
+user anywhere. If it is not, point the user at `awc <agent> --upgrade`, which
 opens a session on the existing package.
 Iterating on a package **this session** just designed
 stays here: the decisions behind it are still in the conversation.

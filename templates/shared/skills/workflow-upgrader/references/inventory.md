@@ -13,7 +13,7 @@ A package is a `workflows/<name>/` folder holding `<name>.yaml` and
 `.codex/skills/<name>/SKILL.md`, `.opencode/command/<name>.md`, and — only for
 a worktree workflow — `./<name>.sh` and `./agents-cli.conf`.
 
-Nothing found → the job is creation, not update; hand over to the
+Nothing found → the job is creation, not upgrade; hand over to the
 workflow-creator skill. Several found → list them with their one-line
 `description:` and ask which. A `workflows/` folder holding YAML that has no
 `nodes:` list is someone else's format: say so rather than reshaping it.
@@ -81,7 +81,7 @@ Compare against the current bases while you're there:
   protocol, older artifact paths, or a `description:` naming modes it no longer
   has.
 
-### Update-only checks
+### Upgrade-only checks
 
 Things a freshly written package cannot have, so the creator's checklist never
 looks for them:
@@ -94,7 +94,7 @@ looks for them:
   naming an input that isn't declared.
 - **Copy/node mismatch.** A node invoking a mode its agent copy was trimmed of,
   or a copy carrying a mode nothing invokes. Both directions matter: the first
-  halts the run, the second confuses the next update.
+  halts the run, the second confuses the next upgrade.
 - **Launcher drift.** A missing launcher; launchers whose input mapping
   disagrees with each other or with `inputs:`; a launcher naming a workflow
   path that has since been renamed; a Codex skill whose `description:` no

@@ -1,7 +1,7 @@
 # The scoped interview
 
 Creating a workflow needs a relentless interview because nothing is settled
-yet. Updating one is the opposite problem: almost everything is settled, in
+yet. Upgrading one is the opposite problem: almost everything is settled, in
 writing, in the package you just inventoried. So the interview is narrow and
 short — the areas the change reopens, and nothing else.
 
@@ -21,7 +21,7 @@ ripples into; those ripples are what you actually need answers about.
 is the record" in the skill's rules. Read decisions from it; ask only what it
 does not answer.
 
-**Mine the failure, when there is one.** An update prompted by a broken run
+**Mine the failure, when there is one.** An upgrade prompted by a broken run
 starts from the run: which node halted, what the agent's report file says, what
 the command printed. The fix follows from that, and it is often not the change
 the user proposed.
@@ -47,7 +47,7 @@ pairing rewrites every loop; the trail migration rewrites every agent file —
 say so and confirm before planning it. Same for anything that touches a run
 already in flight under `.awc/tasks/in-progress/`.
 
-And one question that belongs to updates alone: **the audit's independent
+And one question that belongs to upgrades alone: **the audit's independent
 findings.** Offer them as a short list, once, and take the user's answer as
 final.
 
@@ -55,7 +55,7 @@ final.
 
 - Anything the package answers. Confirm it in the plan instead: "this stays a
   worktree workflow, plain acceptance criteria, cap 6 on the slice loop."
-- The whole creator interview. An update that reopens every area is a rewrite,
+- The whole creator interview. An upgrade that reopens every area is a rewrite,
   and if that is genuinely what the user wants, say so and hand over to the
   workflow-creator skill.
 - Repo facts. Test runner, lint command, CI config, whether a script exists —

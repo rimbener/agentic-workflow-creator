@@ -1,6 +1,6 @@
 {
-  "skill_name": "workflow-updater",
-  "notes": "Each eval starts from a repo that already holds a generated workflow package, so the graded object is the diff, not a package. Every eval carries the two assertions that make an update an update: the ripples landed, and nothing outside the change was touched. Run the with-skill arm under `awc <agent> --update`; the baseline arm is the same prompt with no updater staged.",
+  "skill_name": "workflow-upgrader",
+  "notes": "Each eval starts from a repo that already holds a generated workflow package, so the graded object is the diff, not a package. Every eval carries the two assertions that make an upgrade an upgrade: the ripples landed, and nothing outside the change was touched. Run the with-skill arm under `awc <agent> --upgrade`; the baseline arm is the same prompt with no upgrader staged.",
   "evals": [
     {
       "id": 0,

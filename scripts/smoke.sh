@@ -10,7 +10,7 @@
 #      holds the workflow-creator skill and the awc-status command, as real
 #      files, under the names that host looks for. --version never loads them,
 #      so the lifecycle check alone cannot see a payload in the wrong place.
-#      Then the same again under --update, which adds the workflow-updater
+#      Then the same again under --upgrade, which adds the workflow-upgrader
 #      skill — and only that flag may add it.
 set -uo pipefail
 
@@ -69,7 +69,7 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
   probe=''
   want_skill=''
   want_status=''
-  want_updater=''
+  want_upgrader=''
   case "$agent" in
     codex)
       # Both ship as skills here, and prompt-input is what the model actually
@@ -77,7 +77,7 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
       probe='codex debug prompt-input'
       want_skill='- workflow-creator:'
       want_status='- awc-status:'
-      want_updater='- workflow-updater:'
+      want_upgrader='- workflow-upgrader:'
       ;;
     opencode)
       # The skill and the command live in different registries, so check both:
@@ -85,7 +85,7 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
       probe='opencode debug skill + debug config'
       want_skill='"name": "workflow-creator"'
       want_status='"awc-status": {'
-      want_updater='"name": "workflow-updater"'
+      want_upgrader='"name": "workflow-upgrader"'
       ;;
   esac
 
@@ -132,32 +132,32 @@ while IFS=$'\t' read -r agent staged skillpath statuspath <&3 || [ -n "${agent:-
 
   check_loaded create "$want_skill" "$want_status"
 
-  # 4. --update swaps in the second skill. The creator stays either way: the
-  # updater reads the dialect and the agent bases out of its folder, so the two
+  # 4. --upgrade swaps in the second skill. The creator stays either way: the
+  # upgrader reads the dialect and the agent bases out of its folder, so the two
   # are only ever staged together — and a create session must not carry the
-  # updater at all, or it competes for triggering when nothing exists to update.
+  # upgrader at all, or it competes for triggering when nothing exists to upgrade.
   # Same real-file test as the payload check above: on the env-var hosts a
-  # user who owns a workflow-updater skill has it shadowed in as a symlink, and
+  # user who owns a workflow-upgrader skill has it shadowed in as a symlink, and
   # that link is theirs, not our payload landing where it should not.
-  updaterpath="${skillpath/workflow-creator/workflow-updater}"
-  if [ -f "$TMP/$staged/$updaterpath" ] && [ ! -L "$TMP/$staged/$updaterpath" ]; then
-    echo "   FAIL: $updaterpath staged without --update"
+  upgraderpath="${skillpath/workflow-creator/workflow-upgrader}"
+  if [ -f "$TMP/$staged/$upgraderpath" ] && [ ! -L "$TMP/$staged/$upgraderpath" ]; then
+    echo "   FAIL: $upgraderpath staged without --upgrade"
     fail=1
   else
-    echo "   ok: no $updaterpath without --update"
+    echo "   ok: no $upgraderpath without --upgrade"
   fi
 
   rm -rf "$TMP"
-  node dist/cli.js "$agent" --update --keep --tmp-dir "$TMP" -- --version >/dev/null || true
-  for want in "$staged/$updaterpath" "$staged/$skillpath"; do
+  node dist/cli.js "$agent" --upgrade --keep --tmp-dir "$TMP" -- --version >/dev/null || true
+  for want in "$staged/$upgraderpath" "$staged/$skillpath"; do
     if [ -f "$TMP/$want" ] && [ ! -L "$TMP/$want" ]; then
-      echo "   ok: $want (--update)"
+      echo "   ok: $want (--upgrade)"
     else
-      echo "   FAIL: missing or symlinked under --update — $want"
+      echo "   FAIL: missing or symlinked under --upgrade — $want"
       fail=1
     fi
   done
-  check_loaded update "$want_updater" "$want_skill" "$want_status"
+  check_loaded upgrade "$want_upgrader" "$want_skill" "$want_status"
 
   rm -rf "$TMP"
 done 3< <(bun -e 'import { loadHosts } from "./src/hosts.ts"

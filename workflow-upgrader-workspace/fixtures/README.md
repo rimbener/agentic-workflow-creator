@@ -1,7 +1,7 @@
-# Eval fixtures — workflow-updater
+# Eval fixtures — workflow-upgrader
 
-The updater's fixtures are target repos that **already hold a generated
-workflow package**, since an update session starts from one. An eval run copies
+The upgrader's fixtures are target repos that **already hold a generated
+workflow package**, since an upgrade session starts from one. An eval run copies
 a fixture into its run directory and runs `git init && git add -A && git
 commit` in the copy — the packages exercise git operations (worktrees,
 commits), and a worktree workflow refuses to launch unless its YAML is on

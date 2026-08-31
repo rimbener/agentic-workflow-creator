@@ -1,7 +1,7 @@
-// Objective facts extractor for an *update* to a workflow package.
-// Usage: bun check_update.ts <baseline-dir> <result-dir>
+// Objective facts extractor for an *upgrade* to a workflow package.
+// Usage: bun check_upgrade.ts <baseline-dir> <result-dir>
 //
-// An update is graded on its diff, not on the package alone, and both halves of
+// An upgrade is graded on its diff, not on the package alone, and both halves of
 // that grading need the same list: which files the session added, removed and
 // changed. This prints exactly that, and never judges — a grader combines it
 // with `check_package.ts` (is the result still a valid package?) and its own
@@ -15,7 +15,7 @@ import path from 'node:path'
 const baseline = process.argv[2]
 const result = process.argv[3]
 if (!baseline || !result) {
-  console.error('usage: bun check_update.ts <baseline-dir> <result-dir>')
+  console.error('usage: bun check_upgrade.ts <baseline-dir> <result-dir>')
   process.exit(1)
 }
 
@@ -43,7 +43,7 @@ for (const f of [...before].filter((x) => after.has(x)).sort()) {
   ;(a.equals(b) ? unchanged : modified).push(f)
 }
 
-// `executable` matters for a script the update added: the package's own
+// `executable` matters for a script the upgrade added: the package's own
 // checklist requires it, and a non-executable one fails only at run time.
 const addedExecutable = added.filter((f) => {
   try {
