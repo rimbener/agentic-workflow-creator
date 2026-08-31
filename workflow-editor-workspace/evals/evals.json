@@ -1,0 +1,75 @@
+{
+  "skill_name": "workflow-editor",
+  "notes": "Each eval runs its with-skill arm under `awc <agent> --edit`; the baseline arm is the same prompt with no editor staged. The graded object is the diff plus the session's conduct: the stated changes land ungated, everything beyond them stays gated, the validation never shrinks, and requests that are not edits get handed to the session or launcher that owns them. The touched/untouched reading comes from `bun workflow-upgrader-workspace/scripts/check_upgrade.ts <fixture-copy> <result-dir>` and package validity from `bun workflow-creator-workspace/scripts/check_package.ts <result-dir> templates/shared/skills/workflow-creator/assets/running.md` (the second argument enables the running.md verbatim comparison; without it the script skips that fact). The scripts extract facts and belong to their own workspaces; this one adds none.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "stated-changes-applied-as-given",
+      "prompt": "In the ship-feature workflow, rename the `request` input to `story` everywhere it appears. I've already decided on this; apply it as described.",
+      "expected_output": "The input renamed in the YAML's inputs: and every {{request}} placeholder, threaded through all three in-session launchers, ship-feature.sh's usage/args/step 3, and the README — applied without a node-table gate, an audit report, or a separate plan-approval turn, with the full validation checklist still run and nothing beyond the rename touched.",
+      "files": ["../workflow-upgrader-workspace/fixtures/bun-app-shipped"],
+      "expectations": [
+        "stated-changes-no-plan-gate: the session applies the rename without presenting the node table as a gate, without a broad audit report, and without asking for a separate yes on the change the user already stated",
+        "input-renamed-everywhere: inputs: declares story, every {{request}} placeholder reads {{story}}, and all three in-session launchers plus ship-feature.sh's usage line, args block and step 3 map the new name, worded the same across them",
+        "beyond-request-still-gated: anything the session wants to change beyond the rename and its ripples — an independent finding, an improvement — is offered as a question or a handoff note, never applied",
+        "validation-still-full: the session runs the creator's full validation checklist plus the editor's own orphan/dangling/launcher checks over the changed package before handing off",
+        "nothing-else-touched: every hunk in the diff traces to the rename or one of its ripples",
+        "package-still-valid: the YAML parses, every node has exactly one behavior, every agent path resolves, and every agent node passes the arguments its agent file requires",
+        "positive-phrasing: nothing added describes the input's previous name or what the session skipped"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "no-package-hands-to-creator",
+      "prompt": "Edit my workflow: the review loop's cap should be 8 instead of 6.",
+      "expected_output": "The repo holds no workflows/ package, so there is nothing to edit: the session says so and hands the request to the workflow-creator skill loaded beside it (a creation job), without improvising a package or applying anything.",
+      "files": ["fixtures/bun-app-bare"],
+      "expectations": [
+        "redirected-to-create: the session states no workflow package exists in the repo and hands the request to the workflow-creator skill loaded in this session, as a creation job",
+        "nothing-written: no workflows/ directory is improvised, no launcher files appear, and no project file changes — the session writes nothing before the hand-off"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "audit-ask-hands-to-upgrade",
+      "prompt": "My ship-feature workflow feels outdated and I'm not sure what's wrong with it — audit it and bring it up to date.",
+      "expected_output": "The ask wants the package reviewed and decisions made, not stated changes applied: the session says that is the workflow-upgrader's inventory-and-audit walk and points the user at `awc <agent> --upgrade`, leaving workflows/ship-feature/ byte-identical.",
+      "files": ["../workflow-upgrader-workspace/fixtures/bun-app-shipped"],
+      "expectations": [
+        "redirected-to-upgrade: the session identifies the request as an audit/modernization job and names `awc <agent> --upgrade` as the session that owns it, rather than improvising its own audit walk",
+        "nothing-else-touched: nothing in the repo is modified — the package, the launchers and the launch script are byte-identical",
+        "package-still-valid: trivially, because the package is untouched"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "run-ask-hands-to-launchers",
+      "prompt": "Use my ship-feature workflow to add a subtract(a, b) function to src/math.ts with unit tests — task id subtract-fn.",
+      "expected_output": "The ask is a run — land a change in the project through the package — not an edit: the session says so and hands the user the package's own launcher, ./ship-feature.sh subtract-fn <host> \"add a subtract(a, b) function to src/math.ts with unit tests\" (or the in-session launcher), without editing the package, walking the YAML itself, or making the code change directly.",
+      "files": ["../workflow-upgrader-workspace/fixtures/bun-app-shipped"],
+      "expectations": [
+        "run-handed-to-launchers: the session identifies the request as a run and names the package's own launcher — ./ship-feature.sh with the task id and request filled in, or the in-session launcher — as the way to run it",
+        "no-run-improvised: the session neither walks the YAML's nodes itself nor makes the requested code change directly — the hand-off is the whole answer",
+        "nothing-else-touched: nothing in the repo is modified — no package file, no launcher, no project source",
+        "package-still-valid: trivially, because the package is untouched"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "drop-a-phase-sweeps-orphans-ungated",
+      "prompt": "In the ship-feature workflow, remove the exhaustive engineering review round at the end — the per-slice reviews already catch what it catches. I've decided; apply it as described and leave everything else alone.",
+      "expected_output": "The review-round loop removed from ship-feature.yaml without a plan-approval turn, and its real orphans swept: agents/reviewer_engineering.md deleted, the implementer_tdd copy's fix-review-findings mode trimmed (description line included), the dod_validator copy no longer demanding the review report, and the README's walkthrough row gone — while everything the phase shared with surviving nodes stays: scripts/check.sh (the slice loop and the DoD round still run it) and the base var (the slice review, the DoD node and the gate still use it). Full validation run, nothing beyond the removal touched.",
+      "files": ["../workflow-upgrader-workspace/fixtures/bun-app-shipped"],
+      "expectations": [
+        "stated-changes-no-plan-gate: the removal is applied without presenting the node table as a gate or asking for a separate yes on the change the user already stated",
+        "node-list-orphans-swept: agents/reviewer_engineering.md is deleted since no node invokes it, the implementer_tdd copy no longer carries fix-review-findings (description: line included), the dod_validator copy no longer requires the review report no node now produces, and the README's walkthrough row is gone",
+        "shared-artifacts-survive: scripts/check.sh and the base var stay — the slice loop, the DoD round and the gate still use them, and deleting either breaks nodes the request never touched",
+        "beyond-request-still-gated: any independent finding or improvement the session spots is offered as a question or handoff note, never applied",
+        "validation-still-full: the session runs the creator's full validation checklist plus the editor's own orphan/dangling/launcher checks and the end-to-end git diff read before handing off",
+        "nothing-else-touched: every hunk in the diff traces to the removal or one of its named ripples — launchers, launch script, running.md and the untouched agents are byte-identical",
+        "package-still-valid: the YAML parses, every node has exactly one behavior, every agent path resolves, and every agent node passes the arguments its agent file requires",
+        "positive-phrasing: no artifact describes the phase that used to exist or echoes its removal"
+      ]
+    }
+  ]
+}
