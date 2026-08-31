@@ -37,10 +37,17 @@ const STORY_MODE_ONE = new RegExp(STORY_MODE.source)
 
 // Find candidate workflow YAMLs: any yaml with a top-level nodes/steps/jobs list.
 const yamlFiles = files.filter((f) => /\.ya?ml$/.test(f))
-const workflows: { file: string; doc: any; parseError?: string }[] = []
+const workflows: {
+  file: string
+  doc: Record<string, unknown> | null
+  parseError?: string
+}[] = []
 for (const f of yamlFiles) {
   try {
-    const doc = Bun.YAML.parse(readFileSync(f, 'utf8')) as any
+    const doc = Bun.YAML.parse(readFileSync(f, 'utf8')) as Record<
+      string,
+      unknown
+    > | null
     if (
       doc &&
       typeof doc === 'object' &&
@@ -48,7 +55,7 @@ for (const f of yamlFiles) {
     ) {
       workflows.push({ file: rel(f), doc })
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     workflows.push({
       file: rel(f),
       doc: null,
@@ -71,7 +78,7 @@ const BEHAVIOR_KEYS = [
   'shell',
 ]
 
-function nodeFacts(node: any, idx: number) {
+function nodeFacts(node: Record<string, unknown> | null, idx: number) {
   if (node === null || typeof node !== 'object') return { idx, malformed: true }
   const keys = Object.keys(node)
   const behaviors = keys.filter((k) => BEHAVIOR_KEYS.includes(k))
@@ -87,7 +94,7 @@ function nodeFacts(node: any, idx: number) {
     if (typeof node[k] === 'string' && node[k].trim().includes('\n'))
       multilineCmds.push(k)
   }
-  const facts: any = {
+  const facts: Record<string, unknown> = {
     idx,
     id: node.id ?? node.name ?? null,
     keys,
@@ -106,11 +113,14 @@ function nodeFacts(node: any, idx: number) {
           ? 1
           : 0,
       steps: Array.isArray(loop.steps)
-        ? loop.steps.map((s: any, i: number) => nodeFacts(s, i))
+        ? loop.steps.map((s: StoryNode, i: number) =>
+            nodeFacts(s as Record<string, unknown>, i),
+          )
         : undefined,
     }
     for (const k of ['prompt', 'agent', 'expect', 'allowed_tools'])
-      if (loop[k] !== undefined) (facts.loop as any)[k] = loop[k]
+      if (loop[k] !== undefined)
+        (facts.loop as Record<string, unknown>)[k] = loop[k]
   }
   for (const k of [
     'agent',
@@ -190,13 +200,20 @@ function storySteps(nodes: StoryNode[]) {
 const TRAIL_FLAT =
   /\.awc\/tasks\/(?!in-progress[/\s`"']|done[/\s`"'])[\w<>{}.-]+/g
 
-function collectRefs(doc: any): { agents: string[]; scripts: string[] } {
+function collectRefs(doc: Record<string, unknown>): {
+  agents: string[]
+  scripts: string[]
+} {
   const agents = new Set<string>()
   const scripts = new Set<string>()
-  const visit = (v: any) => {
-    if (Array.isArray(v)) return v.forEach(visit)
+  const visit = (v: unknown) => {
+    if (Array.isArray(v)) {
+      v.forEach(visit)
+      return
+    }
     if (v && typeof v === 'object') {
-      if (typeof v.agent === 'string') agents.add(v.agent)
+      const obj = v as Record<string, unknown>
+      if (typeof obj.agent === 'string') agents.add(obj.agent)
       for (const k of [
         'run',
         'bash',
@@ -208,19 +225,22 @@ function collectRefs(doc: any): { agents: string[]; scripts: string[] } {
         'when',
         'when_bash',
       ]) {
-        if (typeof v[k] === 'string') {
-          const m = v[k].match(/[\w./-]+\.(?:sh|mjs|ts|js|py)\b/g)
-          if (m) m.forEach((s: string) => scripts.add(s))
+        if (typeof obj[k] === 'string') {
+          const m = (obj[k] as string).match(/[\w./-]+\.(?:sh|mjs|ts|js|py)\b/g)
+          if (m)
+            m.forEach((s: string) => {
+              scripts.add(s)
+            })
         }
       }
-      return Object.values(v).forEach(visit)
+      Object.values(obj).forEach(visit)
     }
   }
   visit(doc)
   return { agents: [...agents], scripts: [...scripts] }
 }
 
-const report: any = { repo, workflows: [] }
+const report: Record<string, unknown> = { repo, workflows: [] }
 
 for (const wf of workflows) {
   if (!wf.doc) {
@@ -228,7 +248,9 @@ for (const wf of workflows) {
     continue
   }
   const doc = wf.doc
-  const nodes: any[] = Array.isArray(doc.nodes) ? doc.nodes : []
+  const nodes: Record<string, unknown>[] = Array.isArray(doc.nodes)
+    ? (doc.nodes as Record<string, unknown>[])
+    : []
   const wfDir = path.dirname(path.join(repo, wf.file))
   const refs = collectRefs(doc)
   const resolveRef = (r: string) => {
