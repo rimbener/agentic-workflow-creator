@@ -86,8 +86,9 @@ carries a `slice` field: the slice's subtasks are those whose field matches
    broken code.
 2. Establish the slice's diff without guessing a ref: it runs from the
    previous slice's closing commit, named by the `closing-commit: <hash>`
-   line the fix step wrote at the end of that slice's own
-   `implementation-<N-1>.md` / `tdd-<N-1>.md` — read it there. A previous
+   line the fix step wrote at the end of that slice's own closer record —
+   `tdd-<N-1>.md` / `implementation-<N-1>.md`, whichever the workflow's fix
+   step writes — read it there. A previous
    slice whose record has no `closing-commit:` line is a broken trail, not a
    finding on this slice: return
    `blocked -> .awc/tasks/in-progress/<task>/tmp/<that record>: no closing-commit line`
@@ -95,7 +96,11 @@ carries a `slice` field: the slice's subtasks are those whose field matches
    no previous slice: its diff runs from `Base:`, commits and working tree
    both. Read that diff **plus** any new
    untracked files the slice added, plus the slice's subtask files and its
-   `criterion → test` map. Do not review outside the slice's diff, and read
+   `criterion → test` map. After slice 1, the diff also carries the small
+   trail commit that recorded the previous slice's `closing-commit:` line —
+   that one file, the record you read the hash from, is trail bookkeeping:
+   raise no finding on it.
+   Do not review outside the slice's diff, and read
    nothing else from a prior slice's files beyond that recorded hash.
 3. Check all the lenses. **Any finding blocks — slice reviews accept no
    minors**. Production-code findings are fixed before the slice closes;
