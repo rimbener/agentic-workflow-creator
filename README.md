@@ -54,9 +54,10 @@ Agents:
 Options:
   --upgrade       Open the session on workflow-upgrader, to change a workflow
                   package this repo already has (default: create a new one)
-  --edit          Open the session on workflow-runner, to make a change to
-                  this repo by running a workflow package it already has
-                  (mutually exclusive with --upgrade)
+  --edit          Open the session on workflow-editor, to apply the changes
+                  you describe to a workflow package this repo already has —
+                  the audit-and-interview walk stays with --upgrade (the two
+                  flags are exclusive)
   --keep          Do not delete the temp folder on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
   -h, --help      Show help
@@ -102,21 +103,17 @@ surgical on purpose: the package holds decisions and hand-edits from before,
 so the change and its ripples are planned with you and applied, and nothing
 else is touched.
 
-## Making a change through your workflow
+## Editing a workflow directly
 
 ```bash
 awc claude --edit
 ```
 
-That opens the session on the **workflow-runner** skill instead: you describe
-the change you want made to the project — a feature, a fix, a refactor — and
-the session executes it through the workflow package your repo already has.
-It finds the package, fills its inputs from your words, and then leads the run
-exactly as the package's own launchers would: the workflow's agents do the
-work, its gates come back to you, and the package itself is never touched.
-Every generated package also ships in-session launchers per host — `--edit` is
-the same run without needing to remember them, plus finding the package,
-mapping your request onto its inputs, and resuming a paused run.
+That opens the session on the **workflow-editor** skill instead — a separate
+skill for when the changes are already decided: you name the package and
+describe what should change, and exactly those changes are applied, with
+their ripples and the full validation checklist, and anything beyond your
+words still asked first.
 
 ## Use locally (without publishing)
 

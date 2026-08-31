@@ -14,11 +14,13 @@ for the full design rationale.
 The bundled payload's centerpiece is the **workflow-creator** skill: it
 interviews a user and generates a "lead-run agentic workflow package" — a
 YAML of tiny nodes executed step by step by a `workflow_lead` subagent, plus
-the agent files and scripts those nodes invoke. Its counterpart is
-**workflow-upgrader**, which changes a package that already exists in the
-user's repo; `awc <agent> --upgrade` opens the session on it. A third skill,
-**workflow-runner**, runs an existing package to land a change in the user's
-project — `awc <agent> --edit` opens the session on it, alone.
+the agent files and scripts those nodes invoke. Two sibling skills change a
+package that already exists in the user's repo, and they are deliberately
+separate so each can grow on its own: **workflow-upgrader**
+(`awc <agent> --upgrade`) owns the inventory-and-audit walk, and
+**workflow-editor** (`awc <agent> --edit`) applies changes the user has
+already decided — exactly those, without the broader ceremony. The two never
+ship in the same session.
 
 There are two largely independent things to reason about:
 
@@ -64,11 +66,12 @@ Small, linear pipeline, one file per concern:
   then calls `launch`.
 - `mode.ts` — the one place that knows what `--upgrade` and `--edit` change:
   which skill directories the payload leaves out, and which initial prompt
-  each host reads. Create stages the creator alone; `--upgrade` adds the
-  upgrader beside it (the upgrader reads the dialect and the agent bases from
-  `../workflow-creator/`, so that pair only ships together); `--edit` stages
-  the runner alone — the package being run carries its own contract, and an
-  unused skill is only an extra trigger competing for the model's attention.
+  each host reads. Create stages no change skill (an unused skill is only an
+  extra trigger competing for the model's attention); `--upgrade` adds the
+  upgrader, `--edit` adds the editor — never both. The creator and the
+  grill-me/grilling aids ship in every mode; both change skills read the
+  dialect and the agent bases from `../workflow-creator/`, so the creator
+  must be there beside them.
 - `staging.ts` — `resetTmp`/`copyPayload`/`shadow`/`cleanup`/`readPrompt`.
   `resetTmp` always deletes a stale `tmpDir` first (self-heals after a
   `kill -9`, which cannot be intercepted by handlers). `shadow` is the piece
@@ -108,6 +111,7 @@ a new session file) lands where it should.
 templates/
 ├── shared/                          # host-neutral; staged into every host under its own dir names
 │   ├── commands/awc-status.md       # /awc-status
+│   ├── skills/{grill-me,grilling}/  # conversational aids — staged in every mode
 │   ├── skills/workflow-creator/
 │   │   ├── SKILL.md                 # the skill's process (recon → interview → design → write → validate)
 │   │   ├── references/
@@ -126,8 +130,8 @@ templates/
 │   │       ├── inventory.md         # reading a package into a map, and the audit
 │   │       ├── change-playbook.md   # what each kind of change ripples into
 │   │       └── interview.md         # the scoped interview
-│   └── skills/workflow-runner/       # staged only under --edit, without the authoring skills
-│       └── SKILL.md                 # locate the package → read its own contract → fill inputs → lead the run
+│   └── skills/workflow-editor/       # staged only under --edit
+│       └── SKILL.md                 # locate → read silently → apply the stated changes + ripples → validate
 └── hosts/
     ├── claude/{prompt.md, prompt-upgrade.md, prompt-edit.md, plugin/.claude-plugin/plugin.json}
     ├── codex/{prompt.md, prompt-upgrade.md, prompt-edit.md}
@@ -136,20 +140,22 @@ templates/
 
 Key things to know before touching this content:
 
-- **workflow-upgrader owns no dialect of its own.** It reads
-  `../workflow-creator/`'s `assets/running.md`, `references/*`, `SKILL.md` and
-  `assets/agents/*.md` — every host stages skills as flat siblings, so that
-  path resolves everywhere. The creator's validation checklist is what the
-  upgrader's audit compares a package against, which is why "bring an old
-  package up to date" needs no version list and cannot rot. `test/staging.test.ts`
-  checks every `../workflow-creator/<path>` the upgrader cites still resolves.
-- **workflow-runner cites nothing outside itself and the package.** It is
-  staged *without* the creator and the upgrader, so a `../workflow-creator/`
-  reference in it would dangle in every `--edit` session; at run time the
-  package's own `running.md` and `agents/workflow_lead.md` are the contract —
-  the YAML was written against the copies beside it. `test/staging.test.ts`
-  pins both: no creator citation in the runner, and edit-mode staging leaves
-  the authoring skills out.
+- **Neither change skill owns a dialect of its own.** The upgrader and the
+  editor both read `../workflow-creator/`'s `assets/running.md`,
+  `references/*`, `SKILL.md` and `assets/agents/*.md` — every host stages
+  skills as flat siblings, so that path resolves everywhere. The creator's
+  validation checklist is what the upgrader's audit compares a package
+  against (and what the editor validates a changed package with), which is
+  why "bring an old package up to date" needs no version list and cannot rot.
+  `test/staging.test.ts` checks every `../workflow-creator/<path>` either
+  skill cites still resolves. Beyond that shared dialect, the two skills
+  deliberately repeat rather than cross-reference each other — the upgrader
+  grows its own functionality, and a `../workflow-upgrader/` path in the
+  editor would dangle in every `--edit` session anyway.
+- **No skill runs a package.** Running is the job of the launchers every
+  package ships; a "use my workflow to build X" ask landing in an awc session
+  is bounced to them — the change skills carry that hand-off, and
+  `test/staging.test.ts` pins it.
 - The bundled agents in `assets/agents/` are **base templates, never final
   artifacts**. The skill copies and tailors one per workflow into the
   generated package's `agents/`, trimming modes/checks the workflow doesn't
@@ -185,10 +191,11 @@ Key things to know before touching this content:
 
 ## Eval material
 
-One workspace per skill, none part of the shipped package (none is in
-`package.json`'s `files`). All follow the same rule: a script extracts
-**objective facts** and never judges pass/fail — graders combine those facts
-with their own reading.
+One workspace per authoring skill — the creator, the upgrader and the editor;
+the conversational aids (grill-me, grilling) have none. No workspace is part
+of the shipped package (nothing here is in `package.json`'s `files`), and all
+follow the same rule: a script extracts **objective facts** and never judges
+pass/fail — graders combine those facts with their own reading.
 
 `workflow-creator-workspace/` — grading a package that gets *generated*:
 - `fixtures/` — tiny target repos (tracked as plain files) that eval prompts
@@ -221,22 +228,22 @@ already hold a package and its evals run under `awc <agent> --upgrade`:
   the run committed. Package validity is `check_package.ts`'s job — one script,
   one thing.
 
-`workflow-runner-workspace/` — grading a *run's conduct*, so its evals run
-under `awc <agent> --edit` and every package-holding eval carries
-`package-untouched` (the run reads the package, never writes it):
+`workflow-editor-workspace/` — grading a *diff plus the session's conduct*,
+so its evals run under `awc <agent> --edit`. The package-holding evals reuse
+`../workflow-upgrader-workspace/fixtures/bun-app-shipped` (one canonical
+shipped package; a copy here would rot):
 - `fixtures/bun-app-bare` — the tiny bun app with no package at all, for the
-  "nothing to run → point at `awc <agent>`" redirect. The evals that need a
-  package reuse `../workflow-upgrader-workspace/fixtures/bun-app-shipped`
-  rather than carrying a copy to rot — its worktree isolation is load-bearing:
-  it exercises both the hand-off to `./ship-feature.sh` and the
-  explicit-consent path for running in place.
-- `evals/evals.json` — four prompts (run in place with consent, worktree
-  hand-off, no-package redirect to the creator, package-change redirect to the
-  upgrader). A full run pauses at its first human gate by design, so the run
-  evals grade up to and including that pause. `test/staging.test.ts` pins the
-  fixtures and the run-only keys.
-- No script of its own: the touched/untouched reading comes from the
-  upgrader workspace's `check_upgrade.ts` directory diff.
+  "nothing to edit → hand to the creator loaded beside you" eval.
+- `evals/evals.json` — five prompts: two applies (an input rename, and a
+  phase removal that must sweep its orphans — both without a plan gate,
+  everything beyond the request gated, validation in full) and three
+  hand-offs (no package → the creator loaded beside the editor; audit-shaped
+  → `awc <agent> --upgrade`; run-shaped → the package's own launchers, the
+  likeliest misclassification since `--edit` previously ran a package).
+  `test/staging.test.ts` pins the fixtures and the edit-only keys.
+- No script of its own: the touched/untouched reading comes from the upgrader
+  workspace's `check_upgrade.ts` directory diff, package validity from the
+  creator workspace's `check_package.ts`.
 
 `workflows-examples/` holds example generated workflow output, for reference.
 

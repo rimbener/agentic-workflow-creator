@@ -58,9 +58,10 @@ Agents:
 Options:
   --upgrade       Open the session on workflow-upgrader, to change a workflow
                   package the repo already has (default: create a new one)
-  --edit          Open the session on workflow-runner, to make a change to
-                  the repo by running a workflow package it already has
-                  (mutually exclusive with --upgrade)
+  --edit          Open the session on workflow-editor, to apply the changes
+                  you describe to a workflow package the repo already has —
+                  the audit-and-interview walk stays with --upgrade (the two
+                  flags are exclusive)
   --keep          Do not delete .awc-tmp/ on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
   -h, --help      Show help
@@ -82,12 +83,14 @@ Exit code: `awc` exits with the agent process's exit code (`143` on SIGTERM).
    - Place the shared payload (`templates/shared/skills/`, `templates/shared/commands/`)
      under the names the target agent looks for — see the host table below.
    - The session's mode decides two of those inputs (`src/mode.ts`): a default
-     session stages the creator alone; `--upgrade` adds `skills/workflow-upgrader/`
-     beside it — the upgrader reads the dialect and the agent bases from
-     `../workflow-creator/`, so that pair only ships together; `--edit` stages
-     `skills/workflow-runner/` alone — at run time the package's own `running.md`
-     and `workflow_lead.md` are the contract, so the runner needs neither
-     authoring skill, and an unused skill is only a competing trigger.
+     session stages no change skill; `--upgrade` adds `skills/workflow-upgrader/`
+     and `--edit` adds `skills/workflow-editor/` — two deliberately separate
+     skills that never ship together (the upgrader owns the inventory-and-audit
+     walk, the editor applies changes the user has already decided). Everything
+     else under `templates/shared/skills/` ships in every mode: the grill aids,
+     and the creator — both change skills read the dialect, the agent bases and
+     the validation checklist from `../workflow-creator/`, so it must be there
+     beside them.
    - Read the initial prompt from `templates/hosts/<agent>/prompt.md` —
      `prompt-upgrade.md` under `--upgrade`, `prompt-edit.md` under `--edit`.
      Each host ships all three.
@@ -135,7 +138,8 @@ Consequences, and why this is the chosen design:
 - Staging never writes into the real config dir; deleting `.awc-tmp/` removes only links.
   This needs care on name collisions: if the user already has a skill or command of
   their own by one of the payload's names — `workflow-creator`, `workflow-upgrader`,
-  `workflow-runner`, `awc-status` — the shadow's link for that name is the copy destination, 
+  `workflow-editor`, `grill-me`, `grilling`, `awc-status` — the shadow's link for
+  that name is the copy destination, 
   and `cpSync` follows a symlinked destination. `copyPayload` therefore unlinks 
   each target name before copying, so the session gets a real file in the temp dir
   and the user's original is left alone. It also means "the payload is not staged" 
@@ -147,6 +151,7 @@ Consequences, and why this is the chosen design:
 ```
 templates/
 ├── shared/                          # host-neutral payload, staged into every host
+│   ├── skills/{grill-me,grilling}/  # conversational aids — every session
 │   ├── skills/workflow-creator/     # every session
 │   │   ├── SKILL.md                 # interview → design → generate a lead-run workflow package
 │   │   ├── references/              # interview checklist, agent catalog, host launcher table
@@ -159,8 +164,8 @@ templates/
 │   ├── skills/workflow-upgrader/     # `--upgrade` sessions only
 │   │   ├── SKILL.md                 # locate → inventory → audit → scoped plan → apply → validate
 │   │   └── references/              # package inventory + audit, change playbook, scoped interview
-│   ├── skills/workflow-runner/       # `--edit` sessions only (staged without the authoring skills)
-│   │   └── SKILL.md                 # locate → read the package's contract → fill inputs → lead the run
+│   ├── skills/workflow-editor/       # `--edit` sessions only
+│   │   └── SKILL.md                 # locate → read silently → apply the stated changes + ripples → validate
 │   └── commands/
 │       └── awc-status.md            # /awc-status — summarize session progress
 └── hosts/
@@ -206,9 +211,8 @@ The template content is a starting point; iterating on it does not require code 
   assumption that each CLI short-circuits on `--version` with the initial prompt already
   in argv), a second under `--keep` asserting the payload landed as real files under
   that host's directory names, and one more per non-default mode (`--upgrade --keep`,
-  `--edit --keep`) for the same in each, plus the assertions that a default session
-  stages neither `workflow-upgrader` nor `workflow-runner` and an `--edit` session
-  stages neither authoring skill. Each
+  `--edit --keep`) asserting each stages its own change skill and not the other's,
+  plus the assertion that a default session stages neither. Each
   staged mode is then checked against the host's own offline listing, so the test sees
   what the model would load rather than what is on disk. `--version` never reads the
   initial prompt, so which of the three prompts a host puts on argv is a unit test
