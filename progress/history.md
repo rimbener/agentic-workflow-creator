@@ -151,3 +151,7 @@ The change-the-package half of awc is a rename, not an edit: the CLI flag `--upd
 ## 2026-08-31 — `ee66d57` — fix(evals): replace explicit any types in check_package.ts
 
 Replaced 11 `any` annotations with proper types (`Record<string, unknown>`, `unknown`, `StoryNode`) in the eval fact-checker script. Fixed `useIterableCallbackReturn` lint error by wrapping `scripts.add()` in braces. All `bun run check` lint warnings now resolved.
+
+## 2026-08-31 — `534e3d9` — feat(cli): add --edit mode with workflow-runner skill
+
+Added a third session mode: `awc <agent> --edit` opens on the workflow-runner skill, which runs an existing workflow package to land a change in the project without touching the package itself. CLI parses `--edit` (mutually exclusive with `--upgrade`), mode.ts stages only what each session can use (create: creator alone, upgrade: upgrader+creator, edit: runner alone), templates include the runner SKILL.md, per-host prompt-edit.md files, and authoring-skill redirects. Eval material in workflow-runner-workspace covers run conduct grading. Tests cover edit-mode staging, symlink collision, prompt isolation, and the runner-cites-nothing assertion.
