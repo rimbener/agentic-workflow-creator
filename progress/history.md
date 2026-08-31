@@ -147,3 +147,7 @@ The kebab-case guard becomes a charset rule — letters, digits, hyphens, or und
 ## 2026-08-31 — `35b9ce4` — refactor!: rename update mode and workflow-updater to upgrade
 
 The change-the-package half of awc is a rename, not an edit: the CLI flag `--update` becomes `--upgrade`, the skill `workflow-updater` becomes `workflow-upgrader`, the host prompts `prompt-update.md` become `prompt-upgrade.md`, and the eval workspace, its fixtures and the `check_update.ts` script follow the same naming. The user-facing flag is breaking: `--upgrade` and the `workflow-upgrader` skill replace the short-lived `--update`/`workflow-updater`.
+
+## 2026-08-31 — `ee66d57` — fix(evals): replace explicit any types in check_package.ts
+
+Replaced 11 `any` annotations with proper types (`Record<string, unknown>`, `unknown`, `StoryNode`) in the eval fact-checker script. Fixed `useIterableCallbackReturn` lint error by wrapping `scripts.add()` in braces. All `bun run check` lint warnings now resolved.
