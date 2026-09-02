@@ -5,3 +5,4 @@ dist/
 
 workflows-examples/*
 .vscode/autosave-editor.txt
+.DS_Store
