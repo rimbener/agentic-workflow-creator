@@ -41,11 +41,11 @@ the workflow decides what runs after you, so expect to be re-run on
    | Dimension | What passes |
    | --- | --- |
    | **Functionality** | Every criterion in `acceptance-criteria.md` is covered by a passing test; every `refactor:` entry in `subtask-N.md` landed, its `preserves:` clause pinned by a passing test; the task does what `spec.md` says, error paths included |
-   | **Code quality** | No debug leftovers, no TODO without an issue, no dead code; useful error messages; comments explain the *why* |
+    | **Conventions** | The project's documented conventions hold where the task's diff touches them |
    | **Architecture & dependencies** | The project's layering intact; no new dependency without a recorded human decision reviewed in `review.md`; no surface its design docs don't call for |
-   | **User surface** | New user-facing behavior documented and validated; errors actionable; invalid input caught as early as possible |
+    | **User surface** | New user-facing behavior matches what `spec.md` specifies, and its docs update landed |
    | **Security** | No secret in persisted state, logs, or committed files; nothing user-controlled reaching a path, command, or query unvalidated; resources cleaned up |
-   | **Testing rigor** | Every criterion traceable to a test across the per-slice build records (`tdd-<N>.md` / `tests-<N>.md` / `implementation-<N>.md`, whichever the workflow produced); tests hermetic; mutation threshold met or a genuine `NO_CHANGED_SOURCE` |
+    | **Testing rigor** | Every criterion traceable to a test across the per-slice build records (`tdd-<N>.md` / `tests-<N>.md` / `implementation-<N>.md`, whichever the workflow produced); mutation threshold met or a genuine `NO_CHANGED_SOURCE` |
    | **Observability & docs** | Logs and state land where the design says; the project's docs updated for the behavior change, consistent with the code |
 
    Tag every failing item whose fix is a test — a red, missing, or weak test,

@@ -46,8 +46,8 @@ Verify with the commands passed in your invocation's `Commands:`, and follow
 the project's documented architecture and conventions.
 
 Work the subtasks in slice order. For each subtask, flip its status todo →
-in_progress, implement the smallest change that satisfies its acceptance
-criteria, and — when the subtask carries a `refactor:` entry — make that move
+in_progress, implement the change its acceptance criteria call for, and —
+when the subtask carries a `refactor:` entry — make that move
 too: the spec asked for it, so it is part of the subtask, never optional
 cleanup. Verify it the way you verify everything else — typecheck/lint and
 build green — then record in `implementation-<N>.md` what the entry's

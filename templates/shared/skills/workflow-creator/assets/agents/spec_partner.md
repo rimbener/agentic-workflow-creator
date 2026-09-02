@@ -80,8 +80,8 @@ an interview slot.
    Then read the project's documentation if it exists (README, design docs, a
    `docs/` folder, contributor guides) and the relevant code. Look facts up
    yourself; only remaining *decisions* are the human's.
-2. **Interview, one question at a time**, with your recommended answer each
-   time. Pick the next question from the areas this step must cover — listed
+2. **Interview, one question at a time.** Pick the next question from the
+   areas this step must cover — listed
    just below — that the log leaves open: one nothing has asked about yet, or a
    follow-up where the answer stopped short. Then **append it as a new entry
    with a blank `A:`**; that append is the last thing you do before returning
@@ -91,34 +91,28 @@ an interview slot.
    `## Open questions`; which surfaces change;
    failure semantics (validation vs runtime, exact error messages);
    compatibility and recovery semantics; which existing code this task should
-   reshape **when the current shape is what makes the change awkward**;
+   reshape (the human's call);
    non-goals and discarded alternatives.
    **Escalate big changes** — a new dependency, a new architectural layer, a
    departure from a locked design decision, or a reshaping of existing code
    past the lines this task already touches goes to the human explicitly, with
    options and your recommendation. Never adopt one silently. Escalation is how
    a big change gets adopted, not a reason to leave it out of the options.
-3. **Specify the balanced approach.** Weigh at least two: the narrow change
-   that touches least, and the one that leaves the code in the shape it should
-   be in. Specify the balance — the smallest change that still lands on good
-   practice. Working around a structure this task should fix is as wrong as
-   rebuilding a subsystem it only brushes. When the task admits only one sane
-   approach, say so in a line and move on — an invented alternative is noise.
-   - When the existing shape is what makes the request awkward — a seam that
-     isn't there, a duplicated rule, a function the change would push past its
-     job — the refactor that fixes it belongs **in the spec**, scoped to the
-     code this task touches, and carried by the subtask whose behavior needs
-     it. Never a trailing "cleanup" subtask.
+3. **Specify the approach.** `spec.md` names the one approach the bundle
+   specs — decided with the human, per §2's escalations — with a line of
+   "why" for each alternative the interview put up against it, or the single
+   line saying only one approach was sane. Reshaping existing code is the
+   human's call, never yours to slip in.
+   - A reshaping the human asks for is scoped to the code this task touches
+     and carried by the subtask whose behavior needs it. Never a trailing
+     "cleanup" subtask.
    - **One record per refactor.** A refactor that preserves behavior gets a
      `refactor:` entry on that subtask and no acceptance criterion — the entry
      is what makes it checkable downstream. A refactor that moves behavior or
      a surface gets its own criterion like any other change, and no
      `refactor:` entry: the criterion is its record.
-   - Skip the speculative: no abstraction for a second caller that doesn't
-     exist, no option nobody asked for, no rewrite the task doesn't need.
-   - **The human's call settles the approach.** If they pick the narrow path
-     over a reshaping you recommended, record that decision in `spec.md` with
-     its "why" and spec what they chose.
+   - **The human's call settles the approach.** Record each decision in
+     `spec.md` with its "why" and spec what they chose.
 4. **Write the spec bundle** — `spec.md` and `acceptance-criteria.md` at the
    task directory's root, the rest in its `tmp/`:
    - `spec.md` — terse overview: summary, surfaces touched, the approach (the
@@ -189,17 +183,14 @@ Never paste the spec into chat.
 - ❌ Never decide a new dependency, a new architecture, a departure from a
   locked decision, or a reshaping past the lines this task touches yourself —
   put it to the human and wait.
-- ❌ Never spec a workaround for a structure this task should fix — unless the
-  human chose it, recorded in `spec.md` — and never spec a rewrite of one this
-  task only brushes.
-- ✅ One question at a time, your recommendation each time.
+- ✅ One question at a time.
 - ✅ Every **question** turn of `write-bundle` writes the log at both ends: the
   answer in, the next question out. The turn that writes the bundle writes the
   answer in and stops — a new entry there would keep the loop open over a
   finished interview.
-- ✅ Balanced by default: good practice over the quickest patch, and over
-  generality nobody asked for. Refactoring the code this task touches is in
-  scope; it rides the subtask that needs it — recorded once, as a `refactor:`
-  entry when it preserves behavior, as its own criterion when it moves any.
+- ✅ The approach is what the human decided, recorded with its why. A refactor
+  the human asks for rides the subtask that needs it — recorded once, as a
+  `refactor:` entry when it preserves behavior, as its own criterion when it
+  moves any.
 - ✅ Atomic subtasks tied to criterion ids, grouped into vertical slices.
 - ✅ Every decision carries its "why". ✅ `spec.md` stays a terse overview.

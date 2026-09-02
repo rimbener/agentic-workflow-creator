@@ -35,8 +35,7 @@ carries a `slice` field: the slice's subtasks are those whose field matches
 
 1. **Correctness against the contract** — the slice's acceptance criteria are
    each covered by a concrete test (check the slice's `criterion → test` map,
-   where a `refactor:` pin is listed too), and the tests bite — a test that
-   cannot fail is a finding. Error paths covered, not just the happy path.
+   where a `refactor:` pin is listed too).
    Every `refactor:` entry on the slice's subtasks is present in the diff — an
    omitted one is a **major**, and one that reaches past what the entry names
    is scope creep. Rule on each entry's `preserves:` clause against the suite
@@ -51,32 +50,20 @@ carries a `slice` field: the slice's subtasks are those whose field matches
 2. **Project conventions** — the project's documented architecture, layering,
    and conventions respected; nothing added that its design docs or the
    approved spec do not call for.
-3. **Code quality** — short functions, one reason to change, revealing names, no
-   duplication, no magic numbers; SOLID, YAGNI, KISS, DRY — judged against the
-   approved spec: a module or seam a criterion or a `refactor:` entry asked for
-   is the spec's call, not gold-plating; one nothing asked for is. No debug
-   leftovers, no commented-out code, no TODO without an issue. Comments explain the *why*,
-   short and not redundant with the code or documentation.
-4. **User surface** — for any slice touching a user-facing surface (CLI, API,
-   config, UI): output/errors consistent with their neighbors; messages
-   actionable; invalid input caught as early as possible; new names follow the
-   existing conventions. Mark `N/A` when the slice touches none, and say so.
-5. **Docs parity** — if the slice changed behavior, its docs update is **in this
+3. **User surface** — for any slice touching a user-facing surface (CLI, API,
+   config, UI): output and errors match what the approved spec specifies; new
+   names follow the project's existing conventions. Mark `N/A` when the slice
+   touches none, and say so.
+4. **Docs parity** — if the slice changed behavior, its docs update is **in this
    slice's diff**. Docs that now contradict the code are a **major**. A slice
    that deferred its docs is a finding.
-6. **Accessibility (WCAG 2.2 AA)** — for any UI the slice adds/touches:
-   - Roles/labels on interactive and informative elements, asserted by tests.
-   - Contrast ≥ 4.5:1 (normal text); touch targets ≥ 44pt / 48dp.
-   - Sensible focus/reading order; dynamic type supported; no color-only signaling.
-   - State changes (loading/error) announced.
-   - On a non-UI (service/logic-only) slice, mark accessibility `N/A`.
 
 ## Protocol
 
 1. Run the command(s) from `Commands:` and record the result in
    `review-slice-<N>.md`. Every failing test is a **blocker** finding; never
    approve over a red suite. Tag every finding whose fix is a test — a red or
-   missing test, a missing `criterion → test` map, a test that cannot fail —
+   missing test, a missing `criterion → test` map —
    `test-step` in addition to its lens — the workflow routes those to the test
    step, not to the production-code fix. **Except** a red test showing a
    `refactor:` move changed behavior: the fix there is the production code, so

@@ -156,8 +156,8 @@ one, record it verbatim under **Notes** and move on.
    outcomes), **edges** (failure, empty, and recovery cases), and which surface
    it touches — named only coarsely. Where each answer comes from is the mode's
    business.
-   - In an interviewing mode, ask, **one question at a time**, with your
-     recommended answer each time. Pick the next question from the areas in
+   - In an interviewing mode, ask, **one question at a time**. Pick the next
+     question from the areas in
      that list the log leaves open — one nothing has asked about yet, or a
      follow-up where the answer stopped short — then **append it as a new entry
      with a blank `A:`**; that append is the last thing you do before returning
@@ -262,9 +262,7 @@ Never paste the story into chat.
 - ✅ In an interviewing mode, every **question** turn writes the log at both
   ends: the answer in, the next question out. The closing turn writes the
   answer in, then the story — a new entry there would keep the loop open over
-  a finished interview.
-- ✅ A recommended answer with every question an interviewing mode asks; the
-  decision is the human's.
+  a finished interview. The decision behind every answer is the human's.
 - ✅ Acceptance criteria are observable and testable — never "works well".
 - ✅ One `user-story.md` every time, whichever mode wrote it — it is what the
   spec step reads.

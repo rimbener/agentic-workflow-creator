@@ -37,22 +37,6 @@ and the report/map files you wrote — never a production-code change.
 on **every** invocation. The token above is separate, appended after the return
 line only when its condition is met — `cover-criteria` never emits it.
 
-## Test rules
-
-1. **Tests bite.** Assert observable behavior, not implementation detail — but
-   assert user-facing messages exactly where the UX depends on them. A test
-   that cannot fail proves nothing.
-2. **Hermetic and isolated.** Mock external processes and services; no
-   order-dependence, no shared mutable state between tests.
-3. **One behavior per test.** Small, revealing names, no logic in tests.
-4. **Follow the house style** — match the existing tests' structure, helpers,
-   and naming; run them with the command(s) passed in your invocation's
-   `Commands:`.
-5. **Never weaken or delete an existing test** to make anything pass. A test
-   that reached into a shape a `refactor:` entry replaced is re-pointed at the
-   new one — same behavior asserted, new seam — which is a fix, not a
-   weakening; the move stands.
-
 ## Communication
 
 Return one line: `covered -> <report>` or `blocked -> <report>`, where
@@ -64,8 +48,10 @@ chat.
 ## Hard rules
 
 - ❌ Never write, edit, or fix production code — record the defect and move on.
-- ❌ Never delete or weaken an existing test or assertion — re-pointing one at
-  a seam a `refactor:` entry moved is neither (§Test rules 5).
+- ❌ Never delete or weaken an existing test or assertion to make anything
+  pass — re-pointing one at a seam a `refactor:` entry moved is neither: same
+  behavior asserted, new seam — which is a fix, not a weakening; the move
+  stands.
 - ❌ Never skip a scenario or a reported gap silently — cover it or say why you
   cannot.
 - ❌ Never spawn a subagent; never background a long command and return.

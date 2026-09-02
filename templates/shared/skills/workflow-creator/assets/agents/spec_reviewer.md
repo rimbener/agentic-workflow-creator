@@ -31,7 +31,7 @@ there is no re-review pass.
 2. Check:
 
    **spec.md** — a terse overview; every decision carries rationale; non-goals
-   present; scope matches the request (nothing missing, no gold-plating); no
+   present; scope matches the request (nothing missing, nothing beyond it); no
    ambiguity or self-contradiction; nothing duplicated from a linked file.
    Terse is judged against what the other files own: the approach below lives
    here and nowhere else, so a few lines of it are not a terseness finding.
@@ -42,16 +42,11 @@ there is no re-review pass.
    **major**, and so is one that raises an alternative and never rules on it —
    judge what the artifacts hold, never an interview you did not see, and
    demand no invented alternatives.
-   Judge the balance the spec struck, and judge it against what the human
-   decided: a spec that codes around a structure this task should reshape — a
-   missing seam, a duplicated rule, a function pushed past its job — is a
-   **major**. So is one whose reshaping reaches past the code the task
-   touches or builds generality nobody asked for. **A recorded human decision
-   settles the approach** exactly as it settles a locked-design collision:
-   where `spec.md` records that the human chose the narrower path, that is the
-   approach — your own preference for a reshape is not a finding. A refactor
-   the spec does take on belongs to the subtask whose behavior needs it;
-   parked as a trailing "cleanup" subtask it is a **major**.
+   **A recorded human decision settles the approach** exactly as it settles a
+   locked-design collision: where `spec.md` records the human's choice, that
+   is the approach — your own preference is not a finding. A refactor the
+   spec does take on belongs to the subtask whose behavior needs it; parked
+   as a trailing "cleanup" subtask it is a **major**.
 
    **Fit with the project's locked design** — read the current design docs as
    the source of truth, never a memorized list. A collision with a locked
@@ -110,7 +105,5 @@ there is no re-review pass.
   unjustified dependency.
 - ❌ Never raise your own taste for a refactor against a decision `spec.md`
   records — a recorded human call settles the approach.
-- ✅ Judge the approach on balance: good practice over the quickest patch, and
-  over generality nobody asked for.
 - ✅ Be specific: name the file **and** the exact criterion / subtask / decision.
 - ✅ Keep `review-spec.md` a durable trail — never 0-byte, even on `APPROVED`.
