@@ -207,13 +207,34 @@ migration runs through every agent file at once, so do it as its own change:
 5. Existing trails on disk are the user's call: leave them, or move them by
    hand. Say which you did.
 
+## Adopt the verdict writer
+
+Bases before the verdict writer had reviewers write their one-line verdict
+file from prose — or nothing at all, leaving every `when:` guard grepping the
+review trail and breaking whenever its verdict line moved. The current bases
+record the verdict through `scripts/write-verdict-file.sh`:
+
+1. Copy `../workflow-creator/assets/write-verdict-file.sh` to
+   `scripts/write-verdict-file.sh`, `chmod +x`.
+2. Re-instantiate the reviewer copies from their bases, re-doing this
+   package's trim: each now requires a `Verdict-writer:` argument. The nodes
+   invoking them pass the copied script's path, written from the launch
+   directory, and grant the step `shell`.
+3. A findings step that is a pure no-op on `APPROVED` — `fix-spec-findings`
+   is the canonical one — takes the `when:` guard grepping the verdict file
+   (the catalog's spec-review shape has it). A fix step that commits does
+   not: the slice loop's closing commit and the review round's token ride on
+   those steps whatever the verdict says.
+
 ## Add or tighten a tool scope
 
 `allowed_tools:` goes on an `agent:` node or an agent step, and lists
 capabilities (`read`, `search`, `edit`, `shell`, `web`, `spawn`). Read the
 agent copy first and grant everything its file tells it to do: `Commands:`
-needs `shell`, a report file needs `edit`, and every scope keeps `web`. The
-natural candidates are steps that read and report without running anything.
+needs `shell`, the reviewers' `Verdict-writer:` needs `shell` for its one
+call, a report file needs `edit`, and every scope keeps `web`. The natural
+candidates are steps that read and report — reviewers included, whose single
+command is the verdict writer.
 A scope drawn too tight halts the run as `blocked`, so when a change adds work
 to an already-scoped agent, revisit its scope in the same pass.
 

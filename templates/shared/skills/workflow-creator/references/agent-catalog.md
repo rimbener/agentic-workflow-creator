@@ -67,12 +67,12 @@ the agent return `blocked` (or its own failure verdict). The workflow YAML's
 | `workflow_lead` | Runs the workflow: invokes agents, enforces gates and caps, collects parallel work, escalates on halt. Coordination only — never writes or commits | `Task/Mode/Workflow` (supplied by the launch command) | `complete`, `halted`, `blocked` |
 | `story_partner` | Writes `user-story.md` — the artifact the spec step reads. `interview` grills the human one question at a time, `capture` structures a source they already wrote, `capture-and-confirm` does both; the interviewing modes keep `story-interview-log.md` as their memory across turns. Owns the *problem*, never the solution | `Task`, `Mode: interview \| capture \| capture-and-confirm`, `Request:` (`interview`), `Source:` (capture modes), `{{answer}}` on the looping modes | `user_story`; token `USER_STORY_WRITTEN` on the looping modes; `blocked` when `Source:` cannot be read |
 | `spec_partner` | Opens by reading `user-story.md` (`write-bundle` halts as `blocked` without it; the later modes read it when it is there). Interview (memory in `spec-interview-log.md`, `write-bundle` only) → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted` (token `SPEC_BUNDLE_WRITTEN`), `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
-| `spec_reviewer` | One-round automated review of the spec bundle → `review-spec.md`, before the human approval | `Task`, `Mode: review` | `APPROVED`, `CHANGES_REQUESTED` |
+| `spec_reviewer` | One-round automated review of the spec bundle → `review-spec.md`, verdict recorded via the `Verdict-writer:` script → 1-line `review-spec-verdict.md`, before the human approval | `Task`, `Mode: review`, `Verdict-writer: <path>` | `APPROVED`, `CHANGES_REQUESTED` |
 | `implementer` | Production code only, non-TDD. Never touches tests; test findings are tagged `test-step` and left open | `Task`, `Mode: build-slice \| fix-slice-findings \| fix-review-findings \| kill-mutants \| close-dod-gaps`, `Commands:`, `Slice: <N>` on slice modes | `green`, `blocked`; token `DONE` per mode |
 | `unit_test_writer` | Unit tests only. Never touches production code; defects a test exposes stay recorded as open production rows | `Task`, `Mode: cover-criteria \| cover-gaps`, `Commands:`, `Slice: <N>`, `Report:` on `cover-gaps` | `covered`, `blocked`; token `DONE` on `cover-gaps` only |
 | `implementer_tdd` | Strict TDD, self-contained: writes both tests and code. Same modes as `implementer` | `Task`, `Mode`, `Commands:`, `Slice: <N>` | `green`, `blocked`; token `DONE` per mode |
-| `reviewer_slice` | Quick per-slice review, scoped to the slice's diff. Runs the suite itself → `review-slice-<N>.md` | `Task`, `Mode: review-slice`, `Slice: <N>`, `Commands:`, `Base:` | `APPROVED`, `CHANGES_REQUESTED`; `blocked` when the previous slice's record has no `closing-commit:` line |
-| `reviewer_engineering` | The exhaustive review: spec scope & test traceability, architecture & dependencies, performance, security, in one pass over the diff. Never runs CI itself | `Task`, `Mode: full-review \| delta-review`, `Base: <ref>` | `APPROVED`, `CHANGES_REQUESTED` |
+| `reviewer_slice` | Quick per-slice review, scoped to the slice's diff. Runs the suite itself → `review-slice-<N>.md`, verdict recorded via the `Verdict-writer:` script → 1-line `review-slice-verdict-<N>.md` | `Task`, `Mode: review-slice`, `Slice: <N>`, `Commands:`, `Base:`, `Verdict-writer: <path>` | `APPROVED`, `CHANGES_REQUESTED`; `blocked` when the previous slice's record has no `closing-commit:` line |
+| `reviewer_engineering` | The exhaustive review: spec scope & test traceability, architecture & dependencies, performance, security, in one pass over the diff → `review.md`, verdict recorded via the `Verdict-writer:` script → 1-line `review-verdict.md`. Never runs CI itself | `Task`, `Mode: full-review \| delta-review`, `Base: <ref>`, `Verdict-writer: <path>` | `APPROVED`, `CHANGES_REQUESTED` |
 | `mutation_tester` | Reads the mutation tool's captured log → `mutation.md`. Measures only; escalate-only, never edits | `Task`, `Mode: report`, `Log: <path>` | `PASS`, `SURVIVORS`, `NO_CHANGED_SOURCE`, `FAILED` |
 | `dod_validator` | Re-runs the full Definition of Done checklist → `dod.md`. Validates only | `Task`, `Mode: validate`, `Commands:`, `Base: <ref>` | `PASS`, `DOD_FAILED` |
 
@@ -138,14 +138,22 @@ agents fall into three groups:
 
 | Scope | Agents | Why |
 | --- | --- | --- |
-| `[read, search, edit, web]` | `spec_reviewer`, `reviewer_engineering`, `mutation_tester` | they read the tree or a captured log and write a verdict; they never run the suite themselves |
+| `[read, search, edit, web]` | `mutation_tester` | it reads a captured log and writes a verdict |
 | `[read, search, edit, web, shell]` | `implementer`, `implementer_tdd`, `unit_test_writer`, `reviewer_slice`, `dod_validator` | they are invoked with `Commands:` and run them |
+| `[read, search, edit, web, shell]` | `spec_reviewer`, `reviewer_engineering` | the one command they run is the package's `scripts/write-verdict-file.sh`, recording the verdict; never the suite |
 | host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it, and writes its own log every turn; a `capture` reads whatever `Source:` names, a URL included |
 
 `edit` is in every scope because every agent writes its report under
 `.awc/tasks/in-progress/<task>/`, and `web` is in every scope because any of
 them may need to look up a library's docs, an error message, or a CVE.
-`shell` is the line that actually separates the groups. `spawn` is granted to
+`shell` is the line that separates `mutation_tester` from the rest — even the
+reviewers run exactly one command, the verdict writer. That script is copied
+verbatim from `assets/write-verdict-file.sh` into the package's `scripts/`,
+`chmod +x`; the YAML passes its package path to each reviewer as the
+`Verdict-writer:` argument (a missing one is `CHANGES_REQUESTED`), and the
+reviewer execs it with the review file and its verdict to produce the
+one-line verdict file the review step names.
+`spawn` is granted to
 none of them — these agents do their own work rather than delegating it.
 
 Scoping is optional per node, and a scope that contradicts the agent's
@@ -222,19 +230,38 @@ Single human sign-off of an artifact (`until: SPEC_APPROVED`, cap ~10):
    `expect:` entry passes). This is the idiom for any approval loop: one
    token as both the loop's `until:` and the step's `expect:`.
 
+Spec review round (before the human approval; both nodes plain, judged by
+`expect:`):
+
+1. `spec_reviewer` — `Mode: review. Verdict-writer:
+   workflows/<name>/scripts/write-verdict-file.sh.` — `expect: [APPROVED,
+   CHANGES_REQUESTED]`
+2. `spec_partner` — `Mode: fix-spec-findings.` — `expect: findings_resolved`,
+   guarded by a `when:`:
+   `grep -qx CHANGES_REQUESTED .awc/tasks/in-progress/{{task}}/tmp/review-spec-verdict.md`
+
+   The guard reads the one-word verdict file the reviewer's writer recorded —
+   never the review trail, whose prose moves its verdict line around. On
+   `APPROVED` the grep exits non-zero and the fix step is skipped; a verdict
+   file the reviewer never wrote fails the grep the same way, which is why
+   recording it is the reviewer's hard rule. This guard belongs nowhere else:
+   the slice loop's `fix-slice-findings` and the review round's
+   `fix-review-findings` carry the closing commit — and the loop's `DONE`
+   token — so they run whatever the verdict says.
+
 Slice build, split pairing (`until: DONE`, last step's token = all slices done):
 
 1. `implementer` — `Mode: build-slice. Slice: {{iteration}}. Commands: {{commands}}.`
 2. `unit_test_writer` — `Mode: cover-criteria. Slice: {{iteration}}. Commands: {{test_command}}.`
 3. `run:` the slice check (typecheck/lint + tests, failure-only output)
-4. `reviewer_slice` — `Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}. Base: {{base}}.`
+4. `reviewer_slice` — `Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}. Base: {{base}}. Verdict-writer: workflows/<name>/scripts/write-verdict-file.sh.`
 5. `unit_test_writer` — `Mode: cover-gaps. Report: review-slice-{{iteration}}.md. Commands: {{test_command}}.`
 6. `implementer` — `Mode: fix-slice-findings. Slice: {{iteration}}. Commands: {{commands}}.`
 
 Exhaustive review round (`until: DONE`, cap ~2):
 
 1. `run:` CI
-2. `reviewer_engineering` — `Mode: full-review. Base: {{base}}.`
+2. `reviewer_engineering` — `Mode: full-review. Base: {{base}}. Verdict-writer: workflows/<name>/scripts/write-verdict-file.sh.`
 3. `unit_test_writer` — `Mode: cover-gaps. Report: review.md. Commands: {{test_command}}.`
 4. `implementer` — `Mode: fix-review-findings. Commands: {{commands}}.`
 5. `run:` CI again — never end a round on an unverified tree

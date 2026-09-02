@@ -46,8 +46,10 @@ arguments it requires, what it returns, and which nodes invoke it. The modes
 that survived a trim are the ones that matter — a copy is not the base, and
 assuming it is will have you invoking a mode that isn't there.
 
-**Scripts.** For each file in `scripts/`: what it does, which node runs it,
-whether it is executable. Note any that no node runs.
+**Scripts.** For each file in `scripts/`: what it does, which node or agent
+runs it (the verdict writer is named in a node's `Verdict-writer:` prompt
+argument, not by a `run:`),
+whether it is executable. Note any that no node and no agent runs.
 
 **Artifacts.** What the agents write, and where: the current trail layout is
 `.awc/tasks/in-progress/<task>/` with `spec.md` and `acceptance-criteria.md` at
@@ -76,20 +78,27 @@ Compare against the current bases while you're there:
 - `diff` the package's `running.md` against
   `../workflow-creator/assets/running.md` — it should be byte-identical.
 - `diff` any file the package copied from `../workflow-creator/assets/`
-  (`finish-task.sh`, `run.sh`, `agents-cli.conf`) against its base.
+  (`finish-task.sh`, `write-verdict-file.sh`, `run.sh`, `agents-cli.conf`)
+  against its base.
 - Read each agent copy next to its base: a copy that is behind carries an older
   protocol, older artifact paths, or a `description:` naming modes it no longer
-  has.
+  has. A reviewer copy from before the verdict writer has no `Verdict-writer:`
+  argument and records no one-line verdict file — see the playbook's "Adopt
+  the verdict writer" for the migration.
 
 ### Upgrade-only checks
 
 Things a freshly written package cannot have, so the creator's checklist never
 looks for them:
 
-- **Orphans.** An agent file no node invokes; a script no node, `until_run:` or
-  `when:` runs; an input or var no placeholder fills; a `wait:` naming a node
-  that no longer exists or no longer carries `parallel: true`.
+- **Orphans.** An agent file no node invokes; a script nothing runs — no
+  `run:` node, `until_run:`, `when:`, or reviewer `Verdict-writer:` names it
+  (the verdict writer is exec'd from inside the reviewer step, its path
+  passed in that node's prompt); an input or var no placeholder fills; a
+  `wait:` naming a node that no longer exists or no longer carries
+  `parallel: true`.
 - **Dangling references.** An `agent:` or `run:` path that doesn't resolve; a
+  `Verdict-writer:` argument naming a script the package doesn't contain; a
   `Report:` or `Log:` argument naming an artifact no node produces; a `Source:`
   naming an input that isn't declared.
 - **Copy/node mismatch.** A node invoking a mode its agent copy was trimmed of,

@@ -12,12 +12,16 @@ work — leave them out rather than widening the pass.
 
 ## Modes
 
-Every invocation arrives as `Task: <task>. Mode: <mode>. Base: <base>.` —
+Every invocation arrives as `Task: <task>. Mode: <mode>. Base: <base>.
+Verdict-writer: <verdict-writer>.` —
 every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
 `spec.md` and `acceptance-criteria.md`, which sit one level up in
 `.awc/tasks/in-progress/<task>/`. `<base>` is the git ref
 your diff runs against: never diff against a guessed ref, and a missing
-`Base:` argument is verdict `CHANGES_REQUESTED`, naming it.
+`Base:` argument is verdict `CHANGES_REQUESTED`, naming it. So is a missing
+`Verdict-writer:` — the package-relative path of the verdict writer script
+(`scripts/write-verdict-file.sh`), written from the launch directory like
+every YAML path.
 Running CI is not yours in either mode — **never re-run the suites**; the
 workflow gates on them separately. If anything in the trail or diff shows a
 red suite, never approve over it.
@@ -89,6 +93,12 @@ Judge the trust boundaries the diff touches:
    `APPROVED` / `CHANGES_REQUESTED` + `file:line` findings + severity
    (blocker / major / minor), each tagged with its lens (`[code]` / `[arch]` /
    `[perf]` / `[security]`). Mark fixed findings `resolved` and **keep** them.
+4. Record the verdict by running the verdict writer the invocation named —
+   `<verdict-writer> .awc/tasks/in-progress/<task>/tmp/review <VERDICT>` —
+   which writes `review-verdict.md` beside the review: exactly one line, the
+   bare verdict word, nothing else. The review stays in `review.md`; the
+   verdict file exists so a `when:` guard can grep the verdict without
+   depending on the review file's layout.
 
 Return one line: `<VERDICT> -> .awc/tasks/in-progress/<task>/tmp/review.md`.
 
@@ -101,3 +111,6 @@ Return one line: `<VERDICT> -> .awc/tasks/in-progress/<task>/tmp/review.md`.
 - ✅ Be specific: `file:line` plus the exact rule. Record any lens marked `N/A`
   and why.
 - ✅ One `review.md`, durable — never emptied, never 0-byte, even on `APPROVED`.
+- ✅ The verdict is always recorded through `scripts/write-verdict-file.sh` —
+  the verdict file holds exactly one line, the bare verdict word, nothing
+  else.

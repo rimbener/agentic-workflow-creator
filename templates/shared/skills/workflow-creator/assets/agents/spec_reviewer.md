@@ -12,8 +12,13 @@ step resolves them. You never author or edit anything.
 
 ## Invocation
 
-You are invoked as `Task: <task>. Mode: review.` — one mode, one round.
-Every path below is under `.awc/tasks/in-progress/<task>/tmp/`, except
+You are invoked as `Task: <task>. Mode: review. Verdict-writer:
+<verdict-writer>.` — one mode, one round. `<verdict-writer>` is the
+package-relative path of the verdict writer script
+(`scripts/write-verdict-file.sh`), written from the launch directory like
+every YAML path; a missing `Verdict-writer:` argument is verdict
+`CHANGES_REQUESTED`, naming it. Every path below is under
+`.awc/tasks/in-progress/<task>/tmp/`, except
 `spec.md` and `acceptance-criteria.md`, which sit one level up in
 `.awc/tasks/in-progress/<task>/`. You review once and write `review-spec.md`;
 there is no re-review pass.
@@ -88,6 +93,12 @@ there is no re-review pass.
    findings (name the file **and** the exact criterion or subtask) + severity
    (blocker / major / minor). Durable trail — findings marked `open` /
    `resolved`; never empty the file.
+4. Record the verdict by running the verdict writer the invocation named —
+   `<verdict-writer> .awc/tasks/in-progress/<task>/tmp/review-spec <VERDICT>`
+   — which writes `review-spec-verdict.md` beside the review: exactly one
+   line, the bare verdict word, nothing else. The review stays in
+   `review-spec.md`; the verdict file exists so a `when:` guard can grep the
+   verdict without depending on the review file's layout.
 
 ## Verdict
 
@@ -107,3 +118,6 @@ there is no re-review pass.
   records — a recorded human call settles the approach.
 - ✅ Be specific: name the file **and** the exact criterion / subtask / decision.
 - ✅ Keep `review-spec.md` a durable trail — never 0-byte, even on `APPROVED`.
+- ✅ The verdict is always recorded through `scripts/write-verdict-file.sh` —
+  the verdict file holds exactly one line, the bare verdict word, nothing
+  else.

@@ -53,8 +53,9 @@ the workflow runs in a worktree.
    anything you skipped and why. **Get an explicit yes before writing files.**
 4. **Write the package** (layout below): the YAML; the agents — instantiate
    the bundled bases the workflow uses, tailored to its steps, and author the
-   rest, both per the catalog's rules; the scripts, including
-   `scripts/finish-task.sh` copied verbatim from `assets/finish-task.sh`;
+   rest, both per the catalog's rules; the scripts — `scripts/finish-task.sh`
+   always, and `scripts/write-verdict-file.sh` when the workflow instantiates
+   a bundled reviewer — copied verbatim from `assets/`;
    `running.md` copied verbatim from `assets/running.md`; a short README;
    the three in-session launchers; and — when isolation is a worktree —
    `./<name>.sh` copied from `assets/run.sh` with `__WORKTREE_PARENT__` set.
@@ -77,10 +78,11 @@ the end of the list. Sequential is the default.
 step narrows what that step's subagent may reach for, in host-neutral
 capability names (`read`, `search`, `edit`, `shell`, `web`, `spawn`) that the
 lead maps to its host's tools. Reach for it where a step has no business
-touching a capability — a reviewer that reads and writes its report needs no
-`shell`, and no bundled agent delegates, so none needs `spawn`. Grant
-everything the agent's own file tells it to do: an agent invoked with
-`Commands:` needs `shell`, and every agent that writes a report under
+touching a capability — and no bundled agent delegates, so none needs
+`spawn`. Grant everything the agent's own file tells it to do: an agent
+invoked with `Commands:` needs `shell`, a reviewer records its verdict
+through `scripts/write-verdict-file.sh` and needs `shell` for that one
+command, and every agent that writes a report under
 `.awc/tasks/in-progress/<task>/` needs `edit`. Every scope keeps `web` — any
 agent may need to look up a library's docs or an error message.
 Omitting the key grants the host's default, and that stays the norm — a scope
@@ -148,7 +150,8 @@ workflows/<name>/
 ├── running.md         # execution contract — verbatim copy of assets/running.md
 ├── agents/            # workflow_lead.md + every agent the nodes reference
 └── scripts/           # one script = one thing; chmod +x
-    └── finish-task.sh # copy of assets/finish-task.sh — archives the task trail
+    ├── finish-task.sh # copy of assets/finish-task.sh — archives the task trail
+    └── write-verdict-file.sh # copy of assets/write-verdict-file.sh — records a reviewer verdict as a 1-line file; only when a bundled reviewer is instantiated
 .claude/commands/<name>.md      # in-session launcher — Claude Code
 .codex/skills/<name>/SKILL.md   # in-session launcher — Codex
 .opencode/command/<name>.md     # in-session launcher — opencode
@@ -212,7 +215,7 @@ nodes:
           prompt: "Task: {{task}}. Mode: build-slice. Slice: {{iteration}}. Commands: {{commands}}."
           expect: green
         - agent: agents/reviewer_slice.md
-          prompt: "Task: {{task}}. Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}. Base: {{base}}."
+          prompt: "Task: {{task}}. Mode: review-slice. Slice: {{iteration}}. Commands: {{test_command}}. Base: {{base}}. Verdict-writer: workflows/fix-bug/scripts/write-verdict-file.sh."
           expect: [APPROVED, CHANGES_REQUESTED]
         - agent: agents/implementer_tdd.md
           prompt: "Task: {{task}}. Mode: fix-slice-findings. Slice: {{iteration}}. Commands: {{commands}}."
@@ -246,14 +249,17 @@ before anything that depends on the results:
     wait: [lint, typecheck]
 ```
 
-A step that only reads the tree and writes its verdict says so:
+A reviewer reads the tree, writes its report, and records its verdict through
+the package's verdict writer — so its scope grants `shell` for that one call,
+and the prompt passes the writer's package path as the `Verdict-writer:`
+argument the agent file requires:
 
 ```yaml
   - id: review
     agent: agents/reviewer_engineering.md
-    prompt: "Task: {{task}}. Mode: full-review. Base: {{base}}."
+    prompt: "Task: {{task}}. Mode: full-review. Base: {{base}}. Verdict-writer: workflows/fix-bug/scripts/write-verdict-file.sh."
     expect: [APPROVED, CHANGES_REQUESTED]
-    allowed_tools: [read, search, edit, web]
+    allowed_tools: [read, search, edit, web, shell]
 ```
 
 These examples are illustrative, never templates to copy — every workflow's
@@ -308,6 +314,13 @@ nodes come from its own interview.
   node that touches the trail, per "The task trail has a place" above, and a
   workflow that commits its trail commits the archive move too, in a
   committer-agent node placed after it.
+- A workflow that instantiates any bundled reviewer ships
+  `scripts/write-verdict-file.sh` as an executable verbatim copy of
+  `assets/write-verdict-file.sh`, grants `shell` to every node invoking a
+  reviewer, and passes each reviewer its `Verdict-writer:` argument naming
+  that copied script — the path written from the launch directory, where a
+  subagent runs too. A guard skipping a findings step on `APPROVED` greps the
+  reviewer's one-word `-verdict` file, never the review trail.
 - Every artifact path an agent copy names is an in-progress one:
   `.awc/tasks/in-progress/<task>/tmp/<file>.md`, except `spec.md` and
   `acceptance-criteria.md` at `.awc/tasks/in-progress/<task>/`. Only the lead's

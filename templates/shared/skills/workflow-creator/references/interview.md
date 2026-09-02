@@ -108,7 +108,10 @@ the parts separately, they're separate nodes.
 **9. Quality.** *Is there an exhaustive review at the end?*
 (`reviewer_engineering`, with `Base:`). How many rounds before the cap halts?
 Should a re-review run only when fixes touched production source (a `when:`
-predicate on the node)?
+predicate on the node)? Should a findings-fix step be skipped outright when
+the review approved — a `when:` grepping the reviewer's one-word `-verdict`
+file? Safe exactly when the step carries no commit; the slice loop's and the
+review round's fix steps always run.
 
 **10. DoD and gates.** A final Definition-of-Done validation
 (`dod_validator`)? Besides the spec approval, where else must a human

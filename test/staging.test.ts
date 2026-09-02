@@ -570,6 +570,11 @@ describe('the shared payload', () => {
     expect(existsSync(path.join(skillDir, 'assets', 'finish-task.sh'))).toBe(
       true,
     )
+    // The reviewers record their verdicts through this script; a package
+    // missing the copy leaves the one-line verdict file unwritten.
+    expect(
+      existsSync(path.join(skillDir, 'assets', 'write-verdict-file.sh')),
+    ).toBe(true)
     // A `run:` command executes from the launch directory, not beside the
     // YAML, so the canonical node has to carry the package-relative path.
     for (const doc of [
@@ -585,6 +590,75 @@ describe('the shared payload', () => {
     const running = read('assets', 'running.md')
     expect(running).toContain('.awc/tasks/in-progress/<task>/')
     expect(running).toContain('.awc/tasks/done/<task>/')
+  })
+
+  // The verdict writer threads through three documents that have to agree,
+  // or a generated package copies no script, grants no shell, or passes no
+  // path — and the one-line verdict file never appears for a guard to grep.
+  test('the verdict writer is shipped, granted shell, and passed by path', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const read = (...parts: string[]) =>
+      readFileSync(path.join(skillDir, ...parts), 'utf8')
+    for (const reviewer of [
+      'spec_reviewer.md',
+      'reviewer_slice.md',
+      'reviewer_engineering.md',
+    ]) {
+      const body = read('assets', 'agents', reviewer)
+      expect(body).toContain('Verdict-writer:')
+      expect(body).toContain('write-verdict-file.sh')
+      // The writer's path is an invocation argument — never a literal the
+      // tailoring would have to remember to rewrite.
+      expect(body).not.toContain('workflows/<name>')
+    }
+    const catalog = read('references', 'agent-catalog.md')
+    expect(catalog).toContain(
+      'the one command they run is the package\'s `scripts/write-verdict-file.sh`',
+    )
+    // The producer has a consumer: the canonical spec-review shape guards
+    // its fix step with a grep of the verdict file, not the review trail.
+    expect(catalog).toContain('grep -qx CHANGES_REQUESTED')
+    const skill = read('SKILL.md')
+    expect(skill).toContain('Verdict-writer:')
+    expect(skill).toContain('[read, search, edit, web, shell]')
+    // The old teaching — reviewers need no shell — must not survive in the
+    // document generated scopes are modeled from.
+    expect(skill.replace(/\s+/g, ' ')).not.toContain('needs no `shell`')
+    // The change skills ship the base and know the agent-invoked exception.
+    const upgrader = readFileSync(
+      path.join(sharedDir(), 'skills', 'workflow-upgrader', 'SKILL.md'),
+      'utf8',
+    )
+    const editor = readFileSync(
+      path.join(sharedDir(), 'skills', 'workflow-editor', 'SKILL.md'),
+      'utf8',
+    )
+    for (const body of [upgrader, editor]) {
+      expect(body).toContain('write-verdict-file.sh')
+      expect(body).toContain('Verdict-writer:')
+    }
+    // The audit walk lives in inventory.md — its orphan and dangling lists
+    // must both know the writer, or the same pass that adopts it flags it
+    // unused or lets a typo'd prompt path through.
+    const inventory = readFileSync(
+      path.join(
+        sharedDir(),
+        'skills',
+        'workflow-upgrader',
+        'references',
+        'inventory.md',
+      ),
+      'utf8',
+    ).replace(/\s+/g, ' ')
+    expect(inventory).toContain('or reviewer `Verdict-writer:` names it')
+    expect(inventory).toContain(
+      'a `Verdict-writer:` argument naming a script the package doesn\'t contain',
+    )
+    // The writer path travels in the prompt, not in an agent file — both
+    // skills' orphan wording says so.
+    const flat = (s: string) => s.replace(/\s+/g, ' ')
+    expect(flat(upgrader)).toContain("named in a node's `Verdict-writer:` argument")
+    expect(flat(editor)).toContain("named in a node's `Verdict-writer:` argument")
   })
 
   // Every loop iteration spawns a fresh subagent, so an interviewer's only

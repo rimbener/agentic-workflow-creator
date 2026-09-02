@@ -53,7 +53,7 @@ Read these before starting (silently — they are your working knowledge):
 - `../workflow-creator/references/hosts.md` — the three launchers and the
   worktree launch script.
 - `../workflow-creator/assets/` — the bases you copy from: `agents/*.md`,
-  `run.sh`, `agents-cli.conf`, `finish-task.sh`.
+  `run.sh`, `agents-cli.conf`, `finish-task.sh`, `write-verdict-file.sh`.
 
 If the workflow-creator skill is genuinely not loaded in this session — not
 merely a path that failed on the first try — say so plainly **before you
@@ -93,14 +93,16 @@ changes you cannot validate.
    invalidate (a rename or removal of a node a paused run resumes by) waits
    for the user to choose: finish the run first, or accept that it restarts.
 5. **Validate — never compressed.** Run the workflow-creator's full
-   validation checklist over the whole changed package, then check: no
-   orphans (every agent file referenced, every script run by a node, an
-   `until_run:` or a `when:`, every input and var used, every `wait:` naming
-   a live `parallel: true` node), no dangling
-   references, agent copies matching the node list in both directions, the
-   launch paths agreeing — the three in-session launchers and, where it
-   exists, `./<name>.sh` — and new prose reading positively. Then **the diff
-   is the change**: read `git diff` for the package end to end; every hunk
+   validation checklist over the whole changed package. Then the standing
+   invariants. No orphans: every agent file referenced, and every script run
+   by a node, an `until_run:`, a `when:`, or named in a node's
+   `Verdict-writer:` argument — the verdict writer's case, exec'd from inside
+   the reviewer step with its path travelling in that node's prompt. Every
+   input and var used. Every `wait:` naming a live `parallel: true` node. No
+   dangling references. Agent copies matching the node list in both
+   directions. The launch paths agreeing — the three in-session launchers
+   and, where it exists, `./<name>.sh`. New prose reading positively. Then
+   **the diff is the change**: read `git diff` for the package end to end; every hunk
    traces to the stated changes or a named ripple, and a hunk that doesn't is
    a drive-by to drop before handing off. Your change leaves `running.md`
    untouched — a package copy that already differs from

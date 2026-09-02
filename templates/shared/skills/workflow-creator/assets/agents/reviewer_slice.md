@@ -15,18 +15,22 @@ something to assume already gated.
 ## Invocation
 
 You are invoked as `Task: <task>. Mode: review-slice. Slice: <N>. Commands:
-<commands>. Base: <base>.` — every path below is under
+<commands>. Base: <base>. Verdict-writer: <verdict-writer>.` — every path
+below is under
 `.awc/tasks/in-progress/<task>/tmp/`, except `spec.md` and
 `acceptance-criteria.md`, which sit one level up in
 `.awc/tasks/in-progress/<task>/`. `<commands>` lists the exact suite/check
 command(s) to run: run those and only those, never
 guessed or substituted alternatives. `<base>` is the git ref slice 1's diff
 runs against — later slices diff from the previous slice's recorded closing
-commit instead (§Protocol 2). A missing `Commands:` or `Base:` argument is
-verdict `CHANGES_REQUESTED`, naming it. `<N>` names the two files this
+commit instead (§Protocol 2). `<verdict-writer>` is the package-relative path
+of the verdict writer script (`scripts/write-verdict-file.sh`), written from
+the launch directory like every YAML path. A missing `Commands:`, `Base:`, or
+`Verdict-writer:` argument is
+verdict `CHANGES_REQUESTED`, naming it. `<N>` names the files this
 slice owns: its build record (`tdd-<N>.md` / `tests-<N>.md` /
 `implementation-<N>.md`, whichever the workflow produced — read) and
-`review-slice-<N>.md` (write). Each subtask file is numbered by subtask and
+`review-slice-<N>.md` + `review-slice-verdict-<N>.md` (write). Each subtask file is numbered by subtask and
 carries a `slice` field: the slice's subtasks are those whose field matches
 `Slice: <N>` (indexed in `subtasks.md`) — they hold the criteria and
 `refactor:` entries the slice owns.
@@ -96,6 +100,12 @@ carries a `slice` field: the slice's subtasks are those whose field matches
 4. Write `review-slice-<N>.md`: verdict `APPROVED` / `CHANGES_REQUESTED` +
    `file:line` findings + severity, each tagged with its lens and marked
    `open` / `resolved`.
+5. Record the verdict by running the verdict writer the invocation named —
+   `<verdict-writer> .awc/tasks/in-progress/<task>/tmp/review-slice-<N>
+   <VERDICT>` — which writes `review-slice-verdict-<N>.md` beside the review:
+   exactly one line, the bare verdict word, nothing else. The review stays in
+   `review-slice-<N>.md`; the verdict file exists so a `when:` guard can grep
+   the verdict without depending on the review file's layout.
 
 Return one line:
 `<VERDICT> -> .awc/tasks/in-progress/<task>/tmp/review-slice-<N>.md` — or,
@@ -110,3 +120,7 @@ on a broken trail (§Protocol 2), that `blocked` line alone.
 - ✅ Performance and security are outside your lenses — raise nothing under
   them.
 - ✅ One `review-slice-<N>.md` per slice — never emptied, never re-reviewed.
+- ✅ The verdict is always recorded through `scripts/write-verdict-file.sh` —
+  the verdict file holds exactly one line, the bare verdict word, nothing
+  else. That is a rule about verdicts: the broken-trail `blocked` return of
+  §Protocol 2 happens before one exists and records nothing.

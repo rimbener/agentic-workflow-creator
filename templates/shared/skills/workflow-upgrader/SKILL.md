@@ -62,7 +62,8 @@ Read these before starting (silently — they are your working knowledge):
 - `../workflow-creator/references/interview.md` — the full area list, for the
   areas your change reopens.
 - `../workflow-creator/assets/` — the bases you instantiate from:
-  `agents/*.md`, `run.sh`, `agents-cli.conf`, `finish-task.sh`.
+  `agents/*.md`, `run.sh`, `agents-cli.conf`, `finish-task.sh`,
+  `write-verdict-file.sh`.
 
 Then read this skill's own references:
 
@@ -202,12 +203,15 @@ the nodes you touched — a ripple you missed shows up there. Then these, which
 only an upgrade can fail:
 
 - **No orphans.** Every file in `agents/` is referenced by a node; every file
-  in `scripts/` is run by a node, an `until_run:`, or a `when:`; every input
+  in `scripts/` is run by a node, an `until_run:`, a `when:`, or — the verdict
+  writer's case — named in a node's `Verdict-writer:` argument, since the
+  reviewers exec it from inside the step and its path travels in that node's
+  prompt; every input
   and var is used by some `{{placeholder}}`; every `wait:` names a node that
   still exists and still carries `parallel: true`.
 - **No dangling references.** Every `agent:` path, `run:` script path and
-  `Report:`/`Log:`/`Source:` argument names something the changed package
-  actually produces or contains.
+  `Report:`/`Log:`/`Source:`/`Verdict-writer:` argument names something the
+  changed package actually produces or contains.
 - **Agent copies match the new node list in both directions** — no mode no node
   invokes, and no node invoking a mode its agent copy no longer carries. Check
   each changed copy's `description:` too: it names the modes the file has.
