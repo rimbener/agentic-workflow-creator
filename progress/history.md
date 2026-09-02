@@ -167,3 +167,11 @@ Two base defects in the slice-loop pairing. The fix step wrote `closing-commit: 
 ## 2026-08-31 — `f88adea` — chore(evals): sync bun-app-shipped agents with the trail-commit dialect
 
 `bun-app-shipped` stays a current-dialect baseline: its instantiated `implementer_tdd` and `reviewer_slice` copies pick up the trail-commit close, the token ordering, and the closer-record spellings. `bun-app-drifted` is untouched — the base change is the kind of drift it exists to carry.
+
+## 2026-09-02 — `8b11d63` — refactor(agents): strip coding styles and recommendations from the base agents
+
+The base agents are executors only. The reviewers' built-in taste lenses (SOLID/KISS/DRY lists, naming and function-size rules, "tests bite", hermetic/isolated doctrine, WCAG 2.2 AA, house style) are gone — `reviewer_slice` and `reviewer_engineering` judge against the project's documented conventions, the approved spec, and objective checks; `dod_validator`'s code-quality row became a conventions check. The spec and story interviews ask and record without recommended answers or the balanced-approach doctrine — the human's call settles the approach, and a reshaping only lands when they ask. TDD's Red→Green→Refactor stays (methodology, not style). Catalog row updated; staging pins hold unchanged.
+
+## 2026-09-02 — `f8cbb6f` — chore: ignore .DS_Store
+
+macOS keeps dropping one into the tree; git status stays clean.
