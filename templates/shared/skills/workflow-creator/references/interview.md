@@ -60,15 +60,15 @@ for it to open with, and the question becomes *how that file gets written*:
 **ask where the problem statement comes from.** The bundled agent for this
 slot is `story_partner`, in three shapes, all writing the same file —
 
-- `interview` — it grills the user one question per turn, log-backed, working
-  from the raw request (`Request:`). Recommend this when the work starts from a
-  rough idea.
-- `capture` — a single node, no questions: it structures what `Source:`
-  carries — a path, a URL, or the request text itself. Recommend this when a
-  ticket or a design doc already states the problem.
-- `capture-and-confirm` — reads the source, then asks only about what it left
-  open; a source that settles every area closes on turn 1. The middle setting,
-  for a thin ticket.
+- `interview` — an `inline:` node: the lead runs it in its own session and
+  grills the user one question at a time, log-backed, working from the raw
+  request (`Request:`). Recommend this when the work starts from a rough idea.
+- `capture` — a single spawned node, no questions: it structures what
+  `Source:` carries — a path, a URL, or the request text itself. Recommend
+  this when a ticket or a design doc already states the problem.
+- `capture-and-confirm` — an `inline:` node too: reads the source, then asks
+  only about what it left open; a source that settles every area closes on
+  turn 1. The middle setting, for a thin ticket.
 
 `capture` is the mode that hands work on: what it could not settle it writes
 under `## Open questions`, and the spec interview settles those first. The
@@ -132,7 +132,8 @@ scoped down to the tools it actually needs?* The natural candidates are the
 steps that read and report without running anything (an exhaustive review, a
 mutation report). Recommend leaving the rest at the host default, and draw
 any scope by the grant rules in SKILL.md's "Tool scope is per node" and the
-catalog's Tool scopes table.
+catalog's Tool scopes table. `inline:` steps take no scope: the lead runs
+them itself, so there is no subagent to narrow.
 
 ## From answers to nodes
 
@@ -140,6 +141,10 @@ Map each settled area to nodes using the canonical shapes in
 `agent-catalog.md`, then walk the sequence start to finish looking for gaps:
 
 - every loop has `until:` **or** `until_run:`, plus `max_iterations`;
+- every step that converses with the human is an `inline:` node carrying
+  `agent:`, `prompt:` and `expect:` alone — both story interviewing modes and
+  the spec interview; a loop there would spawn an agent that can ask only
+  once;
 - every agent node has `expect:`, and passes every argument its agent's file
   says it needs (`Commands:`, `Base:`, `Log:`, `Report:`, `Format:`, `Slice:`,
   `Request:`, `Source:`) — a story node in a capture mode carries `Source:`,

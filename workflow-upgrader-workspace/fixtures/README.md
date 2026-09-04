@@ -12,7 +12,8 @@ commits), and a worktree workflow refuses to launch unless its YAML is on
 The `bun-app` fixture from `workflow-creator-workspace/fixtures/`, plus a
 `ship-feature` package generated against the **current** dialect: the
 `.awc/tasks/in-progress/<task>/` trail with `tmp/`, a `finish` node running
-`scripts/finish-task.sh`, `story_partner` in `interview` mode, and agent copies
+`scripts/finish-task.sh`, `story_partner` in `interview` mode and the spec
+interview both on `inline:` nodes the lead runs itself, and agent copies
 tailored to the nodes that invoke them.
 
 It is the baseline — a package with nothing wrong with it — so an eval that
@@ -38,7 +39,7 @@ letters, digits, hyphens, and underscores.
 
 The same repo holding an `add-endpoint` package generated **before** several
 dialect changes, for the "bring this up to date" eval. It runs in place, and it
-is behind in four ways the current validation checklist catches on its own — no
+is behind in five ways the current validation checklist catches on its own — no
 version list needed, which is the point:
 
 | Drift | What the checklist says now |
@@ -47,6 +48,7 @@ version list needed, which is the point:
 | no `finish` node, no `finish-task.sh` | a workflow writing that trail archives it in a final node |
 | `running.md` predating the trail section | the package's copy is verbatim |
 | no `.opencode/command/` launcher | all three in-session launchers exist and agree |
+| its interviews as `loop:` nodes relaying `{{answer}}` per question | a step that converses with the human is an `inline:` node the lead runs itself |
 
 It also carries two **hand-edits its owner made after generation** — a
 route-registration lens on `reviewer_slice`, a route-coverage row on

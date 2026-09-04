@@ -34,8 +34,8 @@ or narrowed. Two more exist only inside a loop node's body:
 
 Every node has an `id` and exactly one behavior. `parallel: true` and
 `allowed_tools:` are modifiers on `run:` or `agent:`, not second behaviors
-(`allowed_tools:` applies to `agent:` only). `wait:` is a behavior of its
-own.
+(`allowed_tools:` applies to `agent:` only; neither applies to `inline:`).
+`wait:` is a behavior of its own.
 
 ### `run:` — one command
 
@@ -58,11 +58,40 @@ usually *is* the failure; quote it, don't summarize it.
 3. Judge the step **only** by the subagent's final return line against
    `expect:` — a word, or list of words, the line must start with. Inside a
    loop, a return ending with `<promise>TOKEN</promise>` whose TOKEN names an
-   entry in `expect:` also satisfies it — the closing turn of an approval or
-   interview loop carries its token rather than a signal line. A `blocked`
-   return, or a return matching nothing in `expect:`, halts the run. One
+   entry in `expect:` also satisfies it — the closing turn of an approval loop
+   carries its token rather than a signal line. A `blocked` return, or a
+   return matching nothing in `expect:`, halts the run. One
    exception: a return that is a question or an approval request for the
    human is a relay (see below), never a halt.
+
+### `inline:` — one agent, run by you, in conversation with the human
+
+Holds `agent:`, `prompt:` and `expect:` — nothing else. No subagent is
+spawned: **you** read the agent file and act as that agent in your own
+session, working from its body followed by the node's `prompt:` with
+placeholders filled, as a spawn would have received it. This is the node for
+work that is a conversation with the human — an interview above all: a
+spawned agent speaks only through its final return, one question per spawn,
+while here you ask, wait and ask again within one node. The prompt carries no
+`{{answer}}` — nothing is relayed, because you are the one asking.
+
+Inside an `inline:` node the agent file's writes are yours to make — they are
+its deliverables, and `agents/workflow_lead.md`'s no-write rule steps aside
+for this node alone. When the protocol ends, judge its final line against
+`expect:` as you would a spawn's. Then you are the lead again.
+
+`parallel: true` and `allowed_tools:` never go on an `inline:` node — the
+first would detach you from the conversation, the second scopes a spawn that
+never happens. `when:` is allowed as on any node.
+
+**No cap, and none is needed — but the escalation stays.** A loop is capped
+because its iterations can spin unwatched; here every exchange waits on a
+human reply, and stops when they say stop. The escalation the cap carried
+belongs to the agent instead: when it has asked everything it can and the
+artifact still cannot be written — an area nobody can settle, a human who
+asks to stop — return the `blocked` line its file defines, naming what
+stayed open. Never ask past that, and never write the artifact over an open
+area.
 
 ### `loop:` — repeat until a signal
 
@@ -86,12 +115,13 @@ is the escalation.
 **Each iteration is a fresh subagent.** Spawning is the only mechanism a host
 gives you, so iteration N starts blank: none of iteration N-1's questions,
 reasoning, or answers carry over, and the prompt holds only `{{answer}}`'s
-latest value. A body that has to build on what came before, an interview above
-all, therefore keeps its own record on disk; the agent file names that file
-and its shape, and the agent reads it each turn. Your part is to spawn the
-iteration and pass the prompt as the YAML wrote it, filled verbatim —
+latest value. A body that has to build on what came before therefore keeps
+its own record on disk; the agent file names that file and its shape, and the
+agent reads it each turn. Your part is to spawn the iteration and pass the
+prompt as the YAML wrote it, filled verbatim —
 reconstructing earlier turns into the prompt is the agent's log's job, not
-yours.
+yours. A conversation with the human — an interview above all — belongs in
+an `inline:` node instead.
 
 ### `gate:` — human approval
 
@@ -100,11 +130,11 @@ rejected. Anything else is feedback: record it in your status and re-ask.
 
 ### `parallel: true` — start and continue (modifier)
 
-Allowed only on a top-level `run:` or `agent:`+`prompt:` node — never on a
-`loop:`, `gate:`, `wait:`, or a step inside a loop. Start the inner step
-exactly as you would without the flag, then **immediately continue to the
-next node**. Do not wait for the command to exit or the subagent to return.
-Track the node as in-flight.
+Allowed only on a top-level `run:` or `agent:`+`prompt:` node — never on an
+`inline:`, `loop:`, `gate:`, `wait:`, or a step inside a loop. Start the
+inner step exactly as you would without the flag, then **immediately
+continue to the next node**. Do not wait for the command to exit or the
+subagent to return. Track the node as in-flight.
 
 Spawn a parallel agent with the same host call the `agent:` node section
 names for your host, just without waiting on the result. Start a parallel
@@ -118,9 +148,10 @@ Parallel is for work that does not need the human.
 ### `allowed_tools:` — scope an agent's tools (modifier)
 
 Allowed on an `agent:`+`prompt:` node or an agent step inside a loop — never
-on a `run:`, `loop:`, `gate:`, or `wait:` node. It is a list of **capability
-names**, host-neutral by design: hosts spell their tools differently, so the
-workflow names the capability and you map it to your host's tools.
+on a `run:`, `inline:`, `loop:`, `gate:`, or `wait:` node. It is a list of
+**capability names**, host-neutral by design: hosts spell their tools
+differently, so the workflow names the capability and you map it to your
+host's tools.
 
 | Capability | Means | Claude Code | Codex | opencode |
 | --- | --- | --- | --- | --- |
@@ -210,13 +241,16 @@ wrote it and let the agent resolve them.
 
 ## Questions and approvals
 
-An agent that returns a question — or a `gate:` — pauses the run: relay it
-verbatim to the human, wait, and continue with the answer, re-invoking the
-same agent with `{{answer}}` filled where its prompt uses it. Re-invoking is
-a **fresh spawn** — this dialect never continues or resumes the subagent
-that asked; its log on disk is its memory. Never answer
-for the human, never summarize their words — pass them through as given. The
-one exception is a `parallel: true` agent that asks — see its section above.
+A spawned agent that returns a question — or a `gate:` — pauses the run:
+relay it verbatim to the human, wait, and continue with the answer,
+re-invoking the same agent with `{{answer}}` filled where its prompt uses it.
+Re-invoking is a **fresh spawn** — this dialect never continues or resumes
+the subagent that asked; its log on disk is its memory. Never answer
+for the human, never summarize their words — pass them through as given. Two
+exceptions: a `parallel: true` agent that asks (its section above), and an
+`inline:` node, where you are the agent: put the question to the human
+yourself and wait. Use the host's question tool where it has one, plain chat
+otherwise.
 
 ## Halts and resuming
 
@@ -228,7 +262,8 @@ choice against what is actually on disk, and continue from that node — never
 silently redo completed work that created commits, and never re-ask the human
 questions an existing artifact already answers. A trail already sitting under
 `.awc/tasks/done/<task>/` means the run reached its last node — say so rather
-than starting the walk over.
+than starting the walk over. An `inline:` node interrupted mid-conversation
+resumes from the agent's own log, read as that agent's file says.
 
 In-flight `parallel:` work dies with the session. On resume, re-launch any
 `parallel: true` node that sits before the resume point and has not yet been

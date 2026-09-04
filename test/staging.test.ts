@@ -613,7 +613,7 @@ describe('the shared payload', () => {
     }
     const catalog = read('references', 'agent-catalog.md')
     expect(catalog).toContain(
-      'the one command they run is the package\'s `scripts/write-verdict-file.sh`',
+      "the one command they run is the package's `scripts/write-verdict-file.sh`",
     )
     // The producer has a consumer: the canonical spec-review shape guards
     // its fix step with a grep of the verdict file, not the review trail.
@@ -652,20 +652,23 @@ describe('the shared payload', () => {
     ).replace(/\s+/g, ' ')
     expect(inventory).toContain('or reviewer `Verdict-writer:` names it')
     expect(inventory).toContain(
-      'a `Verdict-writer:` argument naming a script the package doesn\'t contain',
+      "a `Verdict-writer:` argument naming a script the package doesn't contain",
     )
     // The writer path travels in the prompt, not in an agent file — both
     // skills' orphan wording says so.
     const flat = (s: string) => s.replace(/\s+/g, ' ')
-    expect(flat(upgrader)).toContain("named in a node's `Verdict-writer:` argument")
-    expect(flat(editor)).toContain("named in a node's `Verdict-writer:` argument")
+    expect(flat(upgrader)).toContain(
+      "named in a node's `Verdict-writer:` argument",
+    )
+    expect(flat(editor)).toContain(
+      "named in a node's `Verdict-writer:` argument",
+    )
   })
 
-  // Every loop iteration spawns a fresh subagent, so an interviewer's only
-  // memory of earlier turns is the log file its own prompt names. Losing that
-  // — or letting the closing turn open one more entry — is what makes an
-  // interview re-ask settled questions or run to max_iterations.
-  test('every interviewer owns a named log, and the dialect says why', () => {
+  // An inline interview's log is its record and resume point. Without the
+  // write-at-both-ends rule it re-asks settled questions or writes over an
+  // unanswered one.
+  test('every interviewer runs inline and owns a named log', () => {
     const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
     const catalog = readFileSync(
       path.join(skillDir, 'references', 'agent-catalog.md'),
@@ -681,8 +684,13 @@ describe('the shared payload', () => {
         'utf8',
       )
       expect(body).toContain(log)
-      expect(body).toContain('blank `A:`') // a question turn opens an entry
-      expect(body).toContain('appends nothing') // the closing turn does not
+      // Logged at both ends of an exchange; the artifact waits on a closed log.
+      expect(body).toContain('blank `A:`')
+      expect(body).toContain("inline in the workflow lead's session")
+      expect(body).toContain('relaunched')
+      // No loop token: nothing inline would consume it.
+      expect(body).not.toContain('USER_STORY_WRITTEN')
+      expect(body).not.toContain('SPEC_BUNDLE_WRITTEN')
       expect(catalog).toContain(log)
     }
 
@@ -690,14 +698,209 @@ describe('the shared payload', () => {
       path.join(skillDir, 'assets', 'running.md'),
       'utf8',
     )
+    // running.md ships in every package, so it defines `inline:` and what it
+    // may not carry.
+    expect(running).toContain(
+      '### `inline:` — one agent, run by you, in conversation with the human',
+    )
+    expect(running).toContain(
+      'Holds `agent:`, `prompt:` and `expect:` — nothing else',
+    )
+    expect(running).toContain('The prompt carries no\n`{{answer}}`')
+    expect(running).toContain(
+      '`parallel: true` and `allowed_tools:` never go on an `inline:` node',
+    )
+    // Loops still spawn per iteration with no history in the prompt — why a
+    // conversation goes inline.
     expect(running).toContain('Each iteration is a fresh subagent')
-    // The log is the memory; the lead never rebuilds history into the prompt.
-    // running.md ships into every package, so the lead-facing wording has to
-    // carry the same rule the catalog states — not a vaguer paraphrase.
     expect(running).toContain(
       "reconstructing earlier turns into the prompt is the agent's log's job",
     )
-    expect(catalog).toContain('Pass `{{answer}}` and nothing more')
+    expect(catalog).toContain('**An interview is an `inline:` node.**')
+    // No cap replaces the loop's; its escalation moves into the agent.
+    expect(running).toContain(
+      '**No cap, and none is needed — but the escalation stays.**',
+    )
+    expect(catalog.replace(/\s+/g, ' ')).toContain(
+      'The cap goes with the loop and nothing replaces it',
+    )
+    for (const [agent, log] of Object.entries(logs)) {
+      const body = readFileSync(
+        path.join(skillDir, 'assets', 'agents', `${agent}.md`),
+        'utf8',
+      ).replace(/\s+/g, ' ')
+      expect(body).toContain(
+        `blocked -> .awc/tasks/in-progress/<task>/tmp/${log}`,
+      )
+      expect(body).toContain('in place of an iteration cap')
+    }
+    // The lead's file carries the no-write exception, or an inline node halts
+    // as a self-write step.
+    const lead = readFileSync(
+      path.join(skillDir, 'assets', 'agents', 'workflow_lead.md'),
+      'utf8',
+    )
+    expect(lead).toContain('an `inline:` node hands you')
+    expect(lead).toContain('there\n   is no relay: ask the human yourself')
+    // The creator states the same rule.
+    const skill = readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')
+    expect(skill).toContain('**A step that talks to the human is inline.**')
+    expect(skill).toContain(
+      'Every step whose work is a conversation with the human is an `inline:`',
+    )
+  })
+
+  // workflow_lead.md outranks running.md at run time: a package migrated to
+  // `inline:` with a stale lead copy halts at the interview's first write.
+  // Every migration document has to name that file.
+  test('the lead copy is recopied wherever a package migrates', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const flat = (...parts: string[]) =>
+      readFileSync(path.join(...parts), 'utf8').replace(/\s+/g, ' ')
+
+    // The creator requires the copy to be verbatim...
+    expect(flat(skillDir, 'SKILL.md')).toContain(
+      '`agents/workflow_lead.md` — a verbatim copy of `assets/agents/workflow_lead.md`',
+    )
+    // ...the audit diffs it against the base...
+    const upgraderRefs = path.join(
+      sharedDir(),
+      'skills',
+      'workflow-upgrader',
+      'references',
+    )
+    expect(flat(upgraderRefs, 'inventory.md')).toContain(
+      '`diff` `agents/workflow_lead.md` against',
+    )
+    // ...and both migrating skills recopy it and say what breaks otherwise —
+    // the editor has no audit walk or plan gate to catch a missed file.
+    const playbook = flat(upgraderRefs, 'change-playbook.md')
+    const editorSkill = flat(
+      sharedDir(),
+      'skills',
+      'workflow-editor',
+      'SKILL.md',
+    )
+    for (const doc of [playbook, editorSkill]) {
+      expect(doc).toContain('`agents/workflow_lead.md`, recopied from')
+      expect(doc).toContain(
+        'blocked -> <step>: asks the lead to write/edit/delete/commit',
+      )
+    }
+
+    // The baseline fixture ships both verbatim copies: editor evals grade
+    // `package-still-valid` against it, so a stale copy here reads as the
+    // dialect.
+    const pkgDir = path.join(
+      import.meta.dir,
+      '..',
+      'workflow-upgrader-workspace',
+      'fixtures',
+      'bun-app-shipped',
+      'workflows',
+      'ship-feature',
+    )
+    const verbatim: [string, string][] = [
+      [
+        path.join(pkgDir, 'agents', 'workflow_lead.md'),
+        path.join(skillDir, 'assets', 'agents', 'workflow_lead.md'),
+      ],
+      [
+        path.join(pkgDir, 'running.md'),
+        path.join(skillDir, 'assets', 'running.md'),
+      ],
+    ]
+    for (const [copy, base] of verbatim) {
+      expect({
+        file: path.basename(copy),
+        verbatim: readFileSync(copy, 'utf8') === readFileSync(base, 'utf8'),
+      }).toEqual({ file: path.basename(copy), verbatim: true })
+    }
+
+    // The fixture's contract promises the interviewers' escalation, so its
+    // tailored interviewer copies keep that return.
+    const interviewers: [string, string][] = [
+      ['story_partner', 'story-interview-log.md'],
+      ['spec_partner', 'spec-interview-log.md'],
+    ]
+    for (const [agent, log] of interviewers) {
+      const body = readFileSync(
+        path.join(pkgDir, 'agents', `${agent}.md`),
+        'utf8',
+      ).replace(/\s+/g, ' ')
+      expect({
+        agent,
+        escalates: body.includes(
+          `blocked -> .awc/tasks/in-progress/<task>/tmp/${log}`,
+        ),
+      }).toEqual({
+        agent,
+        escalates: true,
+      })
+      expect(body).toContain('in place of an iteration cap')
+    }
+  })
+
+  // The lead reads the launcher's role stamp before workflow_lead.md, so a
+  // bare "coordination only" contradicts the first `inline:` node. run.sh's
+  // copy ships in every worktree package.
+  test('every launcher role stamp names the inline exception', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const stamped = [
+      path.join(skillDir, 'references', 'hosts.md'),
+      path.join(skillDir, 'assets', 'run.sh'),
+    ]
+    for (const file of stamped) {
+      const text = readFileSync(file, 'utf8').replace(/\s+/g, ' ')
+      const hits = [...text.matchAll(/coordination only/g)]
+      expect({ file: path.basename(file), hits: hits.length }).toEqual({
+        file: path.basename(file),
+        // hosts.md has two templates (Claude/opencode, Codex); run.sh has one.
+        hits: path.basename(file) === 'hosts.md' ? 2 : 1,
+      })
+      // Each stamp is qualified; none stops at it.
+      expect(text.match(/coordination only(?!, apart from the )/)).toBeNull()
+      expect(text).toContain('nodes your role file has you run yourself')
+    }
+    // The role file, read second, must not restate the bare rule in its
+    // headline or description.
+    const lead = readFileSync(
+      path.join(skillDir, 'assets', 'agents', 'workflow_lead.md'),
+      'utf8',
+    )
+    expect(lead.match(/coordination only[.\n]/i)).toBeNull()
+    expect(lead).toContain(
+      '# workflow_lead — coordination, plus the `inline:` steps handed to you',
+    )
+    // The catalog row a package's README is written from agrees.
+    const catalog = readFileSync(
+      path.join(skillDir, 'references', 'agent-catalog.md'),
+      'utf8',
+    )
+    expect(catalog).toContain(
+      'never writes except while an `inline:` node has it acting as that node',
+    )
+    expect(catalog).not.toContain('Coordination only — never writes or commits')
+    // The migration recipe reaches the launchers too.
+    const playbook = readFileSync(
+      path.join(
+        sharedDir(),
+        'skills',
+        'workflow-upgrader',
+        'references',
+        'change-playbook.md',
+      ),
+      'utf8',
+    ).replace(/\s+/g, ' ')
+    expect(playbook).toContain('The role stamp each launcher opens with')
+    // The editor has no playbook, so its own ripple list must reach the
+    // launchers.
+    const editor = readFileSync(
+      path.join(sharedDir(), 'skills', 'workflow-editor', 'SKILL.md'),
+      'utf8',
+    ).replace(/\s+/g, ' ')
+    expect(editor).toContain('And all four launch paths')
+    expect(editor).toContain('coordination only and stops')
   })
 
   // spec_partner opens by reading user-story.md and treats it as settled, so
@@ -817,30 +1020,33 @@ describe('the shared payload', () => {
     )
   })
 
-  // A loop closes on a token, so every turn of an interviewing mode has to end
-  // in something the lead can act on: a question to relay, or the story plus
-  // its token. capture ends in neither, which is why it may not sit in a loop
-  // — the run would walk to max_iterations with the story already written.
+  // An interviewing mode asks and hears inside one node, so it is `inline:`;
+  // capture asks nothing, so it stays a plain spawned node — inline would
+  // open a conversation nobody is having, a loop would run to its cap.
   test('each story mode matches the node shape that can judge it', () => {
     const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
     const read = (...parts: string[]) =>
       readFileSync(path.join(skillDir, ...parts), 'utf8').replace(/\s+/g, ' ')
 
     const story = read('assets', 'agents', 'story_partner.md')
-    // Every interviewing turn asks or writes — never both, never neither.
+    // One question and its answer per exchange; the file is written once, at
+    // the end.
     expect(story).toContain(
-      'either **asks one question** or **writes the file**',
+      'every exchange before that is **one question** and the answer to it',
     )
-    // capture-and-confirm turn 1 is that same choice, so a complete source
-    // closes the loop on turn 1 instead of stranding it.
-    expect(story).toContain('makes **turn 1** that closing turn')
-    // capture returns no token: nothing for an `until:` to fire on.
+    // A source that settles everything writes the story with nothing asked.
     expect(story).toContain(
-      '- In `capture`, the single run returns that line alone, judged by `expect:`. Add no token',
+      'a source that settles every area brings that moment forward to the start',
+    )
+    // capture asks nothing, so no conversational shape fits it.
+    expect(story).toContain(
+      '- In `capture`, the single run returns that line alone, judged by `expect:` — no question, no second exchange, which is why it is the one mode that runs as a plain spawned node rather than an inline one.',
     )
 
     const catalog = read('references', 'agent-catalog.md')
-    expect(catalog).toContain('could never close that loop')
+    expect(catalog).toContain(
+      'could never close over a mode that returns no token',
+    )
     // One definition of "settled": a captured line counts as an answer does,
     // and an answer that decides a queued line strikes it. Two definitions
     // would send a later turn back over what the source already settled.
@@ -856,7 +1062,9 @@ describe('the shared payload', () => {
     // Every block an interviewing mode owns carries the word, so a capture-only
     // copy can drop them by name instead of by judgement.
     expect(story).toContain("This step is an interviewing mode's alone")
-    expect(story).toContain('In an interviewing mode, every **question** turn')
+    expect(story).toContain(
+      'In an interviewing mode, every question is in the log',
+    )
     // Protocols 3, 4, 5 and Communication carry a marked bullet per mode under
     // a mode-neutral opener, so a capture-only copy keeps neither the
     // one-question rule nor the closing-turn language only a loop can reach.
@@ -864,13 +1072,17 @@ describe('the shared payload', () => {
     expect(story).toContain('- In `capture-and-confirm`, the log opens with')
     expect(story).toContain('- In `capture-and-confirm`, the source got there')
     expect(story).toContain('- In `capture-and-confirm`, a source that settles')
-    expect(story).toContain('- In `capture-and-confirm`, the turn that carries')
+    expect(story).toContain(
+      '- In `capture-and-confirm`, that line may come with nothing asked',
+    )
     expect(story).toContain('- In an interviewing mode, name it out loud')
-    expect(story).toContain('- In an interviewing mode, it is the turn when')
-    expect(story).toContain('- In an interviewing mode, a loop is waiting')
+    expect(story).toContain('- In an interviewing mode, it comes when')
+    expect(story).toContain(
+      '- In an interviewing mode, that line is the whole of what you return',
+    )
     expect(story).toContain('- In `capture`, take each area the source')
     expect(story).toContain('- In `capture`, a collision the source walks into')
-    expect(story).toContain('- In `capture`, that turn is the single run')
+    expect(story).toContain('- In `capture`, that moment is the single run')
     expect(story).toContain('- In `capture`, the single run returns that line')
     expect(catalog).toContain('a mode-neutral opener over one marked bullet')
     expect(catalog).toContain('Marks nest')
@@ -885,7 +1097,9 @@ describe('the shared payload', () => {
     expect(read('references', 'interview.md')).toContain(
       '`Request:`, `Source:`',
     )
-    expect(read('SKILL.md')).toContain('it could never close one')
+    expect(read('SKILL.md')).toContain(
+      'inline there would open a conversation nobody is having',
+    )
   })
 
   // What every mode needs sits above the marks, so a capture-only trim cannot
@@ -925,7 +1139,7 @@ describe('the shared payload', () => {
     expect(story).toContain(
       'A path-shaped or URL-shaped `Source:` that will not open is a halt',
     )
-    expect(story).toContain('A capture mode has one other return')
+    expect(story).toContain('- In a capture mode, it is `blocked ->')
     // The catalog's capture shape decides the same way, or a creator following
     // it would pass a slug as a path and the step would halt on a real run.
     const catalogShape = read('references', 'agent-catalog.md')
@@ -1018,11 +1232,11 @@ describe('trimming story_partner by mark', () => {
       .replace(/\s+/g, ' ')
   }
 
-  // Material no capture-only copy can act on: a log it never opens, a token it
-  // never returns, an entry it never appends.
+  // Material no capture-only copy can act on: a log it never opens, an entry
+  // it never appends, a conversation it never has.
   const INTERVIEW_ONLY = [
     'story-interview-log.md',
-    'USER_STORY_WRITTEN',
+    "inline in the workflow lead's session",
     'blank `A:`',
     'one question at a time',
   ]
@@ -1066,11 +1280,16 @@ describe('trimming story_partner by mark', () => {
     expect(kept).toContain('## Acceptance criteria')
     expect(kept).toContain('**who** (which persona/user)')
     expect(kept).toContain('story-interview-log.md')
-    expect(kept).toContain('USER_STORY_WRITTEN')
+    expect(kept).toContain("inline in the workflow lead's session")
+    // Its escalation survives: with no cap, this return is the only way out
+    // of an area nobody can settle.
+    expect(kept).toContain(
+      'blocked -> .awc/tasks/in-progress/<task>/tmp/story-interview-log.md',
+    )
     for (const token of [
       '## Open questions',
       '`Source:` carries',
-      'blocked ->',
+      'blocked -> <what you could not read>',
       // no row advertising a mode this package has no node for
       '| `capture` |',
       '| `capture-and-confirm` |',
@@ -1088,7 +1307,7 @@ describe('trimming story_partner by mark', () => {
     expect(kept).toContain('story-interview-log.md')
     expect(kept).toContain('## From the source')
     expect(kept).toContain('`Source:` carries or names the raw material')
-    expect(kept).toContain('USER_STORY_WRITTEN')
+    expect(kept).toContain("inline in the workflow lead's session")
     expect(kept).toContain('## Acceptance criteria')
     for (const token of [
       '`Request:` carries',
@@ -1165,6 +1384,8 @@ describe('the upgrader eval material', () => {
       'input-threaded-everywhere',
       // The failure the drift fixture exists for.
       'hand-edits-preserved',
+      // A package generated before `inline:` runs its interviews as loops.
+      'interviews-moved-inline',
       'audit-reported-before-changing',
       // Removal is a sweep, not a deletion.
       'orphans-swept',
@@ -1348,7 +1569,7 @@ describe('the eval material', () => {
       // leaves the story to defaults still has to get one.
       'story-step-precedes-spec',
       // The middle setting: reads the source, then asks only what is open.
-      'confirm-story-loop-shape',
+      'confirm-story-inline-shape',
       'confirm-story-records-the-source',
     ]) {
       expect(names).toContain(key)
@@ -1359,7 +1580,7 @@ describe('the eval material', () => {
       (e: { name: string }) => e.name === 'ticket-capture-story',
     )
     expect(capture.expectations.map((x: string) => x.split(':')[0])).toContain(
-      'interview-loop-has-memory',
+      'interview-inline-with-a-record',
     )
 
     const checker = readFileSync(
@@ -1371,10 +1592,109 @@ describe('the eval material', () => {
     expect(checker).toContain('(capture-and-confirm|capture|interview)')
   })
 
+  // A half-migrated package (story inline, spec still a loop) passes the
+  // whole-file `inline:` grep, and storySteps never sees a spec step. So
+  // `interviewSteps` reports one row per conversational step, with its shape.
+  test('the checker reports every interview step, whichever agent asks', () => {
+    const pkg = path.join(mkdtempSync(path.join(tmpdir(), 'awc-int-')), 'pkg')
+    const wf = path.join(pkg, 'workflows', 'demo')
+    mkdirSync(wf, { recursive: true })
+    writeFileSync(
+      path.join(wf, 'demo.yaml'),
+      [
+        'inputs: [task, request]',
+        'nodes:',
+        '  - id: story',
+        '    inline:',
+        '      agent: agents/story_partner.md',
+        '      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}"',
+        '      expect: user_story',
+        '  - id: spec',
+        '    loop:',
+        '      agent: agents/spec_partner.md',
+        '      prompt: "Task: {{task}}. Mode: write-bundle. The human\'s previous answer: {{answer}}"',
+        '      expect: spec_drafted',
+        '      until: SPEC_BUNDLE_WRITTEN',
+        '      max_iterations: 30',
+        '',
+      ].join('\n'),
+    )
+
+    const script = path.join(workspace, 'scripts', 'check_package.ts')
+    const run = Bun.spawnSync(['bun', script, pkg])
+    expect(run.exitCode).toBe(0)
+    const wfFacts = JSON.parse(run.stdout.toString()).workflows[0]
+
+    expect(wfFacts.interviewSteps).toHaveLength(2)
+    expect(wfFacts.interviewSteps[0]).toMatchObject({
+      mode: 'interview',
+      shape: 'inline',
+      relays_answer: false,
+    })
+    // The step storySteps cannot see, and the one the grep would hide.
+    expect(wfFacts.interviewSteps[1]).toMatchObject({
+      mode: 'write-bundle',
+      shape: 'loop',
+      relays_answer: true,
+    })
+    expect(wfFacts.interviewSteps[1].in_loop.until).toBe('SPEC_BUNDLE_WRITTEN')
+    expect(wfFacts.greps.inline_nodes).toBe(true)
+    // A clean inline node carries nothing extra, inside or beside it.
+    expect(wfFacts.interviewSteps[0].inline_extra_keys).toEqual([])
+    expect(wfFacts.interviewSteps[0].node_extra_keys).toEqual([])
+    expect(wfFacts.nodes[0].inline.extraKeys).toEqual([])
+
+    rmSync(path.dirname(pkg), { recursive: true, force: true })
+  })
+
+  // The other half-migration: `loop:` renamed to `inline:` with the cap and
+  // token left inside, or stranded beside it. Both lists name what survived.
+  test('the checker names a cap or token left inside or beside inline:', () => {
+    const pkg = path.join(mkdtempSync(path.join(tmpdir(), 'awc-half-')), 'pkg')
+    const wf = path.join(pkg, 'workflows', 'demo')
+    mkdirSync(wf, { recursive: true })
+    writeFileSync(
+      path.join(wf, 'demo.yaml'),
+      [
+        'inputs: [task, request]',
+        'nodes:',
+        '  - id: story',
+        '    parallel: true',
+        '    allowed_tools: [read, edit]',
+        '    inline:',
+        '      agent: agents/story_partner.md',
+        '      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}"',
+        '      expect: user_story',
+        '      until: USER_STORY_WRITTEN',
+        '      max_iterations: 20',
+        '',
+      ].join('\n'),
+    )
+
+    const script = path.join(workspace, 'scripts', 'check_package.ts')
+    const run = Bun.spawnSync(['bun', script, pkg])
+    expect(run.exitCode).toBe(0)
+    const wfFacts = JSON.parse(run.stdout.toString()).workflows[0]
+
+    // Inside the body: the loop keys the migration should have dropped.
+    expect(wfFacts.nodes[0].inline.extraKeys).toEqual([
+      'until',
+      'max_iterations',
+    ])
+    const step = wfFacts.interviewSteps[0]
+    expect(step.shape).toBe('inline')
+    expect(step.inline_extra_keys).toEqual(['until', 'max_iterations'])
+    // Beside it: modifiers that scope or detach a spawn that never happens.
+    expect(step.node_extra_keys).toEqual(['parallel', 'allowed_tools'])
+
+    rmSync(path.dirname(pkg), { recursive: true, force: true })
+  })
+
   // The mode decides the node shape, and only a per-node view can show it: a
   // whole-file grep reports `capture` and `until: USER_STORY_WRITTEN` for a
-  // package where the capture sits *inside* that loop and can never close it.
-  test('the checker reports each story step with its loop context', () => {
+  // package where the capture sits *inside* that loop and can never close it,
+  // and cannot tell an inline interview from a spawned one.
+  test('the checker reports each story step with its node shape', () => {
     const pkg = path.join(mkdtempSync(path.join(tmpdir(), 'awc-pkg-')), 'pkg')
     const wf = path.join(pkg, 'workflows', 'demo')
     mkdirSync(wf, { recursive: true })
@@ -1394,6 +1714,11 @@ describe('the eval material', () => {
         '    agent: agents/story_partner.md',
         '    prompt: "Task: {{task}}. Mode: capture-and-confirm. Source: {{source}}. The human\'s previous answer: {{answer}}"',
         '    expect: user_story',
+        '  - id: interview',
+        '    inline:',
+        '      agent: agents/story_partner.md',
+        '      prompt: "Task: {{task}}. Mode: interview. Request: {{source}}"',
+        '      expect: user_story',
         '',
       ].join('\n'),
     )
@@ -1407,10 +1732,16 @@ describe('the eval material', () => {
     expect(steps[0].mode).toBe('capture')
     expect(steps[0].in_loop.until).toBe('USER_STORY_WRITTEN')
     expect(steps[0].relays_answer).toBe(false)
-    // A confirm turn on a plain node: no loop to relay its question into.
+    expect(steps[0].inline).toBe(false)
+    // A confirm turn on a plain spawned node: nowhere to hear the answer.
     expect(steps[1].mode).toBe('capture-and-confirm')
     expect(steps[1].in_loop).toBeNull()
+    expect(steps[1].inline).toBe(false)
     expect(steps[1].source_arg).toBe(true)
+    // The interviewing modes' shape, reported as such.
+    expect(steps[2].mode).toBe('interview')
+    expect(steps[2].inline).toBe(true)
+    expect(steps[2].relays_answer).toBe(false)
 
     rmSync(path.dirname(pkg), { recursive: true, force: true })
   })

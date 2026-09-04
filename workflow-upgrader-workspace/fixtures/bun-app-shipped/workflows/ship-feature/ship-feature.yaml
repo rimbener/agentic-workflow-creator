@@ -15,21 +15,19 @@ nodes:
     run: bun install --silent
 
   # The problem side, settled with the human before anything is specified.
+  # inline: the lead runs the interview in its own session, so the questions
+  # and answers are one conversation rather than a spawn per question.
   - id: story
-    loop:
+    inline:
       agent: agents/story_partner.md
-      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}. The human's previous answer: {{answer}}"
+      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}."
       expect: user_story
-      until: USER_STORY_WRITTEN
-      max_iterations: 20
 
   - id: spec
-    loop:
+    inline:
       agent: agents/spec_partner.md
-      prompt: "Task: {{task}}. Mode: write-bundle. Format: plain. The human's previous answer: {{answer}}"
+      prompt: "Task: {{task}}. Mode: write-bundle. Format: plain."
       expect: spec_drafted
-      until: SPEC_BUNDLE_WRITTEN
-      max_iterations: 30
 
   # Vetted automatically first, so the human approves a clean bundle.
   - id: spec-review

@@ -200,7 +200,7 @@ if [[ ! -f "$PKG" ]]; then
   exit 1
 fi
 
-PROMPT="You are the workflow lead for this run — coordination only.
+PROMPT="You are the workflow lead for this run — coordination only, apart from the \`inline:\` nodes your role file has you run yourself.
 
 The launch arguments, verbatim:
 <args>

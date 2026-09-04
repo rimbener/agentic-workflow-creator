@@ -29,11 +29,16 @@ const rel = (p: string) => path.relative(repo, p)
 const isExec = (p: string) => (statSync(p).mode & 0o111) !== 0
 const GIT_WORKTREE = /git\s+worktree/
 // Which story_partner mode a node invokes, if any — the mode decides the node
-// shape that can judge it (a token-closed loop, or a plain single-run node).
+// shape that can judge it (an inline node the lead runs itself, or a plain
+// single-run spawned node).
 // Longest alternative first: `capture` would otherwise match the `capture` in
 // `capture-and-confirm`, since \b fires at the hyphen.
 const STORY_MODE = /Mode:\s*(capture-and-confirm|capture|interview)\b/g
 const STORY_MODE_ONE = new RegExp(STORY_MODE.source)
+// Every mode that converses with the human. Each belongs on an `inline:`
+// node; `interviewSteps` reports the shape each landed on, since one inline
+// node hides another step still looping from a whole-file grep.
+const INTERVIEW_MODE = /Mode:\s*(capture-and-confirm|interview|write-bundle)\b/
 
 // Find candidate workflow YAMLs: any yaml with a top-level nodes/steps/jobs list.
 const yamlFiles = files.filter((f) => /\.ya?ml$/.test(f))
@@ -67,6 +72,7 @@ for (const f of yamlFiles) {
 const BEHAVIOR_KEYS = [
   'run',
   'agent',
+  'inline',
   'loop',
   'gate',
   'wait',
@@ -100,6 +106,22 @@ function nodeFacts(node: Record<string, unknown> | null, idx: number) {
     keys,
     behaviorCount: normalized.size,
     multilineCmds,
+  }
+  // Only agent+prompt+expect belong in an inline node; `extraKeys` names any
+  // stray scope or cap.
+  if (node.inline && typeof node.inline === 'object') {
+    const inline = node.inline as Record<string, unknown>
+    facts.inline = {
+      agent: inline.agent ?? null,
+      prompt: inline.prompt ?? null,
+      expect: inline.expect ?? null,
+      relays_answer:
+        typeof inline.prompt === 'string' &&
+        /\{\{\s*answer\s*\}\}/.test(inline.prompt),
+      extraKeys: Object.keys(inline).filter(
+        (k) => !['agent', 'prompt', 'expect'].includes(k),
+      ),
+    }
   }
   if (node.loop && typeof node.loop === 'object') {
     const loop = node.loop
@@ -140,11 +162,10 @@ function nodeFacts(node: Record<string, unknown> | null, idx: number) {
   return facts
 }
 
-// Every story step in the tree, with the loop context that decides whether the
-// node shape can judge it: an interviewing mode needs a loop closing on its
-// token and the relayed answer in its prompt; a `capture` returns no token, so
-// a loop around it can only run to its cap. Reported per node, not as a
-// whole-file grep, since the grep cannot tell a looped capture from a plain one.
+// Every story step in the tree, with the node shape that judges it: an
+// interviewing mode belongs on `inline:`; a `capture` asks nothing, so it
+// belongs on a plain spawned node (a loop around it only runs to its cap).
+// Per node, since a whole-file grep cannot tell inline from looped.
 type StoryNode = Record<string, unknown>
 
 function loopFacts(loop: StoryNode) {
@@ -155,9 +176,77 @@ function loopFacts(loop: StoryNode) {
   }
 }
 
+// One row per conversational step, with the node shape carrying it: `inline`
+// (the lead runs the agent in its own session), `loop` (a spawn per question,
+// relaying through the return) or `plain` (a single spawn that can ask once).
+function interviewSteps(nodes: StoryNode[]) {
+  const found: Record<string, unknown>[] = []
+  const visit = (
+    node: StoryNode,
+    at: string,
+    shape: 'inline' | 'loop' | 'plain',
+    loop: StoryNode | null,
+    extras: Record<string, unknown> = {},
+  ): void => {
+    if (!node || typeof node !== 'object') return
+    const prompt = typeof node.prompt === 'string' ? node.prompt : ''
+    const mode = prompt.match(INTERVIEW_MODE)?.[1]
+    if (mode) {
+      found.push({
+        at,
+        mode,
+        shape,
+        agent: node.agent ?? null,
+        expect: node.expect ?? null,
+        relays_answer: /\{\{\s*answer\s*\}\}/.test(prompt),
+        in_loop: loop ? loopFacts(loop) : null,
+        ...extras,
+      })
+    }
+    const inline = node.inline
+    if (inline && typeof inline === 'object') {
+      const body = inline as StoryNode
+      // A half-done migration leaves the cap or token inside `inline:` or
+      // beside it. Both lists are empty in a clean node.
+      visit(body, `${at}.inline`, 'inline', null, {
+        inline_extra_keys: Object.keys(body).filter(
+          (k) => !['agent', 'prompt', 'expect'].includes(k),
+        ),
+        node_extra_keys: Object.keys(node).filter(
+          (k) => !['id', 'inline', 'when', 'comment'].includes(k),
+        ),
+      })
+    }
+    const l = node.loop
+    if (l && typeof l === 'object') {
+      const body = l as StoryNode
+      if (Array.isArray(body.steps)) {
+        let i = 0
+        for (const step of body.steps) {
+          visit(step as StoryNode, `${at}.loop.steps[${i}]`, 'loop', body)
+          i += 1
+        }
+      } else {
+        visit(body, `${at}.loop`, 'loop', body)
+      }
+    }
+  }
+  let i = 0
+  for (const node of nodes) {
+    visit(node, `nodes[${i}]${node?.id ? `#${node.id}` : ''}`, 'plain', null)
+    i += 1
+  }
+  return found
+}
+
 function storySteps(nodes: StoryNode[]) {
   const found: Record<string, unknown>[] = []
-  const visit = (node: StoryNode, loop: StoryNode | null, at: string): void => {
+  const visit = (
+    node: StoryNode,
+    loop: StoryNode | null,
+    at: string,
+    inline = false,
+  ): void => {
     if (!node || typeof node !== 'object') return
     const prompt = typeof node.prompt === 'string' ? node.prompt : ''
     const mode = prompt.match(STORY_MODE_ONE)?.[1]
@@ -171,8 +260,12 @@ function storySteps(nodes: StoryNode[]) {
         request_arg: /Request:\s*\S/.test(prompt),
         relays_answer: /\{\{\s*answer\s*\}\}/.test(prompt),
         in_loop: loop ? loopFacts(loop) : null,
+        inline,
       })
     }
+    const inlineKey = node.inline
+    if (inlineKey && typeof inlineKey === 'object')
+      visit(inlineKey as StoryNode, null, `${at}.inline`, true)
     const loopKey = node.loop
     if (loopKey && typeof loopKey === 'object') {
       const l = loopKey as StoryNode
@@ -272,6 +365,7 @@ for (const wf of workflows) {
     nodeCount: nodes.length,
     nodes: nodes.map(nodeFacts),
     storySteps: storySteps(nodes as StoryNode[]),
+    interviewSteps: interviewSteps(nodes as StoryNode[]),
     refs: {
       agents: Object.fromEntries(refs.agents.map((a) => [a, resolveRef(a)])),
       scripts: Object.fromEntries(refs.scripts.map((s) => [s, resolveRef(s)])),
@@ -295,6 +389,9 @@ for (const wf of workflows) {
       source_arg: /Source:\s/.test(raw),
       request_arg: /Request:\s/.test(raw),
       story_modes: [...raw.matchAll(STORY_MODE)].map((m) => m[1]),
+      // Whole-file only; `interviewSteps` says whether every conversational
+      // step got one.
+      inline_nodes: /^\s*inline:/m.test(raw),
       user_story_token: /USER_STORY_WRITTEN/.test(raw),
       // whole-file greps above; the per-node view is `storySteps` below
       stryker: /stryker/i.test(raw),

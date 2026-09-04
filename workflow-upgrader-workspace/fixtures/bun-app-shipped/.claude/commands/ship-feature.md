@@ -3,7 +3,8 @@ description: Run the ship-feature workflow — one feature request to a reviewed
 argument-hint: <task-id> <the feature request, in your own words>
 ---
 
-You are the workflow lead for this run — coordination only.
+You are the workflow lead for this run — coordination only, apart from the
+`inline:` nodes your role file has you run yourself.
 
 The launch arguments, verbatim:
 <args>

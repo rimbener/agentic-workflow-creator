@@ -16,7 +16,7 @@ folder, tailored to this workflow:
   `story_partner` is where this bites, and there the marks are complete:
   - §The source and the two capture rows are marked for the capture modes.
   - Each mode row is marked with its own mode alone.
-  - Protocol 1, the log paragraph and the question-turn ticks are marked
+  - Protocol 1, the log paragraph and the question ticks are marked
     *interviewing*; what `capture-and-confirm` adds to Protocol 1 is a bullet
     of its own.
   - Protocols 3, 4 and 5 and §Communication are each a mode-neutral opener
@@ -45,7 +45,7 @@ folder, tailored to this workflow:
   add repo facts, another agent's name, or workflow-phase knowledge while
   trimming.
 
-`workflow_lead.md` is the exception: it is pure coordination with nothing
+`workflow_lead.md` is the exception: it is workflow-neutral, with nothing
 workflow-specific to trim, so every package copies it unchanged. When no
 bundled agent fits a step — or the user prefers an agent of their own —
 author a new one; see "Authoring a new agent" at the end.
@@ -64,9 +64,9 @@ the agent return `blocked` (or its own failure verdict). The workflow YAML's
 
 | Agent | Does | Invocation arguments | Return signals |
 | --- | --- | --- | --- |
-| `workflow_lead` | Runs the workflow: invokes agents, enforces gates and caps, collects parallel work, escalates on halt. Coordination only — never writes or commits | `Task/Mode/Workflow` (supplied by the launch command) | `complete`, `halted`, `blocked` |
-| `story_partner` | Writes `user-story.md` — the artifact the spec step reads. `interview` grills the human one question at a time, `capture` structures a source they already wrote, `capture-and-confirm` does both; the interviewing modes keep `story-interview-log.md` as their memory across turns. Owns the *problem*, never the solution | `Task`, `Mode: interview \| capture \| capture-and-confirm`, `Request:` (`interview`), `Source:` (capture modes), `{{answer}}` on the looping modes | `user_story`; token `USER_STORY_WRITTEN` on the looping modes; `blocked` when `Source:` cannot be read |
-| `spec_partner` | Opens by reading `user-story.md` (`write-bundle` halts as `blocked` without it; the later modes read it when it is there). Interview (memory in `spec-interview-log.md`, `write-bundle` only) → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted` (token `SPEC_BUNDLE_WRITTEN`), `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
+| `workflow_lead` | Runs the workflow: invokes agents, enforces gates and caps, collects parallel work, escalates on halt. Coordination only — never commits, and never writes except while an `inline:` node has it acting as that node's agent | `Task/Mode/Workflow` (supplied by the launch command) | `complete`, `halted`, `blocked` |
+| `story_partner` | Writes `user-story.md` — the artifact the spec step reads. `interview` grills the human one question at a time, `capture` structures a source they already wrote, `capture-and-confirm` does both; the interviewing modes run on an `inline:` node and keep `story-interview-log.md` as the interview's record. Owns the *problem*, never the solution | `Task`, `Mode: interview \| capture \| capture-and-confirm`, `Request:` (`interview`), `Source:` (capture modes) | `user_story`; `blocked` when `Source:` cannot be read |
+| `spec_partner` | Opens by reading `user-story.md` (`write-bundle` halts as `blocked` without it; the later modes read it when it is there). Interview on an `inline:` node (record in `spec-interview-log.md`, `write-bundle` only) → spec bundle (`spec.md`, `acceptance-criteria.md`, `subtasks.md`, `subtask-N.md`) with vertical slices | `Task`, `Mode: write-bundle \| fix-spec-findings \| present-for-approval`, `Format: plain\|gherkin` | `spec_drafted`, `findings_resolved`, token `SPEC_APPROVED`, `blocked` |
 | `spec_reviewer` | One-round automated review of the spec bundle → `review-spec.md`, verdict recorded via the `Verdict-writer:` script → 1-line `review-spec-verdict.md`, before the human approval | `Task`, `Mode: review`, `Verdict-writer: <path>` | `APPROVED`, `CHANGES_REQUESTED` |
 | `implementer` | Production code only, non-TDD. Never touches tests; test findings are tagged `test-step` and left open | `Task`, `Mode: build-slice \| fix-slice-findings \| fix-review-findings \| kill-mutants \| close-dod-gaps`, `Commands:`, `Slice: <N>` on slice modes | `green`, `blocked`; token `DONE` per mode |
 | `unit_test_writer` | Unit tests only. Never touches production code; defects a test exposes stay recorded as open production rows | `Task`, `Mode: cover-criteria \| cover-gaps`, `Commands:`, `Slice: <N>`, `Report:` on `cover-gaps` | `covered`, `blocked`; token `DONE` on `cover-gaps` only |
@@ -123,6 +123,20 @@ the agent return `blocked` (or its own failure verdict). The workflow YAML's
   commit their own work; a commit with no such owner (the approved spec, a
   trailing artifact sweep) gets a small authored committer agent that stages
   only the paths named in its invocation.
+- **An interview is an `inline:` node.** A step whose work *is* a
+  conversation with the human — `story_partner`'s `interview` and
+  `capture-and-confirm`, `spec_partner`'s `write-bundle`, any authored agent
+  that asks one question at a time — runs inline: the lead acts as that agent
+  in its own session, so the exchange is one conversation (see `running.md`
+  §`inline:`). The node holds `agent:`, `prompt:` and `expect:` only — no
+  `{{answer}}`, no `max_iterations`, no completion token, never
+  `parallel: true` or `allowed_tools:`. The cap goes with the loop and nothing
+  replaces it — every exchange waits on the human — but its escalation moves
+  into the agent: an interview that cannot settle an area, or is told to
+  stop, returns the `blocked` line its file defines rather than guessing or
+  asking on. `story_partner`'s `capture` asks nothing, so it stays a plain
+  spawned `agent:` node. Approval loops stay loops: each round is one
+  self-contained present-and-answer, closed by its token.
 - **Parallel only for disjoint work.** `parallel: true` on a `run:` or agent
   that does not share writes with in-flight siblings and does not need the
   human. Interviews, gates, and paired implementer/test-writer steps stay
@@ -141,7 +155,8 @@ agents fall into three groups:
 | `[read, search, edit, web]` | `mutation_tester` | it reads a captured log and writes a verdict |
 | `[read, search, edit, web, shell]` | `implementer`, `implementer_tdd`, `unit_test_writer`, `reviewer_slice`, `dod_validator` | they are invoked with `Commands:` and run them |
 | `[read, search, edit, web, shell]` | `spec_reviewer`, `reviewer_engineering` | the one command they run is the package's `scripts/write-verdict-file.sh`, recording the verdict; never the suite |
-| host default (omit the key) | `story_partner`, `spec_partner` | an interview follows the human wherever they point it, and writes its own log every turn; a `capture` reads whatever `Source:` names, a URL included |
+| no scope at all (an `inline:` node takes none) | `story_partner` interviewing, `spec_partner` `write-bundle` | the lead runs these itself, with its own tools; there is no subagent to scope |
+| host default (omit the key) | `story_partner` `capture`, `spec_partner`'s later modes | a `capture` reads whatever `Source:` names, a URL included; an approval or fix turn works from the files it was pointed at |
 
 `edit` is in every scope because every agent writes its report under
 `.awc/tasks/in-progress/<task>/`, and `web` is in every scope because any of
@@ -160,22 +175,30 @@ Scoping is optional per node, and a scope that contradicts the agent's
 invocation is worse than none — the step halts as `blocked` naming the
 capability it was denied. When in doubt, omit the key.
 
-## Canonical loop shapes
+## Canonical node shapes
 
-Interview (`until: USER_STORY_WRITTEN` / `SPEC_BUNDLE_WRITTEN`, cap ~20–30):
+Interview (an `inline:` node — no cap, no token, one conversation):
 
-1. `story_partner` — `Mode: interview. Request: {{request}}. The human's previous answer: {{answer}}` — `expect: user_story`
+```yaml
+  - id: story
+    inline:
+      agent: agents/story_partner.md
+      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}."
+      expect: user_story
+```
 
-   or, for the spec half — `spec_partner` — `Mode: write-bundle. Format: {{format}}. The human's previous answer: {{answer}}` — `expect: spec_drafted`
+1. `story_partner` — `Mode: interview. Request: {{request}}` — `expect: user_story`
 
-   Every iteration spawns a **new** subagent, and `{{answer}}` is the latest
-   answer alone (see `running.md`), so the agent's memory of the interview is
-   the log it reads and extends each turn — authoring rule 8 below has the
-   shape. Each interviewer owns one log (`story-interview-log.md`,
-   `spec-interview-log.md`), and `spec_partner`'s belongs to `write-bundle`
-   alone, so a later approval loop never writes into an interview slot.
-   Pass `{{answer}}` and nothing more: the lead never reconstructs earlier
-   turns into the prompt.
+   or, for the spec half — `spec_partner` — `Mode: write-bundle. Format: {{format}}` — `expect: spec_drafted`
+
+   The lead runs the agent in its own session, so the interview is one
+   conversation, ending when the artifact is written (see `running.md`
+   §`inline:`). Nothing is relayed, so the node carries no `{{answer}}`, no
+   `max_iterations` and no `until:`. Each interviewer owns one log
+   (`story-interview-log.md`, `spec-interview-log.md`) — the interview's
+   record and relaunch point; authoring rule 8 has the shape.
+   `spec_partner`'s belongs to `write-bundle` alone, so a later approval loop
+   never writes into an interview slot.
 
 The story half has two leaner shapes, for a workflow whose problem statement
 already exists — a spec written elsewhere, a ticket, a design doc. Both still
@@ -197,28 +220,26 @@ Capture (a plain node, no loop, no questions):
    dumps it to a file, and `Source:` names that file — the capture reads, it
    does not fetch credentials. What the source leaves undecided lands under
    `## Open questions` in the story, and the spec interview asks it. Single
-   run, so `expect:` alone judges it: this mode returns no token, so a
-   `capture` placed inside `until: USER_STORY_WRITTEN` could never close that
-   loop — it belongs on a plain node.
+   run, so `expect:` alone judges it: this mode asks nothing, so it belongs
+   on a plain spawned `agent:` node — an `inline:` node would put the lead in
+   a conversation nobody is having, and a token-closed loop could never close
+   over a mode that returns no token.
 
-Capture, then confirm (`until: USER_STORY_WRITTEN`, cap ~10):
+Capture, then confirm (an `inline:` node, like the interview above):
 
-1. `story_partner` — `Mode: capture-and-confirm. Source: {{source}}. The human's previous answer: {{answer}}` — `expect: user_story`
+1. `story_partner` — `Mode: capture-and-confirm. Source: {{source}}` — `expect: user_story`
 
-   Turn 1 reads the repo first, then records the source in the log (a fact
+   It reads the repo first, then records the source in the log (a fact
    the README or the code already answers is never queued as a question),
-   then takes an ordinary question turn: it asks the first area the source
-   left open — or, when the source settles every area, writes the story and
-   closes the loop right there. Every later turn is an ordinary interview
-   turn, same log, same closing rule. The cap is lower because the source did
-   the opening work.
+   then interviews for whatever the source left open — or, when the source
+   settles every area, writes the story right there having asked nothing.
+   Same log, same closing rule as the interview.
 
-   Each turn of both looping modes therefore ends one of two ways — a question
-   the lead relays, or the story plus its token. A turn that does neither
-   leaves the loop with nothing to relay and no signal, and the run walks to
-   its cap.
+   Both interviewing modes end once, with the story and its return line;
+   every exchange before it is one question and its answer.
 
-Single human sign-off of an artifact (`until: SPEC_APPROVED`, cap ~10):
+Single human sign-off of an artifact (a loop — each round is one
+self-contained present-and-answer — `until: SPEC_APPROVED`, cap ~10):
 
 1. `spec_partner` — `Mode: present-for-approval. Format: {{format}}. The human's response: {{answer}}` — `expect: SPEC_APPROVED`
 
@@ -341,18 +362,24 @@ the same design rules the bundled ones obey:
    directly — never pasted into chat. Loop-enders append
    `<promise>DONE</promise>` only when their documented condition holds.
 7. **A blocked command is `blocked`** — never "verified by inspection".
-8. **A loop that builds on earlier turns names its own log.** Every iteration
-   is a fresh subagent and the prompt carries `{{answer}}`'s latest value alone
-   (see `running.md`), so any agent asking the human one question per turn —
-   an interview, a triage, an outline session — gets a log under
-   `.awc/tasks/in-progress/<task>/tmp/`, named in the agent file, in the shape
-   the bundled interviewers use: one `Q:`/`A:` entry per question, headed by
-   the area it settles. A follow-up opens a new entry repeating that area —
-   never a second pair under an old one — so the last entry is always the
-   only open one. Each turn the agent reads the log first and fills the
-   arriving answer in; a question turn then appends its question with a blank
-   `A:`, the closing turn appends nothing, and the first turn creates the log
-   and asks. An entry is only ever appended with its question in it, so no
-   blank sits waiting and holds the loop open.
-   Scope the log to the mode that interviews — other modes read the artifacts.
-   The node passes `{{answer}}` and nothing more.
+8. **An agent that talks to the human runs inline, and names its own log.**
+   Any agent asking the human one question at a time — an interview, a
+   triage, an outline session — goes on an `inline:` node (see `running.md`)
+   and gets a log under `.awc/tasks/in-progress/<task>/tmp/`, named in the
+   agent file, in the shape the bundled interviewers use: one `Q:`/`A:` entry
+   per question, headed by the area it settles. A follow-up opens a new entry
+   repeating that area — never a second pair under an old one — so the last
+   entry is always the only open one. The agent logs each question before it
+   asks and each answer verbatim as it arrives, and writes its artifact only
+   over a log with no blank `A:`. The log is committed with the trail and is
+   where a relaunched run picks up — a last entry with a blank `A:` is the
+   question nobody answered. Scope the log to the mode that interviews —
+   other modes read the artifacts. The node passes no `{{answer}}`. Give the
+   agent the exit the cap used to be: a `blocked` return naming what stayed
+   open, for the area nobody can settle and the human who asks to stop.
+9. **A loop step that builds on earlier iterations names its own record.**
+   Every iteration is a fresh subagent and the prompt carries `{{answer}}`'s
+   latest value alone (see `running.md`), so an agent whose loop body has to
+   know what the previous round did reads and extends a file on disk rather
+   than trusting the prompt — the build records the bundled implementers keep
+   are that shape.

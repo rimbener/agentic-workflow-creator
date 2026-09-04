@@ -40,8 +40,8 @@ Codex to run the ship-feature workflow with the same two values.
 | Node | Type | What happens | How it exits |
 | --- | --- | --- | --- |
 | `install` | run | `bun install --silent` | exit 0 |
-| `story` | loop | a story interview, one question per turn, writes `user-story.md` | `USER_STORY_WRITTEN`, cap 20 |
-| `spec` | loop | a spec interview, writes the bundle with plain acceptance criteria | `SPEC_BUNDLE_WRITTEN`, cap 30 |
+| `story` | inline | a story interview the lead runs in its own session, one question at a time, writes `user-story.md` | `user_story` |
+| `spec` | inline | a spec interview in the same session, writes the bundle with plain acceptance criteria | `spec_drafted` |
 | `spec-review` | agent | automated review of the bundle → `review-spec.md` | `APPROVED` / `CHANGES_REQUESTED` |
 | `spec-fixes` | agent | resolves every finding the review raised | `findings_resolved` |
 | `spec-approval` | loop | you read the spec and criteria and approve them | `SPEC_APPROVED`, cap 10 |

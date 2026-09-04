@@ -55,8 +55,8 @@ Read these before starting (silently — they are your working knowledge):
   correct package rather than as history.
 - `../workflow-creator/references/agent-catalog.md` — the bundled agent bases,
   their arguments and signals, how a copy is tailored (and untailored), the
-  pairing rules, the canonical loop shapes, and the rules for authoring a new
-  agent.
+  pairing rules, the canonical node and loop shapes, and the rules for
+  authoring a new agent.
 - `../workflow-creator/references/hosts.md` — the three launchers and the
   worktree launch script.
 - `../workflow-creator/references/interview.md` — the full area list, for the

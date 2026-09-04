@@ -31,11 +31,14 @@ every recipe is "does every node still pass every argument its agent requires".
 1. Choose the agent: a base from the catalog, or a new file per the catalog's
    authoring rules. Instantiate it into `agents/`, trimmed to the modes this
    workflow's new nodes invoke.
-2. Write the nodes from the catalog's canonical loop shape where one
+2. Write the nodes from the catalog's canonical shape where one
    matches — a phase is rarely one node, and a phase built on an authored
-   agent follows the same loop rules. Give the loop `max_iterations` and
+   agent follows the same rules. Give the loop `max_iterations` and
    exactly one of `until:` / `until_run:`, and check that its **last** agent
-   step is the one whose file emits the token, or the loop can never close.
+   step is the one whose file emits the token, or the loop can never close. A
+   phase whose work is a conversation with the human is an `inline:` node
+   instead — `agent:`, `prompt:`, `expect:` and nothing else, no cap and no
+   token, since the lead runs it in its own session.
 3. Place it where its inputs exist: after whatever produces the artifacts it
    reads, before whatever consumes what it writes. A phase that writes to the
    task trail goes before the `finish` node.
@@ -170,16 +173,17 @@ story node before it — a `story_partner` copy, or an authored agent that
 writes the same `user-story.md` (an authored spec agent needs one only when
 its own file reads that artifact). If the audit found that gap, this is the
 fix. For a `story_partner` copy, choose the mode with the user —
-`interview` (a loop, `Request:`), `capture` (a plain node, `Source:`, no token,
-so it can never sit inside a loop), or `capture-and-confirm` (a loop,
-`Source:` + `{{answer}}`) — instantiate the copy with only that mode, and match
-the node shape to it. `capture` writes what it couldn't settle under
-`## Open questions`, which the spec interview then asks first.
+`interview` (an `inline:` node, `Request:`), `capture` (a plain spawned node,
+`Source:`, no token, so it can never sit inside a loop), or
+`capture-and-confirm` (an `inline:` node, `Source:`) — instantiate the copy
+with only that mode, and match the node shape to it. `capture` writes what it
+couldn't settle under `## Open questions`, which the spec interview then asks
+first.
 
 Swapping between the three modes later is the same work: re-instantiate the
-copy from the base with the new mode, change the node's shape (loop ↔ plain
-node) to match, and adjust the arguments — `Source:` must name a declared input
-or var.
+copy from the base with the new mode, change the node's shape (`inline:` ↔
+plain node) to match, and adjust the arguments — `Source:` must name a
+declared input or var.
 
 ## Adopt the current task-trail layout
 
@@ -226,11 +230,52 @@ record the verdict through `scripts/write-verdict-file.sh`:
    not: the slice loop's closing commit and the review round's token ride on
    those steps whatever the verdict says.
 
+## Move an interview onto an inline node
+
+A package generated before `inline:` runs its interviews as loops: one spawn
+per question, relayed through the agent's return and back as `{{answer}}`,
+capped by `max_iterations`. The agent's protocol — ask, hear the answer,
+choose the next question — cannot run that way. The migration lands in five
+places:
+
+1. The node: `loop:` becomes `inline:`, keeping `agent:`, `prompt:` and
+   `expect:`. The `until:` token, the `max_iterations` cap and the
+   `{{answer}}` argument all go — nothing is relayed, and the node ends on the
+   agent's return line.
+2. The agent copy: diff it against
+   `../workflow-creator/assets/agents/<agent>.md` first (the habit above), then
+   take the base's inline protocol — the log written at both ends of each
+   exchange, the relaunch pickup, one return line with no `<promise>` token.
+   A copy on the old protocol still treats every turn as a fresh agent and
+   asks the human to repeat themselves.
+3. `agents/workflow_lead.md`, recopied from
+   `../workflow-creator/assets/agents/workflow_lead.md`. This one silently
+   breaks the run: the lead file **outranks `running.md`**, and a copy from
+   before `inline:` forbids its own writes — so the first file the interview
+   creates comes back as
+   `blocked -> <step>: asks the lead to write/edit/delete/commit`, with a
+   correct YAML and `running.md` beside it. No package tailors the lead, so
+   this is a copy, not a merge.
+4. Everything downstream of the token: a `when:` or README row naming the
+   loop's cap or signal, and any node that echoed an interview token such as
+   `USER_STORY_WRITTEN` or `SPEC_BUNDLE_WRITTEN`.
+5. The role stamp each launcher opens with — the three in-session launchers
+   and, where it exists, `./<name>.sh`. The lead reads that line before its
+   role file, so a bare "coordination only" contradicts the node it is about
+   to run: take the wording from `../workflow-creator/references/hosts.md`,
+   the same in all four. A launcher added in the same pass takes it too —
+   never its siblings' stale stamp.
+
+An approval loop is **not** this migration: each round is one self-contained
+present-and-answer, closed by its own token, so it stays a loop.
+
 ## Add or tighten a tool scope
 
 `allowed_tools:` goes on an `agent:` node or an agent step, and lists
-capabilities (`read`, `search`, `edit`, `shell`, `web`, `spawn`). Read the
-agent copy first and grant everything its file tells it to do: `Commands:`
+capabilities (`read`, `search`, `edit`, `shell`, `web`, `spawn`) — never on an
+`inline:` node, where the lead runs the agent itself and there is no subagent
+to scope. Read the agent copy first and grant everything its file tells it to
+do: `Commands:`
 needs `shell`, the reviewers' `Verdict-writer:` needs `shell` for its one
 call, a report file needs `edit`, and every scope keeps `web`. The natural
 candidates are steps that read and report — reviewers included, whose single

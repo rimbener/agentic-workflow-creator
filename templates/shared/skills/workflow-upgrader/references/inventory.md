@@ -34,11 +34,14 @@ holding commands: those are the project facts the package was built around.
 | id | type | what it invokes | how it exits |
 | --- | --- | --- | --- |
 
-Type is `run:`, `agent:`, `loop:`, `gate:` or `wait:`; note `parallel: true`,
-`when:` and `allowed_tools:` as modifiers on the row. For a loop, record its
-body's steps in order, its `until:` / `until_run:`, and its `max_iterations`.
-For an agent step, record the `Mode:` and every other argument the prompt
-passes. This table is what you present to the user in step 2.
+Type is `run:`, `agent:`, `inline:`, `loop:`, `gate:` or `wait:`; note
+`parallel: true`, `when:` and `allowed_tools:` as modifiers on the row. For a
+loop, record its body's steps in order, its `until:` / `until_run:`, and its
+`max_iterations`. For an `inline:` node, record that the lead runs the agent
+itself, in conversation with the human — and anything the node carries beyond
+`agent:`, `prompt:` and `expect:`, which is a finding. For an agent step,
+record the `Mode:` and every other argument the prompt passes. This table is
+what you present to the user in step 2.
 
 **Agents.** For each file in `agents/`: which base it came from (or "authored
 for this package" when it matches none), which modes the copy kept, which
@@ -80,6 +83,10 @@ Compare against the current bases while you're there:
 - `diff` any file the package copied from `../workflow-creator/assets/`
   (`finish-task.sh`, `write-verdict-file.sh`, `run.sh`, `agents-cli.conf`)
   against its base.
+- `diff` `agents/workflow_lead.md` against
+  `../workflow-creator/assets/agents/workflow_lead.md` — the one agent copied
+  unchanged, so any difference is drift, and a stale lead blocks the nodes
+  the rest of the package expects (an `inline:` node above all).
 - Read each agent copy next to its base: a copy that is behind carries an older
   protocol, older artifact paths, or a `description:` naming modes it no longer
   has. A reviewer copy from before the verdict writer has no `Verdict-writer:`
@@ -104,10 +111,19 @@ looks for them:
 - **Copy/node mismatch.** A node invoking a mode its agent copy was trimmed of,
   or a copy carrying a mode nothing invokes. Both directions matter: the first
   halts the run, the second confuses the next upgrade.
+- **A conversation on the wrong node shape.** An agent whose file asks the
+  human one question at a time — an interview above all — invoked from a
+  `loop:` (or plain `agent:`) node rather than an `inline:` one: each spawn
+  can ask once, through its return, so the protocol never runs as written.
+  Every package from before `inline:` shows this; the playbook's "Move an
+  interview onto an inline node" is the migration.
 - **Launcher drift.** A missing launcher; launchers whose input mapping
   disagrees with each other or with `inputs:`; a launcher naming a workflow
   path that has since been renamed; a Codex skill whose `description:` no
-  longer describes what the workflow does.
+  longer describes what the workflow does; an opening role stamp other than
+  the one `../workflow-creator/references/hosts.md` gives — the lead reads it
+  before its role file, so a bare "coordination only" contradicts the first
+  `inline:` node.
 - **Repo drift.** A var or node naming a command the repo no longer has — check
   the manifest's scripts, the CI config, and whether the named script files
   exist. This one is invisible until a run fails, and it is the most common

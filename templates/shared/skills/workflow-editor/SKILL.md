@@ -49,7 +49,7 @@ Read these before starting (silently — they are your working knowledge):
   workflow good, and the validation checklist your changed package must pass.
 - `../workflow-creator/references/agent-catalog.md` — the bundled agent bases,
   their arguments and signals, how a copy is tailored (and untailored), the
-  pairing rules, and the canonical loop shapes.
+  pairing rules, and the canonical node and loop shapes.
 - `../workflow-creator/references/hosts.md` — the three launchers and the
   worktree launch script.
 - `../workflow-creator/assets/` — the bases you copy from: `agents/*.md`,
@@ -127,7 +127,22 @@ rewrite destroys them while burying the real change in an unreviewable diff.
 local edit:
 
 - A change to the **node list** reaches the YAML, the README's walkthrough,
-  and the agent copies whose modes or checks it adds or strips.
+  and the agent copies whose modes or checks it adds or strips. Changing a
+  node's *shape* reaches the agent copy's protocol too: a step that becomes an
+  `inline:` node loses its `{{answer}}`, its cap and its loop token, and its
+  agent takes the base's inline protocol. The **first** `inline:` node a
+  package gains reaches two more places, and either one missed halts the run
+  at the interview's first file. `agents/workflow_lead.md`, recopied from
+  `../workflow-creator/assets/agents/workflow_lead.md`: it outranks
+  `running.md` at run time, and a copy from before `inline:` forbids its own
+  writes, so the node's write comes back as
+  `blocked -> <step>: asks the lead to write/edit/delete/commit`. No package
+  tailors it, so that is a copy with no hand-edits to preserve. And all four
+  launch paths — the three in-session launchers and `./<name>.sh` where it
+  exists — whose opening role stamp the lead reads *before* its role file:
+  one that says coordination only and stops contradicts the node it is about
+  to run. Take the wording from `../workflow-creator/references/hosts.md`,
+  the same in all four.
 - A change to **`inputs:`** reaches all three in-session launchers, the
   launch script where one exists, the README, and every `{{placeholder}}` in
   the YAML.

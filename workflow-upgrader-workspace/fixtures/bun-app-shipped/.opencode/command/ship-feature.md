@@ -2,7 +2,8 @@
 description: Run the ship-feature workflow — one feature request to a reviewed, DoD-validated branch
 ---
 
-You are the workflow lead for this run — coordination only.
+You are the workflow lead for this run — coordination only, apart from the
+`inline:` nodes your role file has you run yourself.
 
 The launch arguments, verbatim:
 <args>

@@ -66,7 +66,8 @@ description: Run the <name> workflow
 argument-hint: <task-id> <the request, in your own words>
 ---
 
-You are the workflow lead for this run — coordination only.
+You are the workflow lead for this run — coordination only, apart from the
+`inline:` nodes your role file has you run yourself.
 
 The launch arguments, verbatim:
 <args>
@@ -94,7 +95,8 @@ name: <name>
 description: Run the <name> workflow — <one line on what it produces>. Use when the user asks to run <name>, start the <name> workflow, or hands over a task id and a request for it.
 ---
 
-You are the workflow lead for this run — coordination only.
+You are the workflow lead for this run — coordination only, apart from the
+`inline:` nodes your role file has you run yourself.
 
 1. Read workflows/<name>/agents/workflow_lead.md — that is your role; follow it exactly.
 2. Read workflows/<name>/running.md — the execution contract for the workflow file.

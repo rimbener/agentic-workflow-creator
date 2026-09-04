@@ -14,7 +14,8 @@ Read these before starting (silently — they are your working knowledge):
 - `assets/running.md` — the YAML dialect and its execution contract. This
   exact file ships inside every package you generate.
 - `references/agent-catalog.md` — the bundled agents, their arguments and
-  signals, the canonical loop shapes, and the rules for authoring new agents.
+  signals, the canonical node and loop shapes, and the rules for authoring new
+  agents.
 - `references/interview.md` — how to interview and every area to settle.
 - `references/hosts.md` — the three in-session launcher files every package
   ships, plus the launch script a worktree workflow copies from `assets/run.sh`.
@@ -74,6 +75,15 @@ not need the human (no interview, no gate, no approval). Put a `wait:` before
 any later node that depends on that work; leftover in-flight work drains at
 the end of the list. Sequential is the default.
 
+**A step that talks to the human is inline.** A spawned agent speaks only
+through its return, one question per spawn. On an `inline:` node the lead
+acts as the agent in its own session, asking and hearing answers inside one
+node (`assets/running.md` §`inline:`). Use it wherever the work *is* a
+conversation: the story and spec interviews, a triage, an outline session.
+The node holds `agent:`, `prompt:` and `expect:` only — no `{{answer}}`, no
+cap, no token, no `parallel: true`, no `allowed_tools:`. Work a subagent can
+finish alone stays a spawned `agent:` node; an approval loop stays a loop.
+
 **Tool scope is per node.** `allowed_tools:` on an `agent:` node or agent
 step narrows what that step's subagent may reach for, in host-neutral
 capability names (`read`, `search`, `edit`, `shell`, `web`, `spawn`) that the
@@ -86,7 +96,8 @@ command, and every agent that writes a report under
 `.awc/tasks/in-progress/<task>/` needs `edit`. Every scope keeps `web` — any
 agent may need to look up a library's docs or an error message.
 Omitting the key grants the host's default, and that stays the norm — a scope
-drawn too tight turns into a `blocked` halt mid-run.
+drawn too tight turns into a `blocked` halt mid-run. An `inline:` node takes
+no scope at all: there is no subagent to narrow.
 
 **A script does exactly one thing.** A script with internal phases is a
 workflow hiding inside a file — where the lead can't see progress, retry a
@@ -200,13 +211,12 @@ nodes:
   - id: install
     run: bun install --silent
 
+  # inline: the lead runs the interview itself, as one conversation.
   - id: story
-    loop:
+    inline:
       agent: agents/story_partner.md
-      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}. The human's previous answer: {{answer}}"
+      prompt: "Task: {{task}}. Mode: interview. Request: {{request}}."
       expect: user_story
-      until: USER_STORY_WRITTEN
-      max_iterations: 20
 
   - id: build
     loop:
@@ -283,30 +293,35 @@ nodes come from its own interview.
   chose, or an authored agent producing the same file. For a `story_partner`
   copy, the node shape matches the mode: a capture mode's node passes the
   `Source:` its agent file requires, naming a declared input or var; the two
-  interviewing modes are loops ending on `USER_STORY_WRITTEN` and pass
-  `{{answer}}`; `capture` returns one line and no token, so it sits on a
-  plain node judged by `expect:` — inside a loop it could never close one.
-- Every agent that runs in a loop and has to build on earlier iterations —
-  every interview above all — still carries its log protocol (after the trim
-  for a tailored copy; per authoring rule 8 for an authored one):
-  each iteration is a fresh subagent, so that file is the only memory it has.
-  Check two details: the closing turn fills the arriving answer in and
-  appends no new entry (otherwise the loop never reaches its token), and the log is
-  scoped to the mode that interviews. Its node passes `{{answer}}` and
-  nothing more.
+  interviewing modes are `inline:` nodes, judged by `expect:` alone;
+  `capture` asks nothing, so it sits on a plain spawned `agent:` node —
+  inline there would open a conversation nobody is having.
+- Every step whose work is a conversation with the human is an `inline:` node
+  holding `agent:`, `prompt:` and `expect:` only — no `{{answer}}`, no
+  `max_iterations`, no `until:`, no `parallel: true`, no `allowed_tools:`.
+  The interviews are the cases to check.
+- Every agent that interviews still carries its log protocol (after the trim
+  for a tailored copy; per authoring rule 8 for an authored one): the log is
+  the interview's record and its relaunch point. Check two details: each
+  question is logged before it is asked and each answer as it arrives, so
+  the artifact is written only over a log with no blank `A:`; and the log is
+  scoped to the mode that interviews.
 - Every `run:` is one short command with failure-only output where the tool
   allows it.
-- Every `parallel: true` is on a top-level `run:` or `agent:` node — never a
-  loop, gate, wait, or loop step. Every `wait:` names prior `parallel: true`
-  ids. A `wait:` sits before any node that depends on that work.
-- Every `allowed_tools:` is on an `agent:` node or agent step, and lists
+- Every `parallel: true` is on a top-level `run:` or `agent:` node — never an
+  inline, loop, gate, wait, or loop step. Every `wait:` names prior
+  `parallel: true` ids. A `wait:` sits before any node that depends on that
+  work.
+- Every `allowed_tools:` is on an `agent:` node or agent step — never on an
+  `inline:` node, which spawns nothing to scope — and lists
   capability names (`read`, `search`, `edit`, `shell`, `web`, `spawn`) or a
   host tool name the workflow deliberately depends on. Read each scoped
   node's agent file and confirm the list covers everything that file tells
   the agent to do, per the grant rules in "Tool scope is per node" above.
 - Every `{{placeholder}}` is a declared input, a var, or a loop-only one.
-- The package contains `running.md`, `agents/workflow_lead.md`, and every
-  referenced agent.
+- The package contains `running.md`, `agents/workflow_lead.md` — a verbatim
+  copy of `assets/agents/workflow_lead.md`, which no workflow tailors and
+  which outranks `running.md` at run time — and every referenced agent.
 - A workflow whose agents write a task trail carries a `finish` node running
   `workflows/<name>/scripts/finish-task.sh {{task}}` — the path written from
   the launch directory, since that is where a `run:` executes — and that script
@@ -328,9 +343,12 @@ nodes come from its own interview.
 - All three in-session launchers exist — `.claude/commands/<name>.md`,
   `.codex/skills/<name>/SKILL.md`, `.opencode/command/<name>.md` — each
   pointing at the right paths and mapping its arguments onto every declared
-  input. The two that substitute placeholders carry exactly one, inside its
-  fenced slot and nowhere else in the file; the Codex skill's `description`
-  names the phrases that should trigger it.
+  input, and each opening with the role line `references/hosts.md` gives —
+  the lead reads it before `workflow_lead.md`, so a bare "coordination only"
+  would contradict the first `inline:` node. The two that substitute
+  placeholders carry exactly one, inside its fenced slot and nowhere else in
+  the file; the Codex skill's `description` names the phrases that should
+  trigger it.
 - A worktree workflow ships executable `./<name>.sh` and `./agents-cli.conf`
   copied from `assets/run.sh` and `assets/agents-cli.conf`, with
   `__WORKTREE_PARENT__` matching the interview. The script asks for
