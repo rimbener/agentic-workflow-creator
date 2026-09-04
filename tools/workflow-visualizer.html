@@ -13,13 +13,13 @@
 <style>
   :root{
     --bg:#f4f6f9; --card:#ffffff; --ink:#1b2333; --mut:#667089; --line:#e2e6ef;
-    --run:#2563eb; --agent:#7c3aed; --loop:#d97706; --gate:#e11d48; --wait:#0d9488;
+    --run:#2563eb; --agent:#7c3aed; --inline:#0891b2; --loop:#d97706; --gate:#e11d48; --wait:#0d9488;
     --par:#a855f7; --warn:#b45309; --err:#dc2626; --code:#eef1f7; --ok:#16a34a;
   }
   @media (prefers-color-scheme: dark){
     :root{
       --bg:#0f1219; --card:#171c28; --ink:#e8ebf3; --mut:#8b94ab; --line:#293042;
-      --run:#60a5fa; --agent:#a78bfa; --loop:#fbbf24; --gate:#fb7185; --wait:#2dd4bf;
+      --run:#60a5fa; --agent:#a78bfa; --inline:#22d3ee; --loop:#fbbf24; --gate:#fb7185; --wait:#2dd4bf;
       --par:#c084fc; --warn:#fbbf24; --err:#f87171; --code:#0d1119; --ok:#4ade80;
     }
   }
@@ -105,6 +105,7 @@
   .pill{font-size:12px;font-weight:700;letter-spacing:.4px;padding:2px 10px;border-radius:99px;text-transform:uppercase}
   .pill.run  {color:var(--run);  background:color-mix(in srgb,var(--run) 12%,transparent)}
   .pill.agent{color:var(--agent);background:color-mix(in srgb,var(--agent) 12%,transparent)}
+  .pill.inline {color:var(--inline); background:color-mix(in srgb,var(--inline) 13%,transparent)}
   .pill.loop {color:var(--loop); background:color-mix(in srgb,var(--loop) 13%,transparent)}
   .pill.gate {color:var(--gate); background:color-mix(in srgb,var(--gate) 12%,transparent)}
   .pill.wait {color:var(--wait); background:color-mix(in srgb,var(--wait) 12%,transparent)}
@@ -212,7 +213,7 @@
   <section class="hero" id="hero">
     <div class="drop" id="drop">
       <div class="big">Drop a workflow <span class="mono">.yaml</span> here</div>
-      <div class="sub">awc workflow dialect — run / agent / loop / gate / wait, with parallel, when and allowed_tools</div>
+      <div class="sub">awc workflow dialect — run / agent / inline / loop / gate / wait, with parallel, when and allowed_tools</div>
     </div>
     <div class="actions">
       <button class="primary" id="b-open2">Choose file</button>
@@ -255,8 +256,8 @@ name: sample-feature
 description: One small feature — spec, gated build, side docs, DoD. Sample data for the visualizer.
 comment: >
   This sample exercises every node type in the awc dialect.
-  Use it to verify the visualizer handles run, agent, loop, gate,
-  wait, parallel, when, and allowed_tools correctly.
+  Use it to verify the visualizer handles run, agent, inline, loop,
+  gate, wait, parallel, when, and allowed_tools correctly.
 
 inputs:
   - name: feature
@@ -269,6 +270,13 @@ vars:
   docs_dir: docs/features
 
 nodes:
+  - id: story
+    inline:
+      agent: ./agents/story_partner.md
+      prompt: 'Interview me about {{feature}}, one question at a time, then write the story.'
+      expect: user_story
+    comment: The lead runs this agent in its own session, so the interview is one conversation.
+
   - id: spec
     agent: ./agents/spec_partner.md
     prompt: |
@@ -276,7 +284,7 @@ nodes:
       Work from {{base}}. Record it under .awc/tasks/.
     expect: SPEC_WRITTEN
     allowed_tools: [read, search, edit]
-    comment: The spec partner interviews the human and writes a spec + acceptance criteria.
+    comment: 'A spawned step — the spec partner works from the story and writes the spec + acceptance criteria. A step that asked the human would be an inline: node instead.'
 
   - id: approve-spec
     gate: |
@@ -349,6 +357,7 @@ function behaviors(n){
   const b = []
   if (n.run != null) b.push('run')
   if (n.agent != null) b.push('agent')
+  if (n.inline != null) b.push('inline')
   if (n.loop != null) b.push('loop')
   if (n.gate != null) b.push('gate')
   if (n.wait != null) b.push('wait')
@@ -377,16 +386,30 @@ function validateDoc(doc){
       if (n[k] !== undefined || (n.loop && n.loop[k] !== undefined)) saoKeys.add(k)
 
     const b = behaviors(n)
-    if (b.length === 0) err(id, 'no behavior — needs one of <code>run:</code>, <code>agent:</code>, <code>loop:</code>, <code>gate:</code>, <code>wait:</code>')
+    if (b.length === 0) err(id, 'no behavior — needs one of <code>run:</code>, <code>agent:</code>, <code>inline:</code>, <code>loop:</code>, <code>gate:</code>, <code>wait:</code>')
     if (b.length > 1) err(id, 'multiple behaviors: <code>' + b.join('</code>, <code>') + '</code>')
 
-    if (n.parallel === true){
+    if (n.parallel === true && !b.includes('inline')){
       if (!(b.includes('run') || b.includes('agent')))
         err(id, '<code>parallel: true</code> is a modifier on <code>run:</code> / <code>agent:</code> nodes only')
       else parallelIds.add(id)
     }
-    if (n.allowed_tools != null && !b.includes('agent'))
+    if (n.allowed_tools != null && !b.includes('agent') && !b.includes('inline'))
       err(id, '<code>allowed_tools:</code> applies to <code>agent:</code> nodes and agent steps only')
+
+    // Only agent+prompt+expect belong inside inline:; each message says why.
+    if (b.includes('inline')){
+      const I = n.inline && typeof n.inline === 'object' ? n.inline : {}
+      if (I.agent == null || I.prompt == null)
+        err(id, '<code>inline:</code> needs an <code>agent:</code> and a <code>prompt:</code>')
+      if (I.expect == null) err(id, '<code>inline:</code> node has no <code>expect:</code> — its return line is judged like a spawn\'s')
+      const extra = Object.keys(I).filter(k => ['agent','prompt','expect'].indexOf(k) < 0)
+      if (extra.length) err(id, '<code>inline:</code> holds <code>agent:</code>, <code>prompt:</code> and <code>expect:</code> only — drop <code>' + extra.join('</code>, <code>') + '</code>')
+      if (n.parallel === true) err(id, '<code>parallel: true</code> on an <code>inline:</code> node would detach the lead from the conversation it exists for')
+      if (n.allowed_tools != null) err(id, '<code>allowed_tools:</code> on an <code>inline:</code> node scopes a spawn that never happens')
+      if (typeof I.prompt === 'string' && /\{\{\s*answer\s*\}\}/.test(I.prompt))
+        err(id, '<code>inline:</code> prompt carries <code>{{answer}}</code> — nothing is relayed here, the lead asks and hears the answer itself')
+    }
 
     if (b.includes('loop')){
       const L = n.loop && typeof n.loop === 'object' ? n.loop : {}
@@ -421,7 +444,7 @@ function validateDoc(doc){
   })
 
   if (saoKeys.size)
-    warn('#', 'sao-style key(s) <code>' + [...saoKeys].join('</code>, <code>') + '</code> — this viewer targets the awc dialect (<code>run:</code>, <code>agent:</code>, <code>loop:</code>, <code>gate:</code>, <code>wait:</code>)')
+    warn('#', 'sao-style key(s) <code>' + [...saoKeys].join('</code>, <code>') + '</code> — this viewer targets the awc dialect (<code>run:</code>, <code>agent:</code>, <code>inline:</code>, <code>loop:</code>, <code>gate:</code>, <code>wait:</code>)')
   if (!Array.isArray(doc.nodes)) err('#', 'no <code>nodes:</code> list — not a workflow file')
   if (doc.comment != null && typeof doc.comment !== 'string')
     warn('#', '<code>comment:</code> at workflow level should be a string')
@@ -498,6 +521,15 @@ function nodeHtml(n, i, issues){
     if (n.allowed_tools != null)
       rows.push(`<div class="row"><span class="lbl">allowed_tools</span> ${chips(n.allowed_tools, { forge:true })}</div>`)
   }
+  if (kind === 'inline'){
+    const I = n.inline && typeof n.inline === 'object' ? n.inline : {}
+    rows.push(`<div class="row"><span class="lbl">agent</span> <span class="chip">${esc(String(I.agent))}</span> <span style="color:var(--mut);font-size:12.5px">— run by the lead itself, in conversation with the human</span></div>`)
+    if (I.prompt != null) rows.push(blk('prompt', I.prompt))
+    if (I.expect != null){
+      const e = Array.isArray(I.expect) ? I.expect : [I.expect]
+      rows.push(`<div class="row"><span class="lbl">expect</span> ${chips(e)}</div>`)
+    }
+  }
   if (kind === 'gate') rows.push(`<blockquote class="msg">${esc(n.gate)}</blockquote>`)
   if (kind === 'wait'){
     const targets = Array.isArray(n.wait) ? n.wait : [n.wait]
@@ -567,7 +599,7 @@ function render(doc, fname){
       ${vars ? `<div><b>vars</b><div class="row" style="gap:12px">${vars}</div></div>` : ''}
     </div>
     <div class="counts">${nodes.length} node${nodes.length === 1 ? '' : 's'} · ${
-      ['run','agent','loop','gate','wait'].map(k => {
+      ['run','agent','inline','loop','gate','wait'].map(k => {
         const c = nodes.filter(n => n && typeof n === 'object' && behaviors(n)[0] === k).length
         return c ? `${c} ${k}` : null
       }).filter(Boolean).join(' · ')
@@ -576,7 +608,7 @@ function render(doc, fname){
   renderIssues(issues)
 
   $('#legend').innerHTML = `<span class="l">legend</span>` +
-    ['run','agent','loop','gate','wait'].map(k => pill(k, k)).join('') +
+    ['run','agent','inline','loop','gate','wait'].map(k => pill(k, k)).join('') +
     pill('mod', 'parallel') + pill('cond', 'when')
 
   EDGES = []
