@@ -113,12 +113,20 @@ the review approved — a `when:` grepping the reviewer's one-word `-verdict`
 file? Safe exactly when the step carries no commit; the slice loop's and the
 review round's fix steps always run.
 
-**10. DoD and gates.** A final Definition-of-Done validation
+**10. Shrink.** *Should the run cut back the writing it added, right before
+the last look at it?* (`text_shrinker`, wording only; the catalog's shrink
+shapes.) Two decisions: `shrink-spec` between the spec review's fix step and
+the human approval — recommend it wherever a spec review round exists; and
+`shrink-comments` after the last step that edits code, with a gate `run:`
+behind it — recommend it wherever a review or fix round rewrites code after
+the build. A workflow that writes no code or specs nothing skips that half.
+
+**11. DoD and gates.** A final Definition-of-Done validation
 (`dod_validator`)? Besides the spec approval, where else must a human
 approve — pre-merge `gate:`, a mid-run checkpoint? Every gate is a `gate:`
 node or an interactive loop, never an agent's own judgment.
 
-**11. Finalize.** Commit-message convention? Should the `.awc/tasks/` trail be
+**12. Finalize.** Commit-message convention? Should the `.awc/tasks/` trail be
 committed with the work (recommend yes — review and DoD steps diff against
 committed history, so an uncommitted trail is invisible to them)? A workflow
 whose agents write a task trail ends with a `finish` node archiving it — the
@@ -127,7 +135,7 @@ committer-agent node after it to commit that move. Push / open a draft PR
 (its own node), or stop at "branch ready"? The worktree is left in place for
 a manual PR — not removed.
 
-**12. Tool scope.** Once the node list is settled: *should any step be
+**13. Tool scope.** Once the node list is settled: *should any step be
 scoped down to the tools it actually needs?* The natural candidates are the
 steps that read and report without running anything (an exhaustive review, a
 mutation report). Recommend leaving the rest at the host default, and draw

@@ -75,6 +75,7 @@ the agent return `blocked` (or its own failure verdict). The workflow YAML's
 | `reviewer_engineering` | The exhaustive review: spec scope & test traceability, architecture & dependencies, performance, security, in one pass over the diff → `review.md`, verdict recorded via the `Verdict-writer:` script → 1-line `review-verdict.md`. Never runs CI itself | `Task`, `Mode: full-review \| delta-review`, `Base: <ref>`, `Verdict-writer: <path>` | `APPROVED`, `CHANGES_REQUESTED` |
 | `mutation_tester` | Reads the mutation tool's captured log → `mutation.md`. Measures only; escalate-only, never edits | `Task`, `Mode: report`, `Log: <path>` | `PASS`, `SURVIVORS`, `NO_CHANGED_SOURCE`, `FAILED` |
 | `dod_validator` | Re-runs the full Definition of Done checklist → `dod.md`. Validates only | `Task`, `Mode: validate`, `Commands:`, `Base: <ref>` | `PASS`, `DOD_FAILED` |
+| `text_shrinker` | Cuts the writing this run added to what a reader still needs, before the last look at it → `shrink-comments.md` / `shrink-spec.md`. `shrink-comments` rewrites only comments changed since `Base:`, proves the code fingerprint unchanged, runs `Commands:` and commits; `shrink-spec` tightens the bundle's prose, every criterion, scenario and subtask unchanged, and leaves the commit to the bundle's committer | `Task`, `Mode: shrink-comments \| shrink-spec`, `Base: <ref>` and `Commands:` on `shrink-comments` | `trimmed`, `blocked` |
 
 ## Pairing rules
 
@@ -108,6 +109,18 @@ the agent return `blocked` (or its own failure verdict). The workflow YAML's
   `test-step`. Route those to `unit_test_writer` `cover-gaps` with
   `Report: <that file>`; untagged rows are the implementer's. In the split
   pairing, a findings loop therefore usually holds *both* fix steps.
+- **A shrink sits after the last edit and before the last look.** Words
+  added after it undo it; a judgment before it reads text that will not
+  land. `shrink-spec` goes between the spec review's fix step and the human
+  approval loop. It never commits, so the workflow commits the bundle *after*
+  the approval — the authored committer "Commits always belong to an agent"
+  calls for — and that commit carries the rewrite. `shrink-comments` goes
+  after the last step that edits code — the slice loop when nothing follows
+  it, else the exhaustive review round, else the mutation round — before
+  the DoD, with a `run:` of its `Commands:` gate behind it. It commits its
+  own rewrite, like every fix mode: the DoD's fix steps commit only what
+  they change, so a rewrite left to them would sit dirty. Its `expect:` is
+  `trimmed` alone — `blocked` halts, as everywhere.
 - **`reviewer_engineering` never runs CI** — sandwich it: a `run:` CI step
   before it (so it reviews a verified tree) and another after the fix step
   (so no round ends on an unverified tree).
@@ -148,12 +161,12 @@ the agent return `blocked` (or its own failure verdict). The workflow YAML's
 A node may carry `allowed_tools:` to narrow what that step's subagent reaches
 for (capabilities, mapped to host tools by the lead — see `running.md`). The
 scope follows from what the agent's own file tells it to do, so the bundled
-agents fall into three groups:
+agents fall into these groups:
 
 | Scope | Agents | Why |
 | --- | --- | --- |
-| `[read, search, edit, web]` | `mutation_tester` | it reads a captured log and writes a verdict |
-| `[read, search, edit, web, shell]` | `implementer`, `implementer_tdd`, `unit_test_writer`, `reviewer_slice`, `dod_validator` | they are invoked with `Commands:` and run them |
+| `[read, search, edit, web]` | `mutation_tester`, `text_shrinker` in `shrink-spec` | they read files and write a report; no command to run |
+| `[read, search, edit, web, shell]` | `implementer`, `implementer_tdd`, `unit_test_writer`, `reviewer_slice`, `dod_validator`, `text_shrinker` in `shrink-comments` | they are invoked with `Commands:` and run them |
 | `[read, search, edit, web, shell]` | `spec_reviewer`, `reviewer_engineering` | the one command they run is the package's `scripts/write-verdict-file.sh`, recording the verdict; never the suite |
 | no scope at all (an `inline:` node takes none) | `story_partner` interviewing, `spec_partner` `write-bundle` | the lead runs these itself, with its own tools; there is no subagent to scope |
 | host default (omit the key) | `story_partner` `capture`, `spec_partner`'s later modes | a `capture` reads whatever `Source:` names, a URL included; an approval or fix turn works from the files it was pointed at |
@@ -161,7 +174,7 @@ agents fall into three groups:
 `edit` is in every scope because every agent writes its report under
 `.awc/tasks/in-progress/<task>/`, and `web` is in every scope because any of
 them may need to look up a library's docs, an error message, or a CVE.
-`shell` is the line that separates `mutation_tester` from the rest — even the
+`shell` is the line that separates the first group from the rest — even the
 reviewers run exactly one command, the verdict writer. That script is copied
 verbatim from `assets/write-verdict-file.sh` into the package's `scripts/`,
 `chmod +x`; the YAML passes its package path to each reviewer as the
@@ -270,6 +283,17 @@ Spec review round (before the human approval; both nodes plain, judged by
    `fix-review-findings` carry the closing commit — and the loop's `DONE`
    token — so they run whatever the verdict says.
 
+Spec shrink (after the review round's fix step, before the approval loop; a
+plain node, judged by `expect:`):
+
+1. `text_shrinker` — `Task: {{task}}. Mode: shrink-spec.` — `expect: trimmed`,
+   `allowed_tools: [read, search, edit, web]`
+
+   The human approves the wording that will land. `expect:` names `trimmed`
+   alone — `blocked` halts under the lead's rule, and listing it would let a
+   halt read as a pass. The committer after the approval loop carries the
+   rewrite.
+
 Slice build, split pairing (`until: DONE`, last step's token = all slices done):
 
 1. `implementer` — `Mode: build-slice. Slice: {{iteration}}. Commands: {{commands}}.`
@@ -296,6 +320,17 @@ mutation-tested too:
 3. `implementer` — `Mode: kill-mutants. Commands: {{commands}}.`
 4. `unit_test_writer` — `Mode: cover-gaps. Report: mutation.md. Commands: {{test_command}}.`
 5. `run:` CI — mutation tools refuse to start on a red suite
+
+Comment shrink (after the last step that edits code — the slice loop when
+nothing follows it, else the exhaustive review round, else the mutation
+round — and before the DoD settle; two plain nodes):
+
+1. `text_shrinker` — `Task: {{task}}. Mode: shrink-comments. Base: {{base}}. Commands: {{commands}}.` — `expect: trimmed`, `allowed_tools: [read, search, edit, web, shell]`
+2. `run:` the same gate `{{commands}}` names — the sandwich every fix step gets
+
+   The step rewrites only comments changed since `Base:`, proves the code
+   fingerprint unchanged, runs the gate and commits, so the DoD reads
+   committed history. Not a loop step: a fix round after it adds words back.
 
 DoD settle (`until: DONE`, cap ~2):
 

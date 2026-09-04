@@ -556,6 +556,7 @@ describe('the shared payload', () => {
       'reviewer_slice.md',
       'spec_partner.md',
       'spec_reviewer.md',
+      'text_shrinker.md',
       'unit_test_writer.md',
     ]) {
       const body = readFileSync(path.join(agentsDir, file), 'utf8').replace(
@@ -1160,6 +1161,156 @@ describe('the shared payload', () => {
   })
 })
 
+// text_shrinker rewrites files other agents own, so its whole contract is
+// pinned: the proof, the commit, the return line, and the trim by mode.
+describe('text_shrinker', () => {
+  const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+  const read = (...parts: string[]) =>
+    readFileSync(path.join(skillDir, ...parts), 'utf8')
+  const agent = read('assets', 'agents', 'text_shrinker.md')
+  const catalog = read('references', 'agent-catalog.md')
+
+  test('returns a signal naming a trail report, with a single arrow', () => {
+    expect(agent).toContain(
+      'trimmed -> .awc/tasks/in-progress/<task>/tmp/shrink-comments.md',
+    )
+    expect(agent).toContain(
+      'trimmed -> .awc/tasks/in-progress/<task>/tmp/shrink-spec.md',
+    )
+    // A lead splitting on the arrow would read a second `->` as the path.
+    for (const line of agent.split('\n')) {
+      if (/^\s*[-`]?\s*(trimmed|blocked) ->/.test(line)) {
+        expect({ line, arrows: line.split('->').length - 1 }).toMatchObject({
+          arrows: 1,
+        })
+      }
+    }
+    expect(agent).not.toMatch(/<before> -> <after> lines`\s*$/m)
+  })
+
+  test('proves wording-only against the file it was handed, not against Base', () => {
+    // A proof against Base covers the whole run's work, not the rewrite.
+    expect(agent).not.toContain('git show <Base>:<file>')
+    expect(agent).toContain('Before editing a file, take its code fingerprint')
+    expect(agent).toContain(
+      'whole-line, trailing, or a block comment in the middle',
+    )
+    expect(agent).toContain('never a bare pattern like')
+    // Scope comes from committed history and a dirty path in it halts:
+    // `git diff <Base>` alone reads the working tree, so a prior step's
+    // uncommitted code would ride the wording commit.
+    expect(agent).not.toContain('still untracked')
+    expect(agent).toContain('`git diff --name-only <Base> HEAD`')
+    expect(agent).toContain('`git diff <Base> HEAD -- <file>`')
+    expect(agent).not.toMatch(/git diff (--name-only )?<Base>`/)
+    expect(agent).not.toMatch(/git diff <Base> --/)
+    expect(agent).toContain('`git status --porcelain -- <those paths>`')
+    expect(agent.replace(/\s+/g, ' ')).toContain(
+      "any output is a dirty file, a step's uncommitted work that is never yours to sweep into a commit of wording — return `blocked` naming the path",
+    )
+  })
+
+  test('the comment shrink commits its own rewrite; the spec shrink leaves it to the bundle committer', () => {
+    const body = agent.replace(/\s+/g, ' ')
+    expect(body).toContain(
+      "Commit the rewritten files and the report together, following the project's commit convention, before returning",
+    )
+    expect(body).toContain(
+      'You do not commit: the step that commits the approved bundle carries the rewrite.',
+    )
+    const pairing = catalog.replace(/\s+/g, ' ')
+    expect(pairing).toContain('It commits its own rewrite, like every fix mode')
+    expect(pairing).toContain('commits the bundle *after* the approval')
+  })
+
+  test('the canonical shapes expect trimmed alone, and pass Task', () => {
+    expect(catalog).not.toContain('expect: [trimmed, blocked]')
+    expect(catalog).toContain(
+      '`Task: {{task}}. Mode: shrink-spec.` — `expect: trimmed`',
+    )
+    expect(catalog).toContain(
+      '`Task: {{task}}. Mode: shrink-comments. Base: {{base}}. Commands: {{commands}}.` — `expect: trimmed`',
+    )
+    // The slice-only layout has a slot too.
+    expect(catalog.replace(/\s+/g, ' ')).toContain(
+      'the slice loop when nothing follows it, else the exhaustive review round, else the mutation round',
+    )
+    // Scopes: the spec shrink runs no command, the comment shrink runs the gate.
+    expect(catalog).toContain(
+      '`mutation_tester`, `text_shrinker` in `shrink-spec` |',
+    )
+    expect(catalog).toContain(
+      '`dod_validator`, `text_shrinker` in `shrink-comments` |',
+    )
+    // Shrink is its own interview area; DoD is renumbered after it.
+    const interview = read('references', 'interview.md')
+    expect(interview).toContain('**10. Shrink.**')
+    expect(interview).toContain('**11. DoD and gates.**')
+  })
+
+  test('every mode-specific block carries its mode, and a one-mode copy trims clean', () => {
+    const body = agent.replace(/^---\n[\s\S]*?\n---\n/, '')
+    const MARKED = /`shrink-comments`|`shrink-spec`/
+    let heading = ''
+    const kept = (surviving: RegExp) =>
+      markdownBlocks(body)
+        .filter((block) => {
+          if (/^##\s/.test(block)) heading = block
+          const mark = MARKED.test(block)
+            ? block
+            : MARKED.test(heading)
+              ? heading
+              : ''
+          return !mark || surviving.test(mark)
+        })
+        .join('\n')
+    // Material only one mode can act on carries that mode's mark.
+    const COMMENTS_ONLY = [
+      'git diff',
+      '`Commands`',
+      'code line',
+      'heredoc',
+      'fingerprint',
+    ]
+    const SPEC_ONLY = ['acceptance criterion', 'Given/When/Then', 'subtask']
+    heading = ''
+    for (const block of markdownBlocks(body)) {
+      if (/^##\s/.test(block)) heading = block
+      const inherited = MARKED.test(block) ? block : heading
+      const c = COMMENTS_ONLY.find((t) => block.includes(t))
+      if (c) {
+        expect({
+          token: c,
+          block,
+          marked: /`shrink-comments`/.test(inherited),
+        }).toMatchObject({ marked: true })
+      }
+      const sp = SPEC_ONLY.find((t) => block.includes(t))
+      if (sp) {
+        expect({
+          token: sp,
+          block,
+          marked: /`shrink-spec`/.test(inherited),
+        }).toMatchObject({ marked: true })
+      }
+    }
+    heading = ''
+    const specOnly = kept(/`shrink-spec`/)
+    for (const t of ['git diff', 'Commands', 'fingerprint', 'heredoc']) {
+      expect(specOnly).not.toContain(t)
+    }
+    expect(specOnly).toContain('tmp/shrink-spec.md')
+    expect(specOnly).toContain('Never spawn a subagent')
+    heading = ''
+    const commentsOnly = kept(/`shrink-comments`/)
+    for (const t of ['acceptance criterion', 'Given/When/Then', 'subtask']) {
+      expect(commentsOnly).not.toContain(t)
+    }
+    expect(commentsOnly).toContain('tmp/shrink-comments.md')
+    expect(commentsOnly).toContain('Never spawn a subagent')
+  })
+})
+
 // A block is one bullet, one numbered protocol step, one table row, or one
 // paragraph — the unit the catalog tells the skill to keep or drop whole.
 // Indented continuations (including fenced examples) belong to the block above.
@@ -1573,6 +1724,19 @@ describe('the eval material', () => {
       'confirm-story-records-the-source',
     ]) {
       expect(names).toContain(key)
+    }
+    // Both shrinks are interview defaults, so every code-building eval grades
+    // their placement; the docs-site eval has neither and skips them.
+    for (const e of evals.evals as { name: string; expectations: string[] }[]) {
+      const keys = e.expectations.map((x) => x.split(':')[0])
+      const codeWorkflow = keys.some((k) => /slice|tdd|split-pairing/.test(k))
+      expect({
+        name: e.name,
+        graded: keys.includes('shrink-steps-placed'),
+      }).toEqual({
+        name: e.name,
+        graded: codeWorkflow,
+      })
     }
     // A capture story skips only the story interview — the spec half still
     // interviews, so its log contract is still graded.
