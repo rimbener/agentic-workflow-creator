@@ -16,9 +16,13 @@ The `bun-app` fixture from `workflow-creator-workspace/fixtures/`, plus a
 interview both on `inline:` nodes the lead runs itself, and agent copies
 tailored to the nodes that invoke them.
 
-It is the baseline — a package with nothing wrong with it — so an eval that
-asks for a change grades the change, not a cleanup. What it deliberately does
-**not** have is what the changes ask for:
+It is the baseline — a package with nothing wrong with it. For the upgrader
+that is the point: an audit of it is clean, so its evals grade that a current
+package is reported as current and left byte-identical, and that an
+edit-shaped ask is handed to `awc <agent> --edit` rather than applied. The
+editor's evals borrow it too (`../workflow-editor-workspace/`), so that an
+eval asking for a change grades the change, not a cleanup. What it
+deliberately does **not** have is what the editor's changes ask for:
 
 | The package has | So an eval can ask for |
 | --- | --- |

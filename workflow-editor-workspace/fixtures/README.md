@@ -11,7 +11,10 @@ What the shipped fixture offers the editor's evals is a package with nothing
 wrong with it: the graded object is purely the session's conduct — stated
 changes landing with their ripples, ungated; everything beyond them gated;
 audit-shaped asks handed to `awc <agent> --upgrade`; run-shaped asks handed
-to the package's own launchers; validation run in full.
+to the package's own launchers; validation run in full. Its README in the
+upgrader workspace tables what the package deliberately lacks — the split
+pairing, mutation testing, a third input — which is what the apply evals
+here ask for, since changing what a workflow does is the editor's job alone.
 
 The one fixture that lives here is the one the shipped package cannot stand
 in for:
