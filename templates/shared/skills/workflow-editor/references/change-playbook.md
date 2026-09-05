@@ -1,9 +1,17 @@
 # The change playbook
 
 Each recipe below is one shape of change: what you edit, and — the part that
-gets missed — what else has to move with it. Read the one that matches, then
-check whether a second one also applies; "add mutation testing to a TDD
-workflow" is the add-a-phase recipe with the pairing rules riding along.
+gets missed — what else has to move with it. Read the one that matches the
+stated change, then check whether a second one also applies; "add mutation
+testing to a TDD workflow" is the add-a-phase recipe with the pairing rules
+riding along. The recipes are the from-this-package procedure; the canonical
+node and loop shapes they instantiate live in
+`../workflow-creator/references/agent-catalog.md`, which is the shape but not
+the procedure.
+
+There is no plan gate in an edit session, so a recipe's ripple list is the
+one thing standing between a stated change and a missed orphan: work it in
+full before declaring the change applied.
 
 Three habits run through all of them.
 
@@ -16,12 +24,11 @@ bases mark each rule with the mode it belongs to).
 agent is not just a trimmed base — it may carry hand-edits its owner made after
 generation: a project fact, an extra check, wording they fixed. Those are the
 reason the package is worth keeping, and pulling fresh text over them destroys
-them silently. So every time a recipe says to re-instantiate or untrim, the
-first step is that diff: list what the copy has that the base doesn't, decide
-with the user which of it survives the change, and carry it across
-deliberately. This is the
-"change only what the request reaches" rule at the file level, and it applies to
-every recipe below, not only the migration that says it out loud.
+them silently. So every time a recipe says to instantiate or untrim, the first
+step is that diff: list what the copy has that the base doesn't, and insert
+the base's block into the copy as it stands — never regenerate the file from
+the base. This is the "change only what the request reaches" rule at the file
+level, and it applies to every recipe below.
 
 **Re-read the touched agent files at the end**, because the last step of almost
 every recipe is "does every node still pass every argument its agent requires".
@@ -88,12 +95,15 @@ agents that now run them.
 
 ## Add or remove mutation testing
 
-Adding is the add-a-phase recipe with three specifics: the phase runs the tool
+Adding is the add-a-phase recipe with four specifics: the phase runs the tool
 scoped to the task's changed files and captures its log in a `run:` step; the
 loop ends on `until_run:` with a gate script reading that log, never on a
-token; and `dod_validator` gets its `mutation.md` check back from its base.
-The tool's log path becomes a var. Mutation tools refuse to start on a red
-suite, so the round ends with a CI step.
+token; `dod_validator` gets its `mutation.md` check back from its base; and
+the implementer copy gets its `kill-mutants` mode back from its base — the
+fix steps inside the loop invoke it, and a copy trimmed of it halts the first
+round — with the mode named on its `description:` line again. The tool's log
+path becomes a var. Mutation tools refuse to start on a red suite, so the
+round ends with a CI step.
 
 Removing reverses all four — nodes, the gate and run scripts, the
 `mutation_tester` copy, and the validator's check — and the `kill-mutants` mode
@@ -162,8 +172,9 @@ request to let an agent keep going unsupervised. Say which way you're moving it
 and why.
 
 Adding a human sign-off is a `gate:` node or an approval loop — never a step
-where an agent passes itself. Removing one means saying, in the plan, what now
-goes unreviewed.
+where an agent passes itself. Removing one means saying what now goes
+unreviewed, in the compact diff you state before applying — there is no plan
+turn here to say it in.
 
 ## Add a story step ahead of a spec step
 
@@ -171,8 +182,8 @@ A `spec_partner` step opens by reading `user-story.md` and halts as `blocked`
 without it, so a package whose spec step is a `spec_partner` copy needs a
 story node before it — a `story_partner` copy, or an authored agent that
 writes the same `user-story.md` (an authored spec agent needs one only when
-its own file reads that artifact). If the audit found that gap, this is the
-fix. For a `story_partner` copy, choose the mode with the user —
+its own file reads that artifact). For a `story_partner` copy, choose the
+mode with the user —
 `interview` (an `inline:` node, `Request:`), `capture` (a plain spawned node,
 `Source:`, no token, so it can never sit inside a loop), or
 `capture-and-confirm` (an `inline:` node, `Source:`) — instantiate the copy
@@ -184,90 +195,6 @@ Swapping between the three modes later is the same work: re-instantiate the
 copy from the base with the new mode, change the node's shape (`inline:` ↔
 plain node) to match, and adjust the arguments — `Source:` must name a
 declared input or var.
-
-## Adopt the current task-trail layout
-
-An older package writes a flat `.awc/tasks/<task>/` and ends without archiving.
-The current layout puts `spec.md` and `acceptance-criteria.md` at the root of
-`.awc/tasks/in-progress/<task>/`, everything else in `tmp/` beside them, and
-moves the whole directory to `.awc/tasks/done/<task>/` in a final node. This
-migration runs through every agent file at once, so do it as its own change:
-
-1. Re-instantiate each agent copy from its base at the current paths, re-doing
-   this package's mode trim on the fresh text. That is cleaner than editing
-   paths in place, and it brings the copies up to date in the same pass — but
-   the diff-against-the-base habit above matters most here: hand-edits
-   the fresh text would bury are carried across deliberately, not lost.
-2. Copy `../workflow-creator/assets/finish-task.sh` to
-   `scripts/finish-task.sh`, `chmod +x`, and
-   add the `finish` node running
-   `workflows/<name>/scripts/finish-task.sh {{task}}` — the path written from
-   the launch directory, since that is where a `run:` executes.
-3. Place `finish` after every node that reads or writes the trail, including
-   any `wait:` for parallel work that writes to it. Only a node touching no
-   trail artifact may follow — a committer, a push.
-4. If the workflow commits its trail, the committer node moves after `finish`
-   and commits the archive move too.
-5. Existing trails on disk are the user's call: leave them, or move them by
-   hand. Say which you did.
-
-## Adopt the verdict writer
-
-Bases before the verdict writer had reviewers write their one-line verdict
-file from prose — or nothing at all, leaving every `when:` guard grepping the
-review trail and breaking whenever its verdict line moved. The current bases
-record the verdict through `scripts/write-verdict-file.sh`:
-
-1. Copy `../workflow-creator/assets/write-verdict-file.sh` to
-   `scripts/write-verdict-file.sh`, `chmod +x`.
-2. Re-instantiate the reviewer copies from their bases, re-doing this
-   package's trim: each now requires a `Verdict-writer:` argument. The nodes
-   invoking them pass the copied script's path, written from the launch
-   directory, and grant the step `shell`.
-3. A findings step that is a pure no-op on `APPROVED` — `fix-spec-findings`
-   is the canonical one — takes the `when:` guard grepping the verdict file
-   (the catalog's spec-review shape has it). A fix step that commits does
-   not: the slice loop's closing commit and the review round's token ride on
-   those steps whatever the verdict says.
-
-## Move an interview onto an inline node
-
-A package generated before `inline:` runs its interviews as loops: one spawn
-per question, relayed through the agent's return and back as `{{answer}}`,
-capped by `max_iterations`. The agent's protocol — ask, hear the answer,
-choose the next question — cannot run that way. The migration lands in five
-places:
-
-1. The node: `loop:` becomes `inline:`, keeping `agent:`, `prompt:` and
-   `expect:`. The `until:` token, the `max_iterations` cap and the
-   `{{answer}}` argument all go — nothing is relayed, and the node ends on the
-   agent's return line.
-2. The agent copy: diff it against
-   `../workflow-creator/assets/agents/<agent>.md` first (the habit above), then
-   take the base's inline protocol — the log written at both ends of each
-   exchange, the relaunch pickup, one return line with no `<promise>` token.
-   A copy on the old protocol still treats every turn as a fresh agent and
-   asks the human to repeat themselves.
-3. `agents/workflow_lead.md`, recopied from
-   `../workflow-creator/assets/agents/workflow_lead.md`. This one silently
-   breaks the run: the lead file **outranks `running.md`**, and a copy from
-   before `inline:` forbids its own writes — so the first file the interview
-   creates comes back as
-   `blocked -> <step>: asks the lead to write/edit/delete/commit`, with a
-   correct YAML and `running.md` beside it. No package tailors the lead, so
-   this is a copy, not a merge.
-4. Everything downstream of the token: a `when:` or README row naming the
-   loop's cap or signal, and any node that echoed an interview token such as
-   `USER_STORY_WRITTEN` or `SPEC_BUNDLE_WRITTEN`.
-5. The role stamp each launcher opens with — the three in-session launchers
-   and, where it exists, `./<name>.sh`. The lead reads that line before its
-   role file, so a bare "coordination only" contradicts the node it is about
-   to run: take the wording from `../workflow-creator/references/hosts.md`,
-   the same in all four. A launcher added in the same pass takes it too —
-   never its siblings' stale stamp.
-
-An approval loop is **not** this migration: each round is one self-contained
-present-and-answer, closed by its own token, so it stays a loop.
 
 ## Add or tighten a tool scope
 
@@ -287,7 +214,7 @@ to an already-scoped agent, revisit its scope in the same pass.
 
 A package sometimes carries a hand-written agent that a bundled base now
 covers, or a base that has been hand-edited past recognition. Either swap is
-fine, but it is a change of behavior, not a cleanup: diff the two, tell the
-user what the run will do differently, and check the invocation arguments in
-every node that calls it — the base's argument names are rarely the authored
-one's.
+fine when the user asks for it, but it is a change of behavior, not a
+cleanup: diff the two, tell the user what the run will do differently, and
+check the invocation arguments in every node that calls it — the base's
+argument names are rarely the authored one's.

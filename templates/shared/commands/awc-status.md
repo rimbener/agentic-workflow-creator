@@ -4,8 +4,9 @@ description: Summarize progress of the current awc session — creating a workfl
 
 Summarize the current awc session:
 
-1. Which workflow is in hand, and the goal — the new workflow being built, or
-   the existing package being changed and what should change about it.
+1. Which workflow is in hand, and the goal — the new workflow being built,
+   the existing package being upgraded and what the audit found, or the
+   existing package being edited and what should change about it.
 2. Which steps are done, against the process of the skill leading this
    session — the workflow-creator when building a new package, the
    workflow-upgrader or workflow-editor when changing one. Name each

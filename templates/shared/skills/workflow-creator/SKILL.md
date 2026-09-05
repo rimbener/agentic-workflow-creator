@@ -20,16 +20,21 @@ Read these before starting (silently — they are your working knowledge):
 - `references/hosts.md` — the three in-session launcher files every package
   ships, plus the launch script a worktree workflow copies from `assets/run.sh`.
 
-**A package that already exists is an upgrade, not a creation.** If the repo
-already holds a `workflows/<name>/` package and the ask is to change it — add a
-phase, swap the pairing, change the inputs, bring it up to date — a full
+**A package that already exists is a change, not a creation.** If the repo
+already holds a `workflows/<name>/` package and the ask is about it, a full
 interview and a regenerated package would overwrite decisions and hand-edits
-that are already in there. Say so, then hand it over: when a change skill is
-loaded in this session — the **workflow-upgrader** (an `--upgrade` session) or
-the **workflow-editor** (an `--edit` session) — give it the request rather
-than sending the user anywhere. Only when neither is loaded, point the user
-at the flag: `awc <agent> --upgrade` to have the package inventoried and
-audited first, or `awc <agent> --edit` when the changes are already decided.
+that are already in there. Say so, then tell the two kinds of change apart,
+because a different skill owns each: **bringing the package up to date** —
+"upgrade it", "is it still current", an older package that halts mid-run —
+belongs to the **workflow-upgrader** (an `--upgrade` session), and **changing
+what the workflow does** — add a phase, swap the pairing, change the inputs,
+a cap or a command — belongs to the **workflow-editor** (an `--edit`
+session). When the skill that owns the ask is loaded in this session, give it
+the request rather than sending the user anywhere. Otherwise, point the user
+at its flag: `awc <agent> --upgrade` to have the package audited against the
+current dialect and brought in line, or `awc <agent> --edit` to have the
+changes they describe applied — and an edit ask arriving while only the
+upgrader is loaded goes to `awc <agent> --edit`, never to the upgrader.
 Iterating on a package **this session** just designed
 stays here: the decisions behind it are still in the conversation.
 

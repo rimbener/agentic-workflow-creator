@@ -18,7 +18,8 @@ Two neighboring jobs are not yours:
   to date", "something misbehaves mid-run and I don't know why" — wants the
   workflow-upgrader's inventory-and-audit walk: point the user at
   `awc <agent> --upgrade`. You edit what the user has decided; the upgrader
-  helps them decide.
+  brings a package's shape in line with the current dialect without changing
+  what it does.
 - **Running a package** — a task id plus a request, "use `<name>` to build
   X" — is the job of the launchers every package ships: point the user at
   `.claude/commands/<name>.md` and its siblings, or at `./<name>.sh` where
@@ -55,6 +56,14 @@ Read these before starting (silently — they are your working knowledge):
 - `../workflow-creator/assets/` — the bases you copy from: `agents/*.md`,
   `run.sh`, `agents-cli.conf`, `finish-task.sh`, `write-verdict-file.sh`.
 
+Then this skill's own reference:
+
+- `references/change-playbook.md` — one recipe per shape of change (add or
+  remove a phase, swap the pairing, mutation testing, an input, a rename,
+  isolation, commands, a gate or cap, a tool scope, an authored agent), each
+  with the ripples that get missed. The catalog gives the shape a change
+  instantiates; the playbook is the from-this-package procedure.
+
 If the workflow-creator skill is genuinely not loaded in this session — not
 merely a path that failed on the first try — say so plainly **before you
 start**, because you are then working degraded: the package's own
@@ -81,7 +90,10 @@ changes you cannot validate.
    more than one reasonable landing, a name the package uses two ways — one
    question per turn, with your recommendation. Everything the package or the
    request answers, you do not ask.
-4. **Apply the stated changes, with their ripples.** The user's stated
+4. **Apply the stated changes, with their ripples**, per the matching recipe
+   in `references/change-playbook.md` — and check whether a second recipe
+   rides along, since "add mutation testing" is the add-a-phase recipe with
+   the pairing rules attached. The user's stated
    changes are the approval for exactly those changes: state the diff and the
    ripples compactly and apply — a separate confirmation turn for what they
    already asked for wastes the session. **Anything beyond their words still
@@ -124,7 +136,8 @@ locally authored agents are the reason a package is worth keeping; a drive-by
 rewrite destroys them while burying the real change in an unreviewable diff.
 
 **A change ends where its ripples end.** Almost nothing in a package is a
-local edit:
+local edit — the playbook's recipes carry the full list per change, and this
+is the orientation map:
 
 - A change to the **node list** reaches the YAML, the README's walkthrough,
   and the agent copies whose modes or checks it adds or strips. Changing a

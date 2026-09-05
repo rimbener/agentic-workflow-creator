@@ -1,3 +1,5 @@
 This session was started by `awc --upgrade` (agentic-workflow-creator). Loaded for this session only: the `workflow-upgrader` skill; the `workflow-creator` skill — the upgrader reads the dialect and the agent bases from it, and it is there if this turns out to be a new workflow after all; and `awc-status` for a progress checkpoint whenever you ask for one.
 
-Briefly greet the user, then ask which existing workflow package they want to change and what should change about it, and use the workflow-upgrader skill to guide the process.
+The user is here to bring a workflow package this repo already has up to date with the current dialect. There is nothing to ask about what should change: the upgrader's audit finds that. Changes to what a workflow does belong to `awc --edit`, not to this session.
+
+Briefly greet the user, then ask which existing workflow package they want to upgrade — when the repo holds exactly one, name it and start on it instead of asking — and use the workflow-upgrader skill to bring it up to date.

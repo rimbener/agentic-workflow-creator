@@ -2,9 +2,9 @@
 
 Two passes over the same files. The **inventory** is what the package says
 about itself; the **audit** is where it disagrees with the dialect, with the
-repo, or with itself. Do both before the interview: half the questions you were
-about to ask are already answered in the files, and some of the answers are
-wrong in ways the user will want to hear about first.
+repo, or with itself. Do both before you ask the user anything: the package answers
+every question the creator's interview would have asked, and the audit is
+what tells you — and them — what the upgrade actually is.
 
 ## Finding the package
 
@@ -21,7 +21,7 @@ workflow-creator skill. Several found → list them with their one-line
 ## Inventory
 
 Read the YAML first, then every file it references. What you are building is a
-map you can hold the change against.
+map you can hold the audit against.
 
 **Identity and launch.** `name`, `description`, and the isolation mode —
 worktree if `./<name>.sh` exists, in place otherwise. Which launchers exist.
@@ -91,7 +91,8 @@ Compare against the current bases while you're there:
   protocol, older artifact paths, or a `description:` naming modes it no longer
   has. A reviewer copy from before the verdict writer has no `Verdict-writer:`
   argument and records no one-line verdict file — see the playbook's "Adopt
-  the verdict writer" for the migration.
+  the verdict writer" for the migration. Every difference the diff shows that
+  is the base's text rather than the owner's is a line of the upgrade.
 
 ### Upgrade-only checks
 
@@ -135,14 +136,24 @@ looks for them:
 
 Two groups, both short:
 
-**In the way of your change** — findings the requested change depends on, or
-that the change would otherwise make worse. Fold these into the change plan;
-they are not optional.
+**The upgrade** — every line the creator's checklist demands and the package
+lacks, and every copy that is behind its base, each named with the playbook
+migration that lands it. This group is the job: it goes into the plan whole,
+and it is not offered piecemeal.
 
 **Independent** — everything else, one line each, with what fixing it would
-touch. Offer them; do not fold them in. The user may want a package that runs
-today more than a package that is tidy, and they are the one who has to review
-the diff.
+touch: repo drift, orphans and scar tissue from an earlier change, a copy/node
+mismatch the dialect never caused. Offer them; do not fold them in. The user
+may want a package that runs today more than a package that is tidy, and they
+are the one who has to review the diff.
 
-If the audit is clean, say that in a sentence and move on. A long report on a
-healthy package buries the one line the user needed.
+Whatever the two groups hold, a request to change what the workflow does is
+neither of them. If one arrived with the upgrade — "and add mutation testing
+while you're in there" — the report names it as an edit for
+`awc <agent> --edit` and leaves it out of the plan. That line is part of the
+report whatever the audit found, and it is written before the report ends.
+
+Then, if both groups are empty, say the package is current, in a sentence,
+and stop — nothing is written, and the edit line above is already in the
+user's hands. A long report on a healthy package buries the one line the
+user needed.
