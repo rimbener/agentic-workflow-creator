@@ -52,11 +52,12 @@ Agents:
   opencode        Launch opencode with the bundled workflow skill
 
 Options:
-  --upgrade       Open the session on workflow-upgrader, to change a workflow
-                  package this repo already has (default: create a new one)
+  --upgrade       Open the session on workflow-upgrader, to bring a workflow
+                  package this repo already has up to date with the current
+                  dialect (default: create a new one)
   --edit          Open the session on workflow-editor, to apply the changes
                   you describe to a workflow package this repo already has —
-                  the audit-and-interview walk stays with --upgrade (the two
+                  bringing a package up to date stays with --upgrade (the two
                   flags are exclusive)
   --keep          Do not delete the temp folder on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
@@ -88,20 +89,22 @@ workflows/<name>/                 # the workflow, its agents and scripts
 .opencode/command/<name>.md       # in-session launcher — opencode
 ```
 
-## Changing a workflow you already have
+## Upgrading a workflow you already have
 
 ```bash
 awc claude --upgrade
 ```
 
-That opens the session on the **workflow-upgrader** skill instead. It reads the
-package already in your repo — its nodes, the modes each agent copy kept, its
-scripts and launchers — audits it against the current dialect, and works one
-change at a time: add or drop a phase, swap the pairing, change the inputs,
-isolation or commands, or bring an older package back in line. Upgrading is
-surgical on purpose: the package holds decisions and hand-edits from before,
-so the change and its ripples are planned with you and applied, and nothing
-else is touched.
+That opens the session on the **workflow-upgrader** skill instead. It asks
+which package to upgrade (or names it, when your repo holds one), reads it —
+its nodes, the modes each agent copy kept, its scripts and launchers — and
+audits it against the current dialect: whatever the creator's validation
+checklist demands today and the package lacks is the upgrade, so there is no
+version list to keep. The migrations and their ripples are planned with you
+and applied, and nothing else is touched: the package holds decisions and
+hand-edits from before, and an upgrade brings its shape up to date without
+changing what it does. A package that is already current is left alone. To
+change what a workflow does, use `--edit` below.
 
 ## Editing a workflow directly
 
@@ -110,10 +113,11 @@ awc claude --edit
 ```
 
 That opens the session on the **workflow-editor** skill instead — a separate
-skill for when the changes are already decided: you name the package and
-describe what should change, and exactly those changes are applied, with
-their ripples and the full validation checklist, and anything beyond your
-words still asked first.
+skill for changing what a workflow does: you name the package and describe
+what should change — add or drop a phase, swap the pairing, change the
+inputs, isolation, commands or caps — and exactly those changes are applied,
+with their ripples and the full validation checklist, and anything beyond
+your words still asked first.
 
 ## Use locally (without publishing)
 

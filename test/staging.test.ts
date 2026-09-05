@@ -447,6 +447,36 @@ describe('the shared payload', () => {
     )
     expect(editorBody).toContain('diff the packaged copy against')
     expect(editorBody).toContain('never by regenerating the file from the base')
+    // The edit recipes — the from-this-package procedure behind the apply
+    // evals — live in the editor's own playbook, and the skill reads it.
+    expect(editorBody).toContain('references/change-playbook.md')
+    const editorPlaybook = readFileSync(
+      path.join(
+        sharedDir(),
+        'skills',
+        'workflow-editor',
+        'references',
+        'change-playbook.md',
+      ),
+      'utf8',
+    ).replace(/\s+/g, ' ')
+    for (const recipe of [
+      '## Add a phase',
+      '## Remove a phase',
+      '## Swap the build pairing',
+      '## Add or remove mutation testing',
+      '## Add, rename or remove an input',
+      '## Rename the workflow',
+    ]) {
+      expect(editorPlaybook).toContain(recipe)
+    }
+    expect(editorPlaybook).toContain('never on a token')
+    // The untrim the mutation eval grades: the implementer copy gets
+    // `kill-mutants` back from its base, not from fresh prose.
+    expect(editorPlaybook).toContain(
+      'the implementer copy gets its `kill-mutants` mode back from its base',
+    )
+    expect(editorPlaybook).toContain('`DONE` closes the loop')
     expect(editorBody).toContain('`<name>.yaml`')
     // The run hand-off gives a paste-ready command, not a bare path.
     expect(editorBody).toContain('inputs already filled')
@@ -775,7 +805,7 @@ describe('the shared payload', () => {
     )
     // ...and both migrating skills recopy it and say what breaks otherwise —
     // the editor has no audit walk or plan gate to catch a missed file.
-    const playbook = flat(upgraderRefs, 'change-playbook.md')
+    const playbook = flat(upgraderRefs, 'upgrade-playbook.md')
     const editorSkill = flat(
       sharedDir(),
       'skills',
@@ -889,13 +919,14 @@ describe('the shared payload', () => {
         'skills',
         'workflow-upgrader',
         'references',
-        'change-playbook.md',
+        'upgrade-playbook.md',
       ),
       'utf8',
     ).replace(/\s+/g, ' ')
     expect(playbook).toContain('The role stamp each launcher opens with')
-    // The editor has no playbook, so its own ripple list must reach the
-    // launchers.
+    // The editor's playbook has no inline migration (that is an upgrade), so
+    // its own ripple list must reach the launchers for the first `inline:`
+    // node a package gains.
     const editor = readFileSync(
       path.join(sharedDir(), 'skills', 'workflow-editor', 'SKILL.md'),
       'utf8',
@@ -1528,19 +1559,20 @@ describe('the upgrader eval material', () => {
         e.expectations.map((x) => x.split(':')[0]),
     )
     for (const key of [
-      // Untrimming a mode has to come from the base, not fresh prose.
-      'dod-validator-untrimmed-from-base',
-      'implementer-regains-kill-mutants',
-      // A change to inputs reaches all four launch paths, not just the YAML.
-      'input-threaded-everywhere',
       // The failure the drift fixture exists for.
       'hand-edits-preserved',
       // A package generated before `inline:` runs its interviews as loops.
       'interviews-moved-inline',
       'audit-reported-before-changing',
-      // Removal is a sweep, not a deletion.
-      'orphans-swept',
-      'mode-trimmed-from-implementer',
+      // An upgrade asks which package, never what should change — and a
+      // package that is already current is left byte-identical.
+      'package-named-not-asked',
+      'audit-clean-reported',
+      'nothing-written',
+      // A change to what the workflow does is an edit, handed to --edit with
+      // the upgrade half still done.
+      'redirected-to-edit',
+      'upgrade-still-done',
     ]) {
       expect(names).toContain(key)
     }
@@ -1651,6 +1683,17 @@ describe('the editor eval material', () => {
       // and where an over-eager sweep deletes what surviving nodes share.
       'node-list-orphans-swept',
       'shared-artifacts-survive',
+      // Untrimming a mode has to come from the base, not fresh prose — and a
+      // change to inputs reaches all four launch paths, not just the YAML.
+      // Both are edits: the upgrader never changes what a workflow does.
+      'dod-validator-untrimmed-from-base',
+      'implementer-regains-kill-mutants',
+      'input-threaded-everywhere',
+      // The loop shapes the playbook's recipes exist to get right: a
+      // mutation loop ends on a gate script, and the loop-ender stays last.
+      'mutation-loop-ends-on-until-run',
+      'split-pairing-applied',
+      'loop-ender-still-correct',
     ]) {
       expect(names).toContain(key)
     }
@@ -1685,7 +1728,7 @@ describe('the docs carry the help text', () => {
     for (const file of files) {
       const text = readFileSync(path.join(import.meta.dir, '..', file), 'utf8')
       for (const line of [
-        'Open the session on workflow-upgrader, to change a workflow',
+        'Open the session on workflow-upgrader, to bring a workflow',
         'Open the session on workflow-editor, to apply the changes',
       ]) {
         expect({ file, has: text.includes(line) }).toEqual({ file, has: true })
@@ -1985,6 +2028,13 @@ describe('readPrompt', () => {
       expect(create).not.toContain('workflow-editor')
       expect(upgrade).not.toContain('workflow-editor')
       expect(edit).not.toContain('workflow-upgrader')
+      // The upgrade prompt asks which package, never what should change —
+      // that opening question is what turns an upgrade session into an edit
+      // interview, so the line that forbids it is pinned, as is the one that
+      // spares the question when the repo holds a single package.
+      expect(upgrade).toContain('nothing to ask about what should change')
+      expect(upgrade).toContain('name it and start on it instead of asking')
+      expect(upgrade).not.toContain('what should change about it')
     }
   })
 })

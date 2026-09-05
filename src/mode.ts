@@ -1,9 +1,9 @@
 // Which skill a session opens in. `awc <agent>` starts on workflow-creator;
 // `awc <agent> --upgrade` starts on workflow-upgrader; `awc <agent> --edit`
 // starts on workflow-editor. The upgrader and the editor are deliberately
-// separate skills — the upgrader owns the inventory-and-audit walk and grows
-// its own functionality, the editor applies changes the user has already
-// decided — and they never ship together: each mode stages exactly one
+// separate skills — the upgrader brings a package up to date with the
+// current dialect and grows its own functionality, the editor applies changes
+// the user has already decided — and they never ship together: each mode stages exactly one
 // change skill (or, for create, none), because an extra change skill is an
 // extra trigger competing for the model's attention. Everything else in
 // templates/shared/skills/ — the grill aids, and the creator per the next

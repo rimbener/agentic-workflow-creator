@@ -29,11 +29,12 @@ Agents:
 ${agents}
 
 Options:
-  --upgrade       Open the session on workflow-upgrader, to change a workflow
-                  package this repo already has (default: create a new one)
+  --upgrade       Open the session on workflow-upgrader, to bring a workflow
+                  package this repo already has up to date with the current
+                  dialect (default: create a new one)
   --edit          Open the session on workflow-editor, to apply the changes
                   you describe to a workflow package this repo already has —
-                  the audit-and-interview walk stays with --upgrade (the two
+                  bringing a package up to date stays with --upgrade (the two
                   flags are exclusive)
   --keep          Do not delete the temp folder on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)

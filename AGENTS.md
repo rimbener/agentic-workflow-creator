@@ -17,10 +17,12 @@ YAML of tiny nodes executed step by step by a `workflow_lead` subagent, plus
 the agent files and scripts those nodes invoke. Two sibling skills change a
 package that already exists in the user's repo, and they are deliberately
 separate so each can grow on its own: **workflow-upgrader**
-(`awc <agent> --upgrade`) owns the inventory-and-audit walk, and
-**workflow-editor** (`awc <agent> --edit`) applies changes the user has
-already decided — exactly those, without the broader ceremony. The two never
-ship in the same session.
+(`awc <agent> --upgrade`) brings a package up to date with the current
+dialect — it asks only which package, audits it against the creator's
+validation checklist, and lands the migrations, never a change to what the
+workflow does — and **workflow-editor** (`awc <agent> --edit`) applies changes
+the user has already decided — exactly those, without the broader ceremony.
+The two never ship in the same session.
 
 There are two largely independent things to reason about:
 
@@ -125,13 +127,15 @@ templates/
 │   │       ├── agents-cli.conf      # host roster — add/remove a host only here
 │   │       └── agents/*.md          # base agent templates instantiated (tailored) per generated workflow
 │   ├── skills/workflow-upgrader/     # staged only under --upgrade
-│   │   ├── SKILL.md                 # locate → inventory → audit → scoped interview → diff plan → apply → validate
+│   │   ├── SKILL.md                 # locate → inventory → audit → the few questions a migration forces → diff plan → apply → validate
 │   │   └── references/
 │   │       ├── inventory.md         # reading a package into a map, and the audit
-│   │       ├── change-playbook.md   # what each kind of change ripples into
-│   │       └── interview.md         # the scoped interview
+│   │       ├── upgrade-playbook.md  # each migration, and what it ripples into
+│   │       └── interview.md         # the upgrade conversation
 │   └── skills/workflow-editor/       # staged only under --edit
-│       └── SKILL.md                 # locate → read silently → apply the stated changes + ripples → validate
+│       ├── SKILL.md                 # locate → read silently → apply the stated changes + ripples → validate
+│       └── references/
+│           └── change-playbook.md   # one recipe per shape of change, with the ripples that get missed
 └── hosts/
     ├── claude/{prompt.md, prompt-upgrade.md, prompt-edit.md, plugin/.claude-plugin/plugin.json}
     ├── codex/{prompt.md, prompt-upgrade.md, prompt-edit.md}
@@ -223,11 +227,12 @@ already hold a package and its evals run under `awc <agent> --upgrade`:
   several dialect changes, plus two hand-edits its owner made afterward. What
   makes it stale is whatever the creator's validation checklist currently
   demands, so it needs no version stamps and cannot rot.
-- `evals/evals.json` — four prompts (untrim a mode from its base, swap the
-  pairing plus a new input, bring a stale package up to date, drop a phase and
-  sweep the orphans). Every one carries `nothing-else-touched` and
-  `package-still-valid`; `test/staging.test.ts` pins those two, the fixtures,
-  and the keys that grade upgrade-only behavior.
+- `evals/evals.json` — three prompts (bring a stale package up to date, a
+  package that is already current is left byte-identical, an edit-shaped ask
+  is handed to `awc <agent> --edit` with the audit still done). Every one
+  carries `nothing-else-touched` and `package-still-valid`;
+  `test/staging.test.ts` pins those two, the fixtures, and the keys that grade
+  upgrade-only behavior.
 - `scripts/check_upgrade.ts` — run via
   `bun workflow-upgrader-workspace/scripts/check_upgrade.ts <baseline-dir> <result-dir>`;
   reports which files the session added, removed and changed, which is what
@@ -242,8 +247,10 @@ so its evals run under `awc <agent> --edit`. The package-holding evals reuse
 shipped package; a copy here would rot):
 - `fixtures/bun-app-bare` — the tiny bun app with no package at all, for the
   "nothing to edit → hand to the creator loaded beside you" eval.
-- `evals/evals.json` — five prompts: two applies (an input rename, and a
-  phase removal that must sweep its orphans — both without a plan gate,
+- `evals/evals.json` — seven prompts: four applies (an input rename, a
+  phase removal that must sweep its orphans, a mutation phase that must untrim
+  two agent copies from their bases, and a pairing swap plus a new input
+  threaded through all four launch paths — all without a plan gate,
   everything beyond the request gated, validation in full) and three
   hand-offs (no package → the creator loaded beside the editor; audit-shaped
   → `awc <agent> --upgrade`; run-shaped → the package's own launchers, the

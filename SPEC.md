@@ -56,11 +56,12 @@ Agents:
   opencode        Launch opencode with the bundled workflow skill
 
 Options:
-  --upgrade       Open the session on workflow-upgrader, to change a workflow
-                  package the repo already has (default: create a new one)
+  --upgrade       Open the session on workflow-upgrader, to bring a workflow
+                  package the repo already has up to date with the current
+                  dialect (default: create a new one)
   --edit          Open the session on workflow-editor, to apply the changes
                   you describe to a workflow package the repo already has —
-                  the audit-and-interview walk stays with --upgrade (the two
+                  bringing a package up to date stays with --upgrade (the two
                   flags are exclusive)
   --keep          Do not delete .awc-tmp/ on exit (debugging)
   --tmp-dir <p>   Temp folder location (default: ./.awc-tmp)
@@ -85,8 +86,9 @@ Exit code: `awc` exits with the agent process's exit code (`143` on SIGTERM).
    - The session's mode decides two of those inputs (`src/mode.ts`): a default
      session stages no change skill; `--upgrade` adds `skills/workflow-upgrader/`
      and `--edit` adds `skills/workflow-editor/` — two deliberately separate
-     skills that never ship together (the upgrader owns the inventory-and-audit
-     walk, the editor applies changes the user has already decided). Everything
+     skills that never ship together (the upgrader brings a package up to date
+     with the current dialect, the editor applies changes the user has already
+     decided). Everything
      else under `templates/shared/skills/` ships in every mode: the grill aids,
      and the creator — both change skills read the dialect, the agent bases and
      the validation checklist from `../workflow-creator/`, so it must be there
