@@ -51,10 +51,11 @@ Read these before starting (silently — they are your working knowledge):
 - `../workflow-creator/references/agent-catalog.md` — the bundled agent bases,
   their arguments and signals, how a copy is tailored (and untailored), the
   pairing rules, and the canonical node and loop shapes.
-- `../workflow-creator/references/hosts.md` — the three launchers and the
-  worktree launch script.
+- `../workflow-creator/references/hosts.md` — the three launchers, the rules
+  skill every package installs beside them, and the worktree launch script.
 - `../workflow-creator/assets/` — the bases you copy from: `agents/*.md`,
-  `run.sh`, `agents-cli.conf`, `finish-task.sh`, `write-verdict-file.sh`.
+  `run.sh`, `agents-cli.conf`, `finish-task.sh`, `write-verdict-file.sh`,
+  `workflow-rules.md`.
 
 Then this skill's own reference:
 
@@ -117,9 +118,11 @@ changes you cannot validate.
    **the diff is the change**: read `git diff` for the package end to end; every hunk
    traces to the stated changes or a named ripple, and a hunk that doesn't is
    a drive-by to drop before handing off. Your change leaves `running.md`
-   untouched — a package copy that already differs from
-   `../workflow-creator/assets/running.md` is drift for `awc <agent>
-   --upgrade` to modernize: raise it in the handoff, never fix it in passing.
+   and the three rules-skill copies (`.claude/skills/awc-workflow-rules/SKILL.md`
+   and its siblings) untouched — a package copy that already differs from
+   its base under `../workflow-creator/assets/`, or a rules skill the package
+   never had, is drift for `awc <agent> --upgrade` to modernize: raise it in
+   the handoff, never fix it in passing.
 6. **Hand off**: the files touched — every hunk tracing to the request or a
    named ripple — what to commit before the next run, and any finding you
    raised for the user to take elsewhere.

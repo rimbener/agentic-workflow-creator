@@ -18,7 +18,9 @@ Read these before starting (silently — they are your working knowledge):
   agents.
 - `references/interview.md` — how to interview and every area to settle.
 - `references/hosts.md` — the three in-session launcher files every package
-  ships, plus the launch script a worktree workflow copies from `assets/run.sh`.
+  ships, the rules skill it installs beside them from
+  `assets/workflow-rules.md`, plus the launch script a worktree workflow
+  copies from `assets/run.sh`.
 
 **A package that already exists is a change, not a creation.** If the repo
 already holds a `workflows/<name>/` package and the ask is about it, a full
@@ -63,7 +65,9 @@ the workflow runs in a worktree.
    always, and `scripts/write-verdict-file.sh` when the workflow instantiates
    a bundled reviewer — copied verbatim from `assets/`;
    `running.md` copied verbatim from `assets/running.md`; a short README;
-   the three in-session launchers; and — when isolation is a worktree —
+   the three in-session launchers; the rules skill —
+   `assets/workflow-rules.md` copied verbatim as `SKILL.md` into each host's
+   `awc-workflow-rules/` skill directory; and — when isolation is a worktree —
    `./<name>.sh` copied from `assets/run.sh` with `__WORKTREE_PARENT__` set.
 5. **Validate** (checklist below), then hand off: how to launch, what the run
    will ask of them, and where the artifacts land.
@@ -171,9 +175,16 @@ workflows/<name>/
 .claude/commands/<name>.md      # in-session launcher — Claude Code
 .codex/skills/<name>/SKILL.md   # in-session launcher — Codex
 .opencode/command/<name>.md     # in-session launcher — opencode
+.claude/skills/awc-workflow-rules/SKILL.md   # rules skill — verbatim copy of assets/workflow-rules.md
+.codex/skills/awc-workflow-rules/SKILL.md    # rules skill — same copy
+.opencode/skill/awc-workflow-rules/SKILL.md  # rules skill — same copy
 ```
 
 Everything under `workflows/<name>/` is host-neutral and written once. The
+rules skill is written once too — the same file under each host's skill
+directory, never tailored, so a repo with several packages holds one copy per
+host (`references/hosts.md`, "The rules skill"): it is what a later session
+finds when someone edits the package by hand with no awc skill loaded. The
 three launcher files are the same four instructions in each host's own
 wrapper — `references/hosts.md` has the file templates, the argument
 placeholder each host substitutes, and the hazards that shape them. Write all
@@ -354,6 +365,12 @@ nodes come from its own interview.
   placeholders carry exactly one, inside its fenced slot and nowhere else in
   the file; the Codex skill's `description` names the phrases that should
   trigger it.
+- The rules skill is installed for all three hosts —
+  `.claude/skills/awc-workflow-rules/SKILL.md`,
+  `.codex/skills/awc-workflow-rules/SKILL.md`,
+  `.opencode/skill/awc-workflow-rules/SKILL.md` — each a byte-identical copy
+  of `assets/workflow-rules.md` (`diff` them), and a repo that already held
+  the copies from another package has them refreshed, never a second name.
 - A worktree workflow ships executable `./<name>.sh` and `./agents-cli.conf`
   copied from `assets/run.sh` and `assets/agents-cli.conf`, with
   `__WORKTREE_PARENT__` matching the interview. The script asks for

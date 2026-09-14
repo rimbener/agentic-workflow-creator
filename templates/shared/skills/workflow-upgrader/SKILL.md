@@ -67,13 +67,13 @@ Read these before starting (silently — they are your working knowledge):
 - `../workflow-creator/references/agent-catalog.md` — the bundled agent bases,
   their arguments and signals, how a copy is tailored (and untailored), the
   pairing rules, and the canonical node and loop shapes.
-- `../workflow-creator/references/hosts.md` — the three launchers and the
-  worktree launch script.
+- `../workflow-creator/references/hosts.md` — the three launchers, the rules
+  skill every package installs beside them, and the worktree launch script.
 - `../workflow-creator/references/interview.md` — the creator's area list,
   for the rare decision a migration reopens.
 - `../workflow-creator/assets/` — the bases you re-instantiate from:
   `agents/*.md`, `run.sh`, `agents-cli.conf`, `finish-task.sh`,
-  `write-verdict-file.sh`.
+  `write-verdict-file.sh`, `workflow-rules.md`.
 
 Then read this skill's own references:
 
@@ -205,10 +205,16 @@ workflows/<name>/
 .claude/commands/<name>.md      # in-session launcher — Claude Code
 .codex/skills/<name>/SKILL.md   # in-session launcher — Codex
 .opencode/command/<name>.md     # in-session launcher — opencode
+.claude/skills/awc-workflow-rules/SKILL.md   # rules skill — verbatim copy of the base workflow-rules.md
+.codex/skills/awc-workflow-rules/SKILL.md    # rules skill — same copy
+.opencode/skill/awc-workflow-rules/SKILL.md  # rules skill — same copy
 ```
 
 Refreshing **`running.md` or `agents/workflow_lead.md`** is a verbatim recopy
-of the base, and nothing else — no package tailors either.
+of the base, and nothing else — no package tailors either. The **rules
+skill** is the same kind of file three times over: a missing or drifted copy
+is a recopy of the base into all three host skill directories, and a package
+from before the rules skill simply gains them.
 Adopting the **task-trail layout** runs through every agent file at once, adds
 `scripts/finish-task.sh` and a `finish` node, and moves any committer after it.
 Moving an **interview onto an `inline:` node** reaches the node, the agent
@@ -244,7 +250,8 @@ only an upgrade can fail:
   each refreshed copy's `description:` too: it names the modes the file has.
 - **`running.md` is byte-identical** to `../workflow-creator/assets/running.md`
   (`diff` them), and any file copied from `../workflow-creator/assets/` is
-  verbatim and executable.
+  verbatim and executable — the three rules-skill copies included, each
+  byte-identical to `../workflow-creator/assets/workflow-rules.md`.
 - **The four launch paths agree**: the three in-session launchers and, where it
   exists, `./<name>.sh` name the same workflow, map the same inputs, and match
   the YAML's `inputs:` list.

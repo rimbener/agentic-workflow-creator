@@ -696,6 +696,173 @@ describe('the shared payload', () => {
     )
   })
 
+  // The rules skill is the one piece of a package that works with no awc
+  // session open: whoever hand-edits workflows/<name>/ later finds it in
+  // their host. It ships verbatim under a fixed name, so the documents that
+  // write, specify, audit and describe the package layout all name its three
+  // directories, and its body can carry nothing a host would substitute.
+  test('the rules skill ships verbatim under one name, and every layout names it', () => {
+    const skillDir = path.join(sharedDir(), 'skills', 'workflow-creator')
+    const read = (...parts: string[]) =>
+      readFileSync(path.join(skillDir, ...parts), 'utf8')
+    const asset = path.join(skillDir, 'assets', 'workflow-rules.md')
+    expect(existsSync(asset)).toBe(true)
+    const rules = readFileSync(asset, 'utf8')
+    // Frontmatter every host accepts, plus the Claude-only paths key that
+    // loads it on a touch of workflows/ (Codex and opencode ignore it).
+    expect(rules).toMatch(/^---\nname: awc-workflow-rules\n/)
+    expect(rules).toMatch(
+      /\npaths: "workflows\/\*\*, \.claude\/commands\/\*\.md, \.codex\/skills\/\*\/SKILL\.md, \.opencode\/command\/\*\.md"\n/,
+    )
+    // Claude Code substitutes placeholders inside a skill body as inside a
+    // command, so the launcher hazard is spelled out, never written.
+    expect(rules).not.toMatch(/\$ARGUMENTS|\$\{|!`/)
+    // The routing table sends what outgrows a hand-edit to the awc flags,
+    // and a run to the launchers.
+    for (const flag of ['`awc <agent> --edit`', '`awc <agent> --upgrade`']) {
+      expect(rules).toContain(flag)
+    }
+    // It defers to the package's own contract, but it also restates the
+    // dialect — so the node types and capability names running.md defines
+    // must all appear in it, or a dialect change rots every installed copy
+    // while the copies still diff clean against the asset.
+    expect(rules).toContain('`running.md`')
+    expect(rules).toContain('finish-task.sh')
+    expect(rules).toContain('write-verdict-file.sh')
+    const running = read('assets', 'running.md')
+    // The heading is `parallel: true`, so the scrape stops at the colon and
+    // the rules are searched for the opening backtick plus key.
+    const nodeTypes = [...running.matchAll(/^### `([a-z_]+:)/gm)].map(
+      (m) => m[1],
+    )
+    for (const key of ['inline:', 'parallel:', 'allowed_tools:']) {
+      expect(nodeTypes).toContain(key)
+    }
+    for (const key of nodeTypes) {
+      expect({ key, restated: rules.includes(`\`${key}`) }).toEqual({
+        key,
+        restated: true,
+      })
+    }
+    const capabilities = [
+      ...running.matchAll(/^\| `([a-z]+)` \| [^|]+ \| `[A-Z]/gm),
+    ].map((m) => m[1])
+    expect(capabilities).toEqual([
+      'read',
+      'search',
+      'edit',
+      'shell',
+      'web',
+      'spawn',
+    ])
+    for (const cap of capabilities) {
+      expect(rules).toContain(`\`${cap}\``)
+    }
+    // The launch script is a worktree-only file; the rules must never send
+    // an in-place package's editor looking for a fourth launch path.
+    expect(rules).not.toMatch(/four launch paths/i)
+    expect(rules).toContain('for a worktree workflow only')
+
+    // One copy per host, at the fixed directory name.
+    const copies = [
+      '.claude/skills/awc-workflow-rules/SKILL.md',
+      '.codex/skills/awc-workflow-rules/SKILL.md',
+      '.opencode/skill/awc-workflow-rules/SKILL.md',
+    ]
+    const flat = (t: string) => t.replace(/\s+/g, ' ')
+    const creator = flat(read('SKILL.md'))
+    const hosts = flat(read('references', 'hosts.md'))
+    const upgraderDir = path.join(sharedDir(), 'skills', 'workflow-upgrader')
+    const upgrader = flat(
+      readFileSync(path.join(upgraderDir, 'SKILL.md'), 'utf8'),
+    )
+    const inventory = flat(
+      readFileSync(
+        path.join(upgraderDir, 'references', 'inventory.md'),
+        'utf8',
+      ),
+    )
+    const playbook = flat(
+      readFileSync(
+        path.join(upgraderDir, 'references', 'upgrade-playbook.md'),
+        'utf8',
+      ),
+    )
+    const editor = flat(
+      readFileSync(
+        path.join(sharedDir(), 'skills', 'workflow-editor', 'SKILL.md'),
+        'utf8',
+      ),
+    )
+    const repoDoc = (file: string) =>
+      flat(readFileSync(path.join(import.meta.dir, '..', file), 'utf8'))
+    for (const copy of copies) {
+      // The creator writes it, the host reference specifies it, the
+      // upgrader locates and diffs it, and the repo docs describe it — each
+      // names all three directories.
+      const dir = copy.slice(0, -'SKILL.md'.length)
+      for (const [doc, name] of [
+        [creator, 'creator'],
+        [hosts, 'hosts.md'],
+        [upgrader, 'upgrader'],
+        [inventory, 'inventory.md'],
+        [repoDoc('README.md'), 'README.md'],
+        [repoDoc('SPEC.md'), 'SPEC.md'],
+        [repoDoc('AGENTS.md'), 'AGENTS.md'],
+      ] as const) {
+        expect({ doc: name, dir, named: doc.includes(dir) }).toEqual({
+          doc: name,
+          dir,
+          named: true,
+        })
+      }
+    }
+    // The asset is named where the copies are made and audited from.
+    for (const doc of [creator, hosts, upgrader, inventory, playbook, editor]) {
+      expect(doc).toContain('workflow-rules.md')
+    }
+    // A missing copy is a migration; an edit never touches the copies.
+    expect(playbook).toContain('## Install the rules skill')
+    expect(inventory).toContain('Install the rules skill')
+    expect(editor).toContain('rules-skill copies')
+
+    // The baseline fixture carries all three, byte-identical — the
+    // upgrader's clean-audit eval reads it as current.
+    const fixture = path.join(
+      import.meta.dir,
+      '..',
+      'workflow-upgrader-workspace',
+      'fixtures',
+      'bun-app-shipped',
+    )
+    for (const copy of copies) {
+      const file = path.join(fixture, copy)
+      expect({
+        copy,
+        verbatim: existsSync(file) && readFileSync(file, 'utf8') === rules,
+      }).toEqual({
+        copy,
+        verbatim: true,
+      })
+    }
+    // The drifted fixture predates the rules skill; the upgrade eval's
+    // `rules-skill-installed` grades the copies appearing, so none may be
+    // there to begin with.
+    const drifted = path.join(
+      import.meta.dir,
+      '..',
+      'workflow-upgrader-workspace',
+      'fixtures',
+      'bun-app-drifted',
+    )
+    for (const copy of copies) {
+      expect({ copy, absent: !existsSync(path.join(drifted, copy)) }).toEqual({
+        copy,
+        absent: true,
+      })
+    }
+  })
+
   // An inline interview's log is its record and resume point. Without the
   // write-at-both-ends rule it re-asks settled questions or writes over an
   // unanswered one.
@@ -1573,6 +1740,8 @@ describe('the upgrader eval material', () => {
       // the upgrade half still done.
       'redirected-to-edit',
       'upgrade-still-done',
+      // A package from before the rules skill gains its three copies.
+      'rules-skill-installed',
     ]) {
       expect(names).toContain(key)
     }
@@ -1765,8 +1934,18 @@ describe('the eval material', () => {
       // The middle setting: reads the source, then asks only what is open.
       'confirm-story-inline-shape',
       'confirm-story-records-the-source',
+      // The creator writes the three rules-skill copies; the layout
+      // expectation alone passes a package that skipped them.
+      'rules-skill-installed',
     ]) {
       expect(names).toContain(key)
+    }
+    for (const e of evals.evals as { name: string; expectations: string[] }[]) {
+      const keys = e.expectations.map((x) => x.split(':')[0])
+      expect({
+        eval: e.name,
+        gradesRulesSkill: keys.includes('rules-skill-installed'),
+      }).toEqual({ eval: e.name, gradesRulesSkill: true })
     }
     // Both shrinks are interview defaults, so every code-building eval grades
     // their placement; the docs-site eval has neither and skips them.

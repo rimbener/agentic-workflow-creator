@@ -131,7 +131,9 @@ file inside it and its `name:`, the three launcher filenames (and the Codex
 skill's `name:` and directory), `./<name>.sh` at the repo root, every `run:`
 path that names `workflows/<name>/scripts/...` — those are written from the
 launch directory, so they carry the folder name — the README, and any prose
-naming the workflow. Then grep the repo for the old name.
+naming the workflow. Then grep the repo for the old name. The rules skill
+under `.claude/skills/awc-workflow-rules/` and its two siblings stays where
+it is: it names no workflow, and every package in the repo shares it.
 
 ## Flip isolation
 

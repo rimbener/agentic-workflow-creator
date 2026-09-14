@@ -423,13 +423,28 @@ const skillRunning =
     ? readFileSync(runningMdRef, 'utf8')
     : null
 const runningCandidates = files.filter((f) => /running\.md$/i.test(f))
+// The rules skill sits beside running.md in the skill's assets/, so the
+// running.md argument locates its base too.
+const rulesRef = runningMdRef
+  ? path.join(path.dirname(runningMdRef), 'workflow-rules.md')
+  : null
+const skillRules =
+  rulesRef && existsSync(rulesRef) ? readFileSync(rulesRef, 'utf8') : null
 report.package = {
   // One launcher per supported host; graders check all three are present and agree.
   launchers: {
     claude: files
       .filter((f) => rel(f).startsWith('.claude/commands/'))
       .map(rel),
-    codex: files.filter((f) => rel(f).startsWith('.codex/skills/')).map(rel),
+    // Codex keeps commands and skills in one directory, so the rules skill
+    // sits beside the launcher here; it is reported under `rulesSkill`.
+    codex: files
+      .filter(
+        (f) =>
+          rel(f).startsWith('.codex/skills/') &&
+          !rel(f).startsWith('.codex/skills/awc-workflow-rules/'),
+      )
+      .map(rel),
     opencode: files
       .filter((f) => /^\.opencode\/commands?\//.test(rel(f)))
       .map(rel),
@@ -473,6 +488,15 @@ report.package = {
     verbatimCopyOfSkill:
       skillRunning !== null ? readFileSync(f, 'utf8') === skillRunning : null,
   })),
+  // One rules-skill copy per host, each verbatim; graders check all three
+  // are present under the fixed `awc-workflow-rules` directory name.
+  rulesSkill: files
+    .filter((f) => /awc-workflow-rules\/SKILL\.md$/.test(rel(f)))
+    .map((f) => ({
+      file: rel(f),
+      verbatimCopyOfSkill:
+        skillRules !== null ? readFileSync(f, 'utf8') === skillRules : null,
+    })),
   allFiles: files.map(rel).sort(),
 }
 

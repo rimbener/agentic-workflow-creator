@@ -87,7 +87,17 @@ workflows/<name>/                 # the workflow, its agents and scripts
 .claude/commands/<name>.md        # in-session launcher — Claude Code
 .codex/skills/<name>/SKILL.md     # in-session launcher — Codex
 .opencode/command/<name>.md       # in-session launcher — opencode
+.claude/skills/awc-workflow-rules/SKILL.md   # rules skill — same file under each host
+.codex/skills/awc-workflow-rules/SKILL.md
+.opencode/skill/awc-workflow-rules/SKILL.md
 ```
+
+The rules skill is the part of the package that works when no awc session is
+open: whenever you (or your agent) edit a file under `workflows/`, it supplies
+the dialect's rules for that file, the ripples the change reaches, a
+validation walk, and a table reading a halted run back to its cause — and it
+points at `awc <agent> --edit` or `--upgrade` when a change outgrows a
+hand-edit.
 
 ## Upgrading a workflow you already have
 

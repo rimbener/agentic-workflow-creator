@@ -10,8 +10,12 @@ what tells you — and them — what the upgrade actually is.
 
 A package is a `workflows/<name>/` folder holding `<name>.yaml` and
 `running.md`. Around it, at the repo root: `.claude/commands/<name>.md`,
-`.codex/skills/<name>/SKILL.md`, `.opencode/command/<name>.md`, and — only for
-a worktree workflow — `./<name>.sh` and `./agents-cli.conf`.
+`.codex/skills/<name>/SKILL.md`, `.opencode/command/<name>.md`; the rules
+skill shared by every package in the repo —
+`.claude/skills/awc-workflow-rules/SKILL.md`,
+`.codex/skills/awc-workflow-rules/SKILL.md`,
+`.opencode/skill/awc-workflow-rules/SKILL.md`; and — only for a worktree
+workflow — `./<name>.sh` and `./agents-cli.conf`.
 
 Nothing found → the job is creation, not upgrade; hand over to the
 workflow-creator skill. Several found → list them with their one-line
@@ -24,7 +28,8 @@ Read the YAML first, then every file it references. What you are building is a
 map you can hold the audit against.
 
 **Identity and launch.** `name`, `description`, and the isolation mode —
-worktree if `./<name>.sh` exists, in place otherwise. Which launchers exist.
+worktree if `./<name>.sh` exists, in place otherwise. Which launchers exist,
+and which of the three rules-skill copies.
 
 **Inputs and vars.** Each `name`, its comment, and where it is used. Note vars
 holding commands: those are the project facts the package was built around.
@@ -83,6 +88,11 @@ Compare against the current bases while you're there:
 - `diff` any file the package copied from `../workflow-creator/assets/`
   (`finish-task.sh`, `write-verdict-file.sh`, `run.sh`, `agents-cli.conf`)
   against its base.
+- `diff` each rules-skill copy — `.claude/skills/awc-workflow-rules/SKILL.md`
+  and its two siblings — against `../workflow-creator/assets/workflow-rules.md`.
+  A package from before the rules skill has none of the three; that absence
+  is a line of the upgrade like any other missing verbatim copy, and the
+  playbook's "Install the rules skill" lands it.
 - `diff` `agents/workflow_lead.md` against
   `../workflow-creator/assets/agents/workflow_lead.md` — the one agent copied
   unchanged, so any difference is drift, and a stale lead blocks the nodes
@@ -118,6 +128,10 @@ looks for them:
   can ask once, through its return, so the protocol never runs as written.
   Every package from before `inline:` shows this; the playbook's "Move an
   interview onto an inline node" is the migration.
+- **A missing or drifted rules skill.** Fewer than three copies, a copy that
+  differs from the base, or one whose directory is not named
+  `awc-workflow-rules` — the name is what lets every package in a repo share
+  the file, and what the host matches the directory against.
 - **Launcher drift.** A missing launcher; launchers whose input mapping
   disagrees with each other or with `inputs:`; a launcher naming a workflow
   path that has since been renamed; a Codex skill whose `description:` no

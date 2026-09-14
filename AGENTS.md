@@ -124,6 +124,7 @@ templates/
 │   │       ├── running.md           # the YAML dialect's execution contract — copied verbatim into every generated package
 │   │       ├── run.sh               # worktree launch template — copied to ./<name>.sh; FILL is worktree parent
 │   │       ├── finish-task.sh       # archives .awc/tasks/in-progress/<task>/ → done/; copied verbatim into a package
+│   │       ├── workflow-rules.md    # the rules skill — copied verbatim as SKILL.md into each host's skill dir in the target repo
 │   │       ├── agents-cli.conf      # host roster — add/remove a host only here
 │   │       └── agents/*.md          # base agent templates instantiated (tailored) per generated workflow
 │   ├── skills/workflow-upgrader/     # staged only under --upgrade
@@ -197,6 +198,23 @@ Key things to know before touching this content:
   the model sees it (which is why `hosts.md` backslash-escapes it throughout).
   Codex has no project-level slash commands, so its launcher is a project
   skill triggered by its `description` instead.
+- Every generated package also installs the **rules skill** —
+  `assets/workflow-rules.md` copied verbatim as `SKILL.md` into
+  `.claude/skills/awc-workflow-rules/`, `.codex/skills/awc-workflow-rules/`
+  and `.opencode/skill/awc-workflow-rules/` in the target repo. It is what a
+  later session finds when someone edits `workflows/<name>/` by hand with no
+  awc skill loaded: the per-file rules, the ripples, the validation walk, the
+  halted-run table, and the routing to `--edit` / `--upgrade`. Its `paths:`
+  frontmatter makes Claude Code load it on its own for files under
+  `workflows/` and for the three launcher paths; Codex and opencode ignore
+  that key and select it by description (both verified to load a skill
+  carrying it). It restates the dialect, so a change to `running.md` or the
+  validation checklist lands in `workflow-rules.md` in the same commit —
+  `test/staging.test.ts` cross-checks node types and capability names. The name is fixed
+  so every package in a repo shares one copy per host, it is never tailored
+  (the upgrader audits it by `diff`, like `running.md`), and its body spells
+  the arguments placeholder out in words because Claude Code substitutes it
+  inside skills too. `test/staging.test.ts` pins all of that.
 - Generated packages must read positively — no "(no worktree)", "NOT TDD",
   or similar negation echoes of ruled-out alternatives; SKILL.md's
   validation checklist greps for this before handoff.

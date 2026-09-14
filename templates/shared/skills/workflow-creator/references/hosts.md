@@ -155,3 +155,62 @@ The script:
 Invocation: `./<name>.sh <task> claude "<request>"` (or `codex` / `opencode`).
 Headless: `AWC_NAME=<name> AWC_BRANCH_PREFIX=task ./<name>.sh ...`.
 An in-place workflow does not ship this file.
+
+## The rules skill — every package
+
+The launchers start a run; the **rules skill** guards the package between
+runs. Once a package is committed, its owner edits it by hand — a cap, a
+command, a node's prompt — in whatever host they use, with no awc skill
+loaded. The rules skill is what that session finds: a host-level skill,
+installed in the target repo, that holds the dialect's rules for changing a
+package (per file, with the ripples and the validation walk), routes a change
+that outgrows a hand-edit to `awc <agent> --edit` or `--upgrade`, and reads a
+halted run's report back to its cause.
+
+It is a copy of `assets/workflow-rules.md`, written **verbatim** as `SKILL.md`
+into each host's project skill directory:
+
+| Host | Rules skill file |
+| --- | --- |
+| Claude Code | `.claude/skills/awc-workflow-rules/SKILL.md` |
+| Codex | `.codex/skills/awc-workflow-rules/SKILL.md` |
+| opencode | `.opencode/skill/awc-workflow-rules/SKILL.md` |
+
+Three properties follow from "verbatim", and every package keeps them:
+
+- **The name is fixed.** `awc-workflow-rules` names the skill and its
+  directory in every package, so a repo holding several packages carries one
+  copy per host, and a second package generated into the same repo overwrites
+  each copy with an identical file. Nothing in the skill names a workflow —
+  it reads the package's own `running.md` and speaks of `workflows/<name>/`
+  generically — so a rename never reaches it.
+- **It is never tailored.** Like `running.md` and `workflow_lead.md`, the
+  three copies are audited by `diff` against the asset, and a refresh is a
+  recopy. Its frontmatter is the same file for all three hosts: `name`,
+  `description`, and a `paths:` key — `workflows/**` plus the three
+  launcher globs (`.claude/commands/*.md`, `.codex/skills/*/SKILL.md`,
+  `.opencode/command/*.md`) — that Claude Code reads to load the skill on
+  its own whenever a matching file is being read or edited. The launcher
+  globs also match a host's unrelated commands and skills; that extra load is
+  the accepted price of catching a launcher edit, since nothing in a
+  launcher's filename marks it as one. Codex and opencode ignore the key —
+  both load a skill carrying it and select it by `description`, which is why
+  that description names the files, the edits and the halted-run question in
+  full.
+- **It carries no substitutable placeholder.** Claude Code substitutes the
+  arguments placeholder inside a skill body exactly as inside a command, so
+  the skill spells the placeholder out in words where it explains the
+  launcher hazard. Keep it that way if the asset is ever edited.
+
+opencode also discovers `.claude/skills/`, and de-duplicates by name, so it
+sees one rules skill whichever copy it reads first. The launchers are still
+one per host; the rules skill simply follows the same one-file-per-host
+layout so a teammate on any tool finds it where their host looks.
+
+The skill restates the dialect's rules rather than quoting `running.md`, and
+the copies diffing clean against the asset says nothing about the asset
+itself being current. A change to `assets/running.md` or to the creator's
+validation checklist — a node type, a modifier, a capability, a key an
+`inline:` node may carry — is a change to `assets/workflow-rules.md` in the
+same commit; `test/staging.test.ts` cross-checks the node types and the
+capability names between the two files, and the rest is the author's.

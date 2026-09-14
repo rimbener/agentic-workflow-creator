@@ -241,6 +241,16 @@ its `description` rather than a command taking a placeholder. The skill's
 `references/hosts.md` is the authority on these files. A worktree workflow also
 ships `./<name>.sh` (from `assets/run.sh`) so the host starts inside the tree.
 
+Every package also installs the **rules skill**: `assets/workflow-rules.md` copied verbatim
+as `SKILL.md` into `.claude/skills/awc-workflow-rules/`, `.codex/skills/awc-workflow-rules/`
+and `.opencode/skill/awc-workflow-rules/`. It guards the package between runs — the session
+that later hand-edits `workflows/<name>/` has no awc skill loaded, and this is the one it
+finds: the per-file rules, the ripples, the validation walk, the halted-run table, and the
+routing to `--edit` / `--upgrade`. Its `paths:` frontmatter (`workflows/**` plus the three
+launcher globs) has Claude Code load it whenever a matching file is touched; Codex and
+opencode ignore the key and select it by description. The name is fixed so packages in one repo share one copy per
+host, and it is never tailored, so the upgrader audits it by `diff` like `running.md`.
+
 ## Risks / open questions
 
 - Each host's injection mechanism is verified against a real binary — Claude Code 2.1.233

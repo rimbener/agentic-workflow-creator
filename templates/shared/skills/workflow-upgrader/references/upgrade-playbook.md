@@ -32,7 +32,8 @@ every recipe is "does every node still pass every argument its agent requires".
 
 `running.md` and `agents/workflow_lead.md` are copied unchanged from
 `../workflow-creator/assets/`, and so are `scripts/finish-task.sh`,
-`scripts/write-verdict-file.sh`, `./<name>.sh` (with `__WORKTREE_PARENT__`
+`scripts/write-verdict-file.sh`, the three rules-skill copies (see "Install
+the rules skill" below), `./<name>.sh` (with `__WORKTREE_PARENT__`
 filled) and `./agents-cli.conf` where the package has them. Any difference
 the audit's `diff` shows is drift, and the fix is a recopy, `chmod +x` for the
 scripts — a merge would only preserve the drift. Two of them are not local:
@@ -137,6 +138,21 @@ wording, and they must not keep it either, so the three are brought up to the
 current template together, with `./<name>.sh` where it exists. The Codex
 launcher's `description:` describes what the workflow does; check it still
 does.
+
+## Install the rules skill
+
+Every package installs a host-level skill that guards it between runs: the
+rules for changing a package by hand, the ripples, the validation walk, and
+the routing to `awc <agent> --edit` or `--upgrade` when a change outgrows a
+hand-edit. It is `../workflow-creator/assets/workflow-rules.md`, copied
+verbatim as `SKILL.md` into `.claude/skills/awc-workflow-rules/`,
+`.codex/skills/awc-workflow-rules/` and `.opencode/skill/awc-workflow-rules/`
+at the repo root (`../workflow-creator/references/hosts.md`, "The rules
+skill"). A package from before it has none; a package whose copies have
+drifted gets a recopy of all three. Nothing else moves: the skill names no
+workflow, so it needs no tailoring, and a repo holding several packages keeps
+one copy per host — an existing copy is refreshed in place, never joined by a
+second directory under another name.
 
 ## Add a story step ahead of a spec step
 
