@@ -199,3 +199,11 @@ The upgrader workspace keeps the stale-package eval and gains two only an upgrad
 ## 2026-09-04 — `38bec6b` — feat(cli): describe --upgrade as bringing a package up to date
 
 The `--help` text, README, SPEC and AGENTS.md describe `--upgrade` as bringing a package in line with the current dialect and `--edit` as the flag for changing what a workflow does. The staging tests pin the upgrade prompt's opening (which package, never what should change), the renamed upgrade playbook, the editor's change playbook with its core recipes and the kill-mutants sentence, and the eval keys each workspace now owns.
+
+## 2026-09-14 — `458cf86` — feat(skill): install a rules skill into every generated package
+
+Every package now copies `assets/workflow-rules.md` verbatim as `SKILL.md` into `.claude/skills/awc-workflow-rules/`, `.codex/skills/awc-workflow-rules/` and `.opencode/skill/awc-workflow-rules/`. That is what a later session finds when someone edits `workflows/<name>/` by hand with no awc skill loaded: the per-file rules, the ripples, the validation walk, the halted-run table, and the routing to `--edit` / `--upgrade`. The name is fixed so packages in one repo share one copy per host; it is never tailored, so the upgrader audits it by `diff` like `running.md` and installs a missing copy. Creator and upgrade evals grade the three copies; the shipped fixture carries them so a current-package upgrade writes nothing.
+
+## 2026-09-14 — `c5159f1` — chore: stop tracking vscode settings
+
+`.vscode/settings.json` held Peacock/theme tweaks. It is gitignored and untracked so those stay local.
