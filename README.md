@@ -4,16 +4,25 @@ Launch Claude Code, Codex, or opencode pre-loaded with a curated set of skills,
 slash commands, and scripts — without touching your global agent configuration
 or your project's own config directory.
 
-```bash
-npx agentic-workflow-creator claude
-```
-
-Or install globally to get the short command:
+This package is not on npm. Clone the repo, install, build, then run
+`dist/cli.js` with Node.
 
 ```bash
-npm install -g agentic-workflow-creator
-awc claude
+git clone https://github.com/rimbener/agentic-workflow-creator.git
+cd agentic-workflow-creator
+bun install
+bun run build
 ```
+
+Run that file from the project you want to work in:
+
+```bash
+node /path/to/agentic-workflow-creator/dist/cli.js claude
+```
+
+The program reads `templates/` from this checkout at run time. A change under
+`templates/` is live on the next run. A change under `src/` needs
+`bun run build` again.
 
 ## How it works
 
@@ -44,7 +53,7 @@ cleans it up automatically.
 ## Usage
 
 ```
-awc <agent> [options] [-- <agent args...>]
+node /path/to/agentic-workflow-creator/dist/cli.js <agent> [options] [-- <agent args...>]
 
 Agents:
   claude          Launch Claude Code with the bundled workflow plugin
@@ -68,7 +77,7 @@ Options:
 Everything after `--` is passed through to the agent's CLI verbatim, e.g.:
 
 ```bash
-awc claude -- --model opus
+node /path/to/agentic-workflow-creator/dist/cli.js claude -- --model opus
 ```
 
 ## What it generates
@@ -102,7 +111,7 @@ hand-edit.
 ## Upgrading a workflow you already have
 
 ```bash
-awc claude --upgrade
+node /path/to/agentic-workflow-creator/dist/cli.js claude --upgrade
 ```
 
 That opens the session on the **workflow-upgrader** skill instead. It asks
@@ -119,7 +128,7 @@ change what a workflow does, use `--edit` below.
 ## Editing a workflow directly
 
 ```bash
-awc claude --edit
+node /path/to/agentic-workflow-creator/dist/cli.js claude --edit
 ```
 
 That opens the session on the **workflow-editor** skill instead — a separate
@@ -129,41 +138,10 @@ inputs, isolation, commands or caps — and exactly those changes are applied,
 with their ripples and the full validation checklist, and anything beyond
 your words still asked first.
 
-## Use locally (without publishing)
-
-To use `awc` in your other projects straight from this checkout, link it
-globally once:
-
-```bash
-cd /path/to/agentic-workflow-creator
-bun run build
-npm link
-```
-
-Then, in any project:
-
-```bash
-awc claude
-```
-
-Because the link is a symlink to the working copy — and templates are read
-from it at runtime, not bundled — edits to the skill, agent templates, or
-commands are live on the next `awc` run; only `src/` changes need a fresh
-`bun run build`. Undo with `npm unlink -g agentic-workflow-creator`.
-
-Alternatively, skip installing and run it by path (or alias it):
-
-```bash
-node /path/to/agentic-workflow-creator/dist/cli.js claude
-```
-
-To rehearse the real published install, `npm pack` builds the tarball and
-`npm i -g ./agentic-workflow-creator-<version>.tgz` installs exactly what
-would ship.
-
 ## Requirements
 
 - Node.js >= 18
+- [Bun](https://bun.sh) — install dependencies and build `dist/cli.js`
 - At least one of the agents on your `PATH`:
   [Claude Code](https://docs.anthropic.com/en/docs/claude-code),
   [Codex](https://developers.openai.com/codex/cli),
