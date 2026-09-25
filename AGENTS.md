@@ -1,6 +1,7 @@
 # AGENTS.md
 
 This file provides guidance to LLMs when working with code in this repository.
+In all interactions and commit messages, be extremely concise and sacrifice grammar for the sake of concision. ALWAYS use ASD-STE100 (Simplified Technical English) for explanations, documentation, etc.
 
 ## What this repo is
 
@@ -171,7 +172,8 @@ Key things to know before touching this content:
   test fails. It also drives each host's `stage*` function directly, so a new
   host needs a case there.
 - The generated YAML dialect (nodes: `run:`, `agent:`+`prompt:`, `inline:`,
-  `loop:`, `gate:`, `when:`, `parallel: true`, `wait:`, `allowed_tools:`) is
+  `loop:`, `gate:`, `when:`, `parallel: true`, `wait:`, `allowed_tools:`,
+  `model:`, `effort:`) is
   fully specified in `assets/running.md` — read it before changing anything
   that touches how workflows are authored or executed. `allowed_tools:` names
   host-neutral capabilities (`read`, `search`, `edit`, `shell`, `web`,
@@ -179,12 +181,22 @@ Key things to know before touching this content:
   the lead maps the capabilities and states the scope in the spawned prompt.
   The mapping table lives in `running.md` because that is the file the lead
   has at run time.
+- `model:` and `effort:` work the same way one step further: no host's spawn
+  tool takes an effort, and two of the three take no model, so a node names a
+  **tier** and the package registers a **profile agent** per host —
+  `.claude/agents/`, `.codex/agents/`, `.opencode/agent/`, each named
+  `awc-<workflow>-<tier>-<effort>` — that carries the model and the effort and
+  nothing else. `references/hosts.md` holds the three file templates, and the
+  tier-to-model table lives only in those files plus the generated README, so
+  there is nothing to drift. The keys are optional, so an old package stays
+  valid and the upgrader needs no migration. A host that cannot load a profile
+  runs the step at the session default with a warning, never a halt.
 - `inline:` is the one node the lead does **not** spawn: it acts as the agent
   in its own session, so an interview is one conversation rather than a spawn
   per question, and the lead's no-write rule steps aside there. It carries
-  `agent:`, `prompt:` and `expect:` only — `parallel: true` and
-  `allowed_tools:` would scope a spawn that never happens, and there is no
-  `{{answer}}` to relay. The interviewers run there (`story_partner`'s asking
+  `agent:`, `prompt:` and `expect:` only — `parallel: true`,
+  `allowed_tools:`, `model:` and `effort:` would shape a spawn that never
+  happens, and there is no `{{answer}}` to relay. The interviewers run there (`story_partner`'s asking
   modes, `spec_partner`'s `write-bundle`); `capture` and every approval loop
   stay spawned, each being one self-contained exchange.
 - Every generated package ships **three** in-session launchers — `.claude/commands/`,
@@ -286,3 +298,5 @@ This repo uses Conventional Commits with no AI co-author attribution (see
 `.agents/commands/commit.md`). Group commits by concern in dependency order:
 CLI source+tests, then plugin/skill content, then eval material, then
 tooling/config/docs. Keep a source change and its test in the same commit.
+
+REMEMBER: In all interactions and commit messages, be extremely concise and sacrifice grammar for the sake of concision. ALWAYS use ASD-STE100 (Simplified Technical English) for explanations, documentation, etc.
