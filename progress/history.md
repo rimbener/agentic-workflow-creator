@@ -207,3 +207,11 @@ Every package now copies `assets/workflow-rules.md` verbatim as `SKILL.md` into 
 ## 2026-09-14 — `c5159f1` — chore: stop tracking vscode settings
 
 `.vscode/settings.json` held Peacock/theme tweaks. It is gitignored and untracked so those stay local.
+
+## 2026-09-25 — `91149a4` — docs: tell readers to run dist/cli.js from a clone
+
+The package is not on npm. The README now says clone the repo, `bun install`, `bun run build`, then run `node dist/cli.js` from the target project. It drops `npx`, a global `npm install`, and `npm link`.
+
+## 2026-09-25 — `62521e0` — docs(agents): document model/effort keys and STE style
+
+`AGENTS.md` names the optional `model:` and `effort:` keys and the per-host profile agent that carries the tier and the effort. It also requires ASD-STE100 in explanations and commit messages.
